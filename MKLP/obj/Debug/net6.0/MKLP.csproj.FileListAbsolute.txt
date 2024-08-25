@@ -1,0 +1,26 @@
+D:\my_Terraria_Plugins\MKLP\MKLP\bin\Debug\net6.0\HttpServer.dll
+D:\my_Terraria_Plugins\MKLP\MKLP\bin\Debug\net6.0\MKLP.deps.json
+D:\my_Terraria_Plugins\MKLP\MKLP\bin\Debug\net6.0\MKLP.dll
+D:\my_Terraria_Plugins\MKLP\MKLP\bin\Debug\net6.0\MKLP.pdb
+D:\my_Terraria_Plugins\MKLP\MKLP\obj\Debug\net6.0\MKLP.csproj.AssemblyReference.cache
+D:\my_Terraria_Plugins\MKLP\MKLP\obj\Debug\net6.0\MKLP.GeneratedMSBuildEditorConfig.editorconfig
+D:\my_Terraria_Plugins\MKLP\MKLP\obj\Debug\net6.0\MKLP.AssemblyInfoInputs.cache
+D:\my_Terraria_Plugins\MKLP\MKLP\obj\Debug\net6.0\MKLP.AssemblyInfo.cs
+D:\my_Terraria_Plugins\MKLP\MKLP\obj\Debug\net6.0\MKLP.csproj.CoreCompileInputs.cache
+D:\my_Terraria_Plugins\MKLP\MKLP\obj\Debug\net6.0\MKLP.dll
+D:\my_Terraria_Plugins\MKLP\MKLP\obj\Debug\net6.0\refint\MKLP.dll
+D:\my_Terraria_Plugins\MKLP\MKLP\obj\Debug\net6.0\MKLP.pdb
+D:\my_Terraria_Plugins\MKLP\MKLP\obj\Debug\net6.0\ref\MKLP.dll
+D:\my_Terraria_Plugins\For my Server\MKLP\MKLP\bin\Debug\net6.0\HttpServer.dll
+D:\my_Terraria_Plugins\For my Server\MKLP\MKLP\bin\Debug\net6.0\MKLP.deps.json
+D:\my_Terraria_Plugins\For my Server\MKLP\MKLP\bin\Debug\net6.0\MKLP.dll
+D:\my_Terraria_Plugins\For my Server\MKLP\MKLP\bin\Debug\net6.0\MKLP.pdb
+D:\my_Terraria_Plugins\For my Server\MKLP\MKLP\obj\Debug\net6.0\MKLP.csproj.AssemblyReference.cache
+D:\my_Terraria_Plugins\For my Server\MKLP\MKLP\obj\Debug\net6.0\MKLP.GeneratedMSBuildEditorConfig.editorconfig
+D:\my_Terraria_Plugins\For my Server\MKLP\MKLP\obj\Debug\net6.0\MKLP.AssemblyInfoInputs.cache
+D:\my_Terraria_Plugins\For my Server\MKLP\MKLP\obj\Debug\net6.0\MKLP.AssemblyInfo.cs
+D:\my_Terraria_Plugins\For my Server\MKLP\MKLP\obj\Debug\net6.0\MKLP.csproj.CoreCompileInputs.cache
+D:\my_Terraria_Plugins\For my Server\MKLP\MKLP\obj\Debug\net6.0\MKLP.dll
+D:\my_Terraria_Plugins\For my Server\MKLP\MKLP\obj\Debug\net6.0\refint\MKLP.dll
+D:\my_Terraria_Plugins\For my Server\MKLP\MKLP\obj\Debug\net6.0\MKLP.pdb
+D:\my_Terraria_Plugins\For my Server\MKLP\MKLP\obj\Debug\net6.0\ref\MKLP.dll
