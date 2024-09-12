@@ -21,6 +21,25 @@ order to install the plugin donwload `MKLP.dll` in releases after that put that 
 
 - All permissions are in `MKLP.json` in `tshock` folder which they can be modified ( require's restart when modifying it )
 
+# Disable Code
+
+**Main code1** : High Stack Value
+**Main code2** : null item boss spawn
+
+**Survival code1** : Illegal Item Progression
+
+**Survival code2** : Illegal Projectile Progression
+
+**Survival code3** : Illegal Tile Progression
+
+**Default code1** : Tile Kill Threshold
+**Default code2** : Tile Place Threshold
+**Default code3** : Tile Paint Threshold
+**Default code4** : Liquid Threshold
+
+**Default code5** : Projectile Threshold
+**Default code6** : HealOther Threshold
+
 # Commands
 **/progression** : Displays defeated boss
 **/report** : Report any suspicious activity
