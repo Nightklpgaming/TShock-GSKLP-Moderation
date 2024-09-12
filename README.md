@@ -1,6 +1,9 @@
 # TShock-GSKLP-Moderation
 Moderation Plugin for GSKLP Server
 
+⚠️ Warning! you need `Discord.Net.Rest.dll`, `Discord.Net.Core.dll`, `Discord.Net.WebSocket.dll` in `bin` folder!
+- MKLP uses Discord.Net v3.13.0
+
 ## Features
 - Disable Feature ( MKLP )
 - BossManager ( Modified ) { from Ozz5581 }
