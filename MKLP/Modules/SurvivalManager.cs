@@ -289,7 +289,7 @@ namespace MKLP.Modules
 
             #region ( Evil Boss Enabled )
 
-            if (MKLP.Config.BossManager.AllowEaterOfWorlds || MKLP.Config.BossManager.AllowBrainOfCthulhu) //modify this
+            if ((bool)MKLP.Config.BossManager.AllowEaterOfWorlds || (bool)MKLP.Config.BossManager.AllowBrainOfCthulhu)
             { //     true if its eow/boc enabled    |    false if its not enabled
                 int[] hellstoneid = { 116, 117, 118, 119, 120, 121, 122, 174, 175,
                         217, 219, 221, 231, 232, 233, 273, 2365, 4533, 4534, 4535, 4536, 4821 };
@@ -1354,7 +1354,6 @@ namespace MKLP.Modules
 
         public static Dictionary<short, string> GetIllegalProjectile()
         {
-
             #region [ get Illegal Projectile ]
             
             Dictionary<short, string> getillegalprojectile = new();
@@ -1409,7 +1408,7 @@ namespace MKLP.Modules
 
             #endregion
 
-            //2223 
+            //357 
 
             #region ( Boss )
 
@@ -1487,7 +1486,7 @@ namespace MKLP.Modules
 
             #region ( Evil Boss Enabled )
 
-            if (MKLP.Config.BossManager.AllowEaterOfWorlds || MKLP.Config.BossManager.AllowBrainOfCthulhu) //modify this
+            if ((bool)MKLP.Config.BossManager.AllowEaterOfWorlds || (bool)MKLP.Config.BossManager.AllowBrainOfCthulhu)
             { //     true if its eow/boc enabled    |    false if its not enabled
                 short[] hellstoneid = { 19, 36, 41, 154, 375, 376, 734, 972, 973, 978 };
 
@@ -2065,6 +2064,651 @@ namespace MKLP.Modules
             #endregion
 
             return getillegalprojectile;
+        }
+
+        public struct MKLP_Tile
+        {
+            public ushort ID;
+            public byte SubID;
+            bool AllSubID;
+            public MKLP_Tile(ushort ID, byte SubID, bool AllSubID = false)
+            {
+                this.ID = ID;
+                this.SubID = SubID;
+                if (AllSubID == true) this.SubID = 0; 
+                this.AllSubID = AllSubID;
+            }
+        }
+        public static Dictionary<MKLP_Tile, string> GetIllegalTile()
+        {
+            #region [ get Illegal Tile ]
+
+            Dictionary<MKLP_Tile, string> getillegaltile = new();
+
+            //bool bothevilworld = (Main.drunkWorld || Main.remixWorld || Main.zenithWorld);
+
+            bool allowdungeonrush = true;
+            bool allowtemplerush = true;
+
+            bool allowmusicbox = true;
+
+            #region | unobtainable |
+
+            MKLP_Tile[] unobtainableids = { new(5, 0, true), new(10, 11), new(21, 52), new(21, 53), new(26, 0, true), new(28, 0, true),
+                new(31, 0, true), new(32, 0, true), new(441, 52), new(441, 53), new(441, 2), new(441, 4), new(441, 5), new(441, 6),
+                new(441, 23), new(441, 24), new(441, 25), new(441, 26), new(441, 27), new(441, 36), new(441, 38), new(441, 40),
+                new(468, 13) };
+
+            foreach (MKLP_Tile add in unobtainableids)
+            {
+                if (!getillegaltile.ContainsKey(add))
+                {
+                    getillegaltile.Add(add, "Illegal");
+                }
+            }
+
+            MKLP_Tile[] cannotplace = { new(21, 3), new(21, 23), new(21, 24), new(21, 25), new(21, 26), new(21, 27), new(21, 36),
+                new(21, 38), new(21, 40), new(80, 0, true), new(165, 0, true), new(185, 0, true), new(186, 0, true), new(187, 0, true),
+                new(227, 6), new(227, 12), new(227, 13), new(227, 14), new(231, 0), new(233, 0, true), new(236, 0, true),
+                new(238, 0, true), new(323, 0), new(485, 0), new(518, 0), new(519, 0), new(529, 0), new(530, 0), new(549, 0),
+                new(624, 0), new(668, 0) };
+
+            foreach (MKLP_Tile add in cannotplace)
+            {
+                if (!getillegaltile.ContainsKey(add))
+                {
+                    getillegaltile.Add(add, "Unplacable");
+                }
+            }
+
+            #endregion
+
+            #region [ Banners ]
+
+
+
+            #endregion
+
+            #region ( Boss )
+
+            #region [ king Slime ]
+            if (!NPC.downedSlimeKing) //king slime
+            {
+                MKLP_Tile[] addin = { new(10, 31), new(11, 32), new(14, 29), new(15, 31), new(18, 8), new(19, 20), new(34, 26),
+                    new(42, 30), new(79, 25), new(87, 24), new(88, 19), new(89, 25), new(90, 20), new(93, 21), new(100, 21),
+                    new(101, 26), new(104, 7), new(172, 26), new(193, 0), new(197, 0), new(220, 0), new(240, 54), new(371, 0),
+                    new(380, 0), new(441, 34), new(497, 24) };
+                foreach (MKLP_Tile add in addin)
+                {
+                    if (!getillegaltile.ContainsKey(add))
+                    {
+                        getillegaltile.Add(add, "King Slime");
+                    }
+                }
+            }
+            #endregion
+
+            #region [ Eye of Cthulhu ]
+            if (!NPC.downedBoss1)
+            {
+                MKLP_Tile[] addin = { new(240, 0), new(380, 0, true) };
+
+                foreach (MKLP_Tile add in addin)
+                {
+                    if (!getillegaltile.ContainsKey(add))
+                    {
+                        getillegaltile.Add(add, "Eye of Cthulhu");
+                    }
+                }
+
+            }
+            #endregion
+
+            #region [ Evil Boss ]
+            if (!NPC.downedBoss2)
+            {
+                MKLP_Tile[] addin = { new(10, 33), new(11, 33), new(14, 32), new(15, 33), new(18, 28), new(19, 27), new(21, 49),
+                    new(33, 27), new(34, 34), new(37, 0), new(42, 34), new(79, 28), new(87, 27), new(88, 25), new(89, 30),
+                    new(90, 28), new(93, 28), new(100, 28), new(101, 29), new(104, 25), new(172, 29), new(239, 9), new(240, 1),
+                    new(240, 2), new(240, 60), new(240, 61), new(240, 62), new(370, 0), new(380, 2), new(380, 3), new(441, 49),
+                    new(463, 0), new(464, 0), new(465, 0), new(466, 0), new(497, 32) };
+
+                foreach (MKLP_Tile add in addin)
+                {
+                    if (!getillegaltile.ContainsKey(add))
+                    {
+                        getillegaltile.Add(add, "Evil Boss");
+                    }
+                }
+
+                if (!Main.hardMode)
+                {
+                    MKLP_Tile[] hellstoneid = { new(58, 0), new(77, 0), new(239, 10), new(491, 0), new(648, 6), new(648, 7),
+                        new(648, 8) };
+
+                    foreach (MKLP_Tile add in hellstoneid) // hellstone are breakable from bombs on hm
+                    {
+                        if (!getillegaltile.ContainsKey(add))
+                        {
+                            getillegaltile.Add(add, "Evil Boss");
+                        }
+                    }
+                }
+            }
+            #endregion
+
+            #region ( Evil Boss Enabled )
+
+            if ((bool)MKLP.Config.BossManager.AllowEaterOfWorlds || (bool)MKLP.Config.BossManager.AllowBrainOfCthulhu)
+            { //     true if its eow/boc enabled    |    false if its not enabled
+                MKLP_Tile[] hellstoneid = { new(58, 0), new(77, 0), new(239, 10), new(491, 0) };
+
+                foreach (MKLP_Tile remove in hellstoneid) // hellstone are breakable from bombs on hm
+                {
+                    if (!getillegaltile.ContainsKey(remove))
+                    {
+                        getillegaltile.Remove(remove);
+                    }
+                }
+            }
+            else
+            {
+
+            }
+            //86
+            #endregion
+
+            #region [ Skeletron ]
+            if (!NPC.downedBoss3)
+            {
+                MKLP_Tile[] addin = { new(10, 8), new(11, 8), new(14, 4), new(15, 7), new(18, 4), new(21, 41), new(34, 21),
+                    new(42, 25), new(79, 20), new(87, 16), new(88, 10), new(89, 11), new(89, 43), new(93, 16), new(97, 0),
+                    new(100, 16), new(101, 21), new(104, 8), new(135, 1), new(135, 4), new(135, 5), new(144, 3), new(144, 4),
+                    new(172, 4), new(194, 0), new(235, 0), new(240, 3), new(300, 0), new(314, 2), new(380, 5), new(380, 6),
+                    new(424, 0), new(425, 0), new(429, 0), new(441, 41), new(442, 0), new(445, 0), new(491, 0), new(497, 5) };
+
+                MKLP_Tile[] dungeonrushids = { new(21, 3), new(21, 4) };
+
+                
+
+                foreach (MKLP_Tile add in dungeonrushids)
+                {
+                    if (!allowdungeonrush)
+                    {
+                        if (!getillegaltile.ContainsKey(add))
+                        {
+                            getillegaltile.Add(add, "Skeletron");
+                        }
+                    }
+
+                }
+
+                foreach (MKLP_Tile add in addin)
+                {
+                    if (!getillegaltile.ContainsKey(add))
+                    {
+                        getillegaltile.Add(add, "Skeletron");
+                    }
+                }
+
+                if (!Main.drunkWorld && !Main.remixWorld)
+                {
+                    MKLP_Tile[] skeleids = { new(19, 4), new(647, 0), new(647, 1), new(647, 2), new(647, 3), new(647, 4),
+                        new(647, 5), new(647, 6), new(648, 52), new(648, 53), new(648, 54), new(649, 6), new(649, 7),
+                        new(649, 8), new(649, 9), new(649, 10), new(649, 11), new(649, 12), new(649, 13), new(649, 14),
+                        new(649, 15), new(650, 12), new(650, 13), new(650, 14), new(650, 15), new(650, 16), new(650, 17),
+                        new(650, 18), new(650, 19), new(650, 20), new(650, 21), new(650, 22), new(650, 23), new(650, 24),
+                        new(650, 25), new(650, 26), new(650, 27) };
+
+                    foreach (MKLP_Tile add in skeleids)
+                    {
+                        if (!getillegaltile.ContainsKey(add))
+                        {
+                            getillegaltile.Add(add, "Skeletron");
+                        }
+                    }
+                }
+            }
+            #endregion
+
+            #region [ Queen Bee ]
+
+            if (!NPC.downedQueenBee)
+            {
+                MKLP_Tile[] addin = { new(96, 1), new(207, 0, true), new(225, 0), new(240, 4), new(380, 1) };
+                foreach (MKLP_Tile add in addin)
+                {
+                    if (!getillegaltile.ContainsKey(add))
+                    {
+                        getillegaltile.Add(add, "Queen Bee");
+                    }
+                }
+            }
+
+            #endregion
+
+            #region [ Deerclops ]
+
+            if (!NPC.downedDeerclops)
+            {
+                MKLP_Tile[] addin = { new(240, 75) };
+
+                foreach (MKLP_Tile add in addin)
+                {
+                    if (!getillegaltile.ContainsKey(add))
+                    {
+                        getillegaltile.Add(add, "Deerclops");
+                    }
+                }
+            }
+
+            #endregion
+
+
+            #region [ HardMode | Wall of Flesh ]
+            if (!Main.hardMode)
+            {
+
+                MKLP_Tile[] addin = { new(4, 8), new(4, 11), new(4, 14), new(5, 3), new(10, 21), new(10, 36), new(10, 37),
+                    new(10, 38),new(11, 21), new(11, 36), new(11, 37), new(11, 38), new(14, 18), new(14, 35), new(15, 4),
+                    new(15, 19), new(15, 20), new(15, 36), new(15, 37), new(15, 38), new(18, 31), new(18, 32), new(18, 33),
+                    new(19, 30), new(19, 31), new(19, 34), new(19, 36), new(19, 37), new(33, 16), new(33, 30), new(33, 31),
+                    new(34, 20), new(34, 37), new(34, 38), new(42, 24), new(42, 37), new(42, 38), new(79, 10), new(79, 31),
+                    new(79, 32), new(87, 14), new(87, 30), new(87, 32), new(88, 8), new(88, 28), new(88, 32), new(89, 9),
+                    new(89, 33), new(89, 35), new(90, 26), new(90, 31), new(90, 32), new(93, 15), new(93, 31), new(93, 32),
+                    new(100, 31), new(100, 32), new(101, 20), new(101, 32), new(101, 33), new(104, 2), new(104, 28), new(104, 33),
+                    new(107, 0), new(108, 0), new(111, 0), new(116, 0), new(117, 0), new(118, 0), new(121, 0), new(122, 0),
+                    new(125, 0), new(127, 0), new(129, 0, true), new(133, 0, true), new(134, 0, true), new(137, 5), new(150, 0),
+                    new(164, 0), new(172, 3), new(172, 16), new(172, 32), new(172, 33), new(177, 0), new(195, 0), new(215, 1),
+                    new(215, 4), new(215, 5), new(218, 0), new(221, 0), new(222, 0), new(223, 0), new(227, 8), new(227, 9),
+                    new(227, 10), new(227, 11), new(239, 11), new(239, 12), new(239, 13), new(239, 14), new(239, 15), new(239, 16),
+                    new(240, 5), new(240, 58), new(240, 89), new(242, 52), new(242, 55), new(246, 15), new(246, 23), new(246, 24),
+                    new(246, 25), new(248, 0), new(249, 0), new(250, 0), new(326, 0), new(327, 0), new(328, 0), new(329, 0),
+                    new(336, 0), new(340, 0), new(341, 0), new(342, 0), new(343, 0), new(344, 0), new(345, 0), new(351, 0),
+                    new(356, 0), new(373, 0), new(374, 0), new(375, 0), new(367, 9), new(367, 10), new(367, 11), new(367, 12),
+                    new(367, 13), new(367, 14), new(367, 15), new(367, 16), new(367, 17), new(367, 19), new(367, 21), new(367, 23),
+                    new(367, 25), new(379, 0), new(380, 7), new(385, 0), new(402, 0), new(403, 0), new(423, 0, true), new(458, 0),
+                    new(459, 0), new(461, 0), new(462, 0), new(474, 0), new(480, 0), new(496, 0), new(497, 28), new(497, 29),
+                    new(498, 0), new(507, 0), new(508, 0), new(663, 0) };
+
+                foreach (MKLP_Tile add in addin)
+                {
+                    if (!getillegaltile.ContainsKey(add))
+                    {
+                        getillegaltile.Add(add, "HardMode | Wall of Flesh");
+                    }
+                }
+
+                if (!Main.tenthAnniversaryWorld)
+                {
+                    MKLP_Tile[] hminprehm = { new(4, 20), new(10, 3), new(14, 3), new(18, 3), new(19, 3), new(20, 5), new(20, 7),
+                        new(21, 9), new(33, 10), new(34, 13), new(42, 17), new(79, 3), new(87, 3), new(88, 3), new(89, 4),
+                        new(90, 7), new(93, 7), new(100, 8), new(101, 13), new(104, 19), new(109, 0), new(159, 0), new(172, 23),
+                        new(242, 62), new(441, 9), new(492, 0), new(497, 2), new(597, 2) };
+
+                    foreach (MKLP_Tile add in hminprehm)
+                    {
+                        if (!getillegaltile.ContainsKey(add))
+                        {
+                            getillegaltile.Add(add, "HardMode | Wall of Flesh");
+                        }
+                    }
+                    if (!Main.zenithWorld)
+                    {
+                        MKLP_Tile[] hminprehm2 = { new(160, 0) };
+
+                        foreach (MKLP_Tile add in hminprehm2)
+                        {
+                            if (!getillegaltile.ContainsKey(add))
+                            {
+                                getillegaltile.Add(add, "HardMode | Wall of Flesh");
+                            }
+                        }
+                    }
+                }
+            }
+            #endregion
+
+            #region [ Queen Slime ]
+
+            if (!NPC.downedQueenSlime)
+            {
+                MKLP_Tile[] addin = { new(240, 73) };
+                foreach (MKLP_Tile add in addin)
+                {
+                    if (!getillegaltile.ContainsKey(add))
+                    {
+                        getillegaltile.Add(add, "Queen Slime");
+                    }
+                }
+            }
+
+            #endregion
+
+            #region ( Mechanical Bosses )
+
+            if (!NPC.downedMechBoss1 && !NPC.downedMechBoss2 && !NPC.downedMechBoss3)
+            {
+                MKLP_Tile[] addin = { new(10, 5), new(10, 23), new(11, 5), new(11, 23), new(14, 5), new(14, 20), new(15, 8),
+                    new(15, 23), new(18, 6), new(18, 21), new(18, 34), new(19, 21), new(21, 43), new(33, 6), new(33, 23),
+                    new(33, 32), new(34, 30), new(34, 39), new(42, 12), new(42, 14), new(42, 39), new(79, 12), new(79, 14),
+                    new(87, 6), new(87, 10), new(79, 33), new(87, 6), new(87, 33), new(88, 23), new(88, 33), new(89, 16),
+                    new(89, 26), new(89, 36), new(90, 12), new(90, 33), new(93, 3), new(93, 12), new(93, 33), new(100, 3),
+                    new(100, 5), new(100, 33), new(101, 8), new(101, 34), new(104, 5), new(104, 15), new(104, 34), new(172, 5),
+                    new(172, 18), new(172, 34), new(198, 0), new(217, 0), new(239, 18), new(240, 62), new(240, 81), new(272, 0),
+                    new(301, 0), new(307, 0), new(419, 0, true), new(420, 0, true), new(421, 0), new(422, 0), new(441, 43),
+                    new(467, 3), new(468, 3), new(469, 2), new(497, 6), new(497, 18), new(497, 30), new(499, 0), new(642, 0) };
+
+                foreach (MKLP_Tile add in addin)
+                {
+                    if (!getillegaltile.ContainsKey(add))
+                    {
+                        getillegaltile.Add(add, "Mechanical Bosses");
+                    }
+                }
+            }
+
+
+            if (!NPC.downedMechBoss1 || !NPC.downedMechBoss2 || !NPC.downedMechBoss3)
+            {
+                MKLP_Tile[] addin = { new(211, 0), new(239, 17), new(346, 0) };
+
+
+                foreach (MKLP_Tile add in addin)
+                {
+                    if (!getillegaltile.ContainsKey(add))
+                    {
+                        getillegaltile.Add(add, "Post Mechanical Bosses");
+                    }
+                }
+            }
+
+            #region [ The Destroyer ]
+
+            if (!NPC.downedMechBoss1)
+            {
+                MKLP_Tile[] addin = { new(240, 6) };
+                foreach (MKLP_Tile add in addin)
+                {
+                    if (!getillegaltile.ContainsKey(add))
+                    {
+                        getillegaltile.Add(add, "The Destroyer");
+                    }
+                }
+            }
+
+            #endregion
+
+            #region [ The Twins ]
+
+            if ((bool)MKLP.Config.BossManager.AllowTheTwins)
+            {
+                MKLP_Tile[] addin = { new(240, 8), new(240, 9), new(413, 2) };
+                foreach (MKLP_Tile add in addin)
+                {
+                    if (!getillegaltile.ContainsKey(add))
+                    {
+                        getillegaltile.Add(add, "The Twins");
+                    }
+                }
+            }
+
+            if (!NPC.downedMechBoss2)
+            {
+                MKLP_Tile[] addin = { };
+                foreach (MKLP_Tile add in addin)
+                {
+                    if (!getillegaltile.ContainsKey(add))
+                    {
+                        getillegaltile.Add(add, "The Twins");
+                    }
+                }
+            }
+
+            #endregion
+
+            #region [ Skeletron Prime ]
+
+            if (!NPC.downedMechBoss3)
+            {
+                MKLP_Tile[] addin = { new(240, 7) };
+                foreach (MKLP_Tile add in addin)
+                {
+                    if (!getillegaltile.ContainsKey(add))
+                    {
+                        getillegaltile.Add(add, "Skeletron Prime");
+                    }
+                }
+            }
+
+            #endregion
+
+            #endregion
+
+            #region [ Plantera ]
+
+            if (!NPC.downedPlantBoss)
+            {
+                MKLP_Tile[] addin = { new(10, 25), new(11, 25), new(14, 22), new(15, 25), new(18, 17), new(19, 16), new(19, 48), new(21, 18),
+                    new(21, 19), new(21, 20), new(21, 21), new(21, 22), new(21, 23), new(21, 24), new(21, 25), new(21, 26), new(21, 27),
+                    new(21, 46), new(33, 24), new(34, 16), new(42, 21), new(79, 18), new(87, 18), new(88, 12), new(89, 13), new(90, 10),
+                    new(93, 10), new(100, 12), new(101, 14), new(104, 22), new(172, 20), new(210, 0), new(239, 20), new(239, 21),
+                    new(240, 36), new(240, 37), new(240, 38), new(240, 39), new(240, 40), new(240, 85), new(242, 53), new(247, 0),
+                    new(253, 0), new(348, 0), new(441, 11), new(441, 18), new(441, 19), new(441, 20), new(441, 21), new(441, 46),
+                    new(467, 12), new(467, 13), new(468, 12), new(497, 20), new(497, 39), new(541, 0), new(620, 0), new(657, 0) };
+
+                foreach (MKLP_Tile add in addin)
+                {
+                    if (!getillegaltile.ContainsKey(add))
+                    {
+                        getillegaltile.Add(add, "Plantera");
+                    }
+                }
+
+                if (!allowtemplerush)
+                {
+                    MKLP_Tile[] templeids = { new(14, 9), new(15, 12), new(18, 10), new(21, 16), new(105, 43), new(105, 44), new(105, 45),
+                        new(135, 6), new(240, 88), new(303, 0), new(441, 16) };
+
+                    foreach (MKLP_Tile add in templeids)
+                    {
+                        if (!getillegaltile.ContainsKey(add))
+                        {
+                            getillegaltile.Add(add, "Plantera (temple rush)");
+                        }
+                    }
+                }
+                
+                if (!Main.tenthAnniversaryWorld)
+                {
+                    MKLP_Tile[] princessids = { new(240, 74), new(240, 80), new(240, 86), new(242, 45), new(242, 64),
+                        new(245, 13), new(246, 29), new(623, 0, true) };
+
+                    foreach (MKLP_Tile add in princessids)
+                    {
+                        if (!getillegaltile.ContainsKey(add))
+                        {
+                            getillegaltile.Add(add, "Plantera");
+                        }
+                    }
+                }
+            }
+
+            #endregion
+
+            #region [ Golem ]
+
+            if (!NPC.downedGolemBoss)
+            {
+                MKLP_Tile[] addin = { new(10, 12), new(10, 32), new(11, 12), new(11, 32), new(14, 31), new(15, 32), new(18, 27),
+                    new(19, 26), new(19, 33), new(21, 48), new(33, 11), new(33, 26), new(34, 14), new(34, 33), new(42, 19),
+                    new(42, 33), new(79, 16), new(79, 27), new(87, 20), new(87, 26), new(88, 15), new(88, 24), new(89, 20),
+                    new(89, 29), new(90, 8), new(90, 27), new(93, 8), new(93, 27), new(100, 10), new(100, 27), new(101, 16),
+                    new(101, 28), new(104, 12), new(104, 24), new(137, 1), new(137, 2), new(137, 3), new(137, 4), new(172, 9),
+                    new(172, 28), new(226, 0), new(238, 0, true), new(240, 57), new(240, 61), new(350, 0), new(441, 48),
+                    new(497, 10), new(497, 25), new(648, 18), new(648, 19), new(648, 20) };
+
+                foreach (MKLP_Tile add in addin)
+                {
+                    if (!getillegaltile.ContainsKey(add))
+                    {
+                        getillegaltile.Add(add, "Golem");
+                    }
+                }
+            }
+
+            #endregion
+
+            #region [ Duke Fishron ]
+
+            if (!NPC.downedFishron)
+            {
+                MKLP_Tile[] addin = { new(240, 55) };
+                foreach (MKLP_Tile add in addin)
+                {
+                    if (!getillegaltile.ContainsKey(add))
+                    {
+                        getillegaltile.Add(add, "Duke Fishron");
+                    }
+                }
+            }
+
+            #endregion
+
+            #region [ Empress of Light ]
+
+            if (!NPC.downedEmpressOfLight)
+            {
+                MKLP_Tile[] addin = { new(240, 72) };
+
+                foreach (MKLP_Tile add in addin)
+                {
+                    if (!getillegaltile.ContainsKey(add))
+                    {
+                        getillegaltile.Add(add, "Empress of Light");
+                    }
+                }
+            }
+
+            #endregion
+
+            #region [ Lunatic Cultist ]
+
+            if (!NPC.downedAncientCultist)
+            {
+                MKLP_Tile[] addin = { new(10, 39), new(10, 40), new(10, 41), new(10, 42), new(11, 39), new(11, 40), new(11, 41),
+                    new(11, 42), new(15, 39), new(15, 40), new(15, 41), new(15, 42), new(18, 35), new(18, 36), new(18, 37),
+                    new(18, 38), new(19, 38), new(19, 39), new(19, 40), new(19, 41), new(33, 33), new(33, 34), new(33, 35),
+                    new(33, 36), new(34, 40), new(34, 41), new(34, 42), new(34, 43), new(42, 40), new(42, 41), new(42, 42),
+                    new(42, 43), new(79, 34), new(79, 35), new(79, 36), new(79, 37), new(87, 34), new(87, 35), new(87, 36),
+                    new(87, 37), new(88, 34), new(88, 35), new(88, 36), new(88, 37), new(89, 37), new(89, 38), new(89, 39),
+                    new(89, 40), new(90, 34), new(90, 35), new(90, 36), new(90, 37), new(93, 34), new(93, 35), new(93, 36), 
+                    new(93, 37), new(100, 34), new(100, 35), new(100, 36), new(100, 37), new(101, 35), new(101, 36),
+                    new(101, 37), new(101, 38), new(104, 35), new(104, 36), new(104, 37), new(104, 38), new(172, 35),
+                    new(172, 36), new(172, 37), new(172, 38), new(240, 56), new(410, 0, true), new(412, 0), new(415, 0),
+                    new(416, 0), new(417, 0), new(418, 0), new(467, 5), new(467, 6), new(467, 7), new(467, 8), new(468, 5),
+                    new(468, 6), new(468, 7), new(468, 8), new(469, 3), new(469, 4), new(469, 5), new(469, 6), new(497, 33),
+                    new(497, 34), new(497, 35), new(497, 36), new(500, 0), new(501, 0), new(502, 0), new(503, 0) };
+
+                foreach (MKLP_Tile add in addin)
+                {
+                    if (!getillegaltile.ContainsKey(add))
+                    {
+                        getillegaltile.Add(add, "Lunatic Cultist");
+                    }
+                }
+            }
+
+            #endregion
+
+            #region [ Moon Lord ]
+
+            if (!NPC.downedMoonlord)
+            {
+                MKLP_Tile[] addin = { new(209, 3), new(209, 4), new(239, 22), new(240, 59), new(242, 36), new(242, 59),
+                    new(408, 0), new(409, 0), new(509, 0), new(597, 8), new(669, 0), new(670, 0), new(671, 0), new(672, 0),
+                    new(673, 0), new(674, 0), new(675, 0), new(676, 0) };
+
+
+                foreach (MKLP_Tile add in addin)
+                {
+                    if (!getillegaltile.ContainsKey(add))
+                    {
+                        getillegaltile.Add(add, "Moon Lord");
+                    }
+                }
+            }
+
+            #endregion
+
+            #endregion
+
+            #region ( Invasion )
+
+            #region [ Goblin Army ]
+            if (!NPC.downedGoblins) // Goblin Army
+            {
+                /*
+                int[] addin = { };
+
+                foreach (int add in addin)
+                {
+                    if (!getillegalprojectile.ContainsKey(add))
+                    {
+                        getillegalprojectile.Add(add, "Goblin Army");
+                    }
+                }
+                */
+            }
+            #endregion
+
+            #region [ Pirate Invasion ]
+            if (!NPC.downedPirates) // Pirate Invasion
+            {
+                MKLP_Tile[] addin = { new(209, 0, true) };
+                foreach (MKLP_Tile add in addin)
+                {
+                    if (!getillegaltile.ContainsKey(add))
+                    {
+                        getillegaltile.Add(add, "Pirate Invasion");
+                    }
+                }
+            }
+            #endregion
+
+            #region [ Frost Legion ]
+            if (!NPC.downedFrost)
+            {
+                MKLP_Tile[] addin = { new(242, 31), new(242, 32), new(242, 33), new(242, 34), new(242, 35) };
+                foreach (MKLP_Tile add in addin)
+                {
+                    if (!getillegaltile.ContainsKey(add))
+                    {
+                        getillegaltile.Add(add, "Pirate Invasion");
+                    }
+                }
+            }
+            #endregion
+
+            #region [ Martians ]
+            if (!NPC.downedMartians)
+            {
+                MKLP_Tile[] addin = { new(242, 27), new(242, 28), new(242, 29) };
+                foreach (MKLP_Tile add in addin)
+                {
+                    if (!getillegaltile.ContainsKey(add))
+                    {
+                        getillegaltile.Add(add, "Pirate Invasion");
+                    }
+                }
+            }
+            #endregion
+
+            #endregion
+
+            #endregion
+
+            return getillegaltile;
         }
 
         public static void BossManager()

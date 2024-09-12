@@ -12,5 +12,4 @@
     <PackageReference Include="TSAPI" Version="5.2.0" />
     <PackageReference Include="TShock" Version="5.2.0" />
   </ItemGroup>
-
 </Project>

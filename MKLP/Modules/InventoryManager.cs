@@ -13,23 +13,26 @@ namespace MKLP.Modules
     {
 
         public static List<string> InventoryLogs = new();
+        static int InvLog_index = 0;
 
         public static void TryAddInvLog(TSPlayer tsplayer, Item playerinv, Item prevplayerinv, int slot, string Type)
         {
-            InventoryLogs.Add($"{tsplayer.Account.Name}|{Type}|{slot}|" +
-                $"{prevplayerinv.netID},{prevplayerinv.stack},{prevplayerinv.prefix}" +
-                $"|" +
-                $"{playerinv.netID},{playerinv.stack},{playerinv.prefix}|{InventoryLogs.Count + 1}");
+            InvLog_index++;
 
-            if (InventoryLogs.Count >= 150)
+            if (InventoryLogs.Count >= 100)
             {
-                int count = 0;
-                foreach (var getandmodify in InventoryLogs)
-                {
-                    InventoryLogs.Remove(getandmodify);
-                    count++;
-                    if (count >= 30) return;
-                }
+                InventoryLogs.RemoveRange(0, 40);
+            }
+
+
+            string log = $"{tsplayer.Account.Name}{DiscordKLP.S_}{Type}{DiscordKLP.S_}{slot}{DiscordKLP.S_}" +
+                $"{prevplayerinv.netID},{prevplayerinv.stack},{prevplayerinv.prefix}" +
+                DiscordKLP.S_ +
+                $"{playerinv.netID},{playerinv.stack},{playerinv.prefix}|{InvLog_index}";
+
+            if (!InventoryLogs.Contains(log))
+            {
+                InventoryLogs.Add(log);
             }
         }
 
