@@ -8,3 +8,27 @@ Moderation Plugin for GSKLP Server
 - Illegal Progression ( MKLP )
 - Warning Suspicion Activity `dupe` ( MKLP )
 - InventoryViewer ( Modified ) { from Nightklp }
+
+# Guide
+- **Replace_Ban_TShockCommand** if set to true `/qban` from mklp will replace `/ban` from tshock
+- **Replace_Mute_TShockCommand** if set to true `/qmute` from mklp will replace `/qmute` from tshock
+
+
+# Commands
+**/progression** : Displays defeated boss
+**/report** : Report any suspicious activity
+
+**/staffchat** : sends your message who has **Staff** permission
+
+**/tpmap** : toggle tp map ping
+
+**/disable** : Acts as Ban but prevents players from doing anything
+**/enable** : enable's a player that got disabled
+
+**/unban** : Removes ban tickets
+**/qban** :  Bans a player
+
+**/unmute** : Unmutes a player
+**/mute** : Mutes a player
+
+**/inventoryview** : "View's inventory of a player
