@@ -24,6 +24,7 @@ order to install the plugin donwload `MKLP.dll` in releases after that put that 
 # Disable Code
 
 **Main code1** : High Stack Value
+
 **Main code2** : null item boss spawn
 
 **Survival code1** : Illegal Item Progression
