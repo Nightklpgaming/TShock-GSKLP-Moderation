@@ -15,6 +15,7 @@ order to install the plugin donwload `MKLP.dll` in releases after that put that 
 - InventoryViewer ( Modified ) { from Nightklp }
 
 # Guide
+**On Config File** `MKLP.json`
 - **Replace_Ban_TShockCommand** if set to true `/qban` from mklp will replace `/ban` from tshock
 - **Replace_Mute_TShockCommand** if set to true `/qmute` from mklp will replace `/qmute` from tshock
 
