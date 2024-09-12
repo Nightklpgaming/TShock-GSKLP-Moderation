@@ -2,7 +2,7 @@
 Moderation Plugin for GSKLP Server
 
 ## Features
-- Disable Feature ( Modified ) { from Oz5581 }
+- Disable Feature ( MKLP )
 - BossManager ( Modified ) { from Oz5581 }
 - Discord Bot ( GSKLP )
 - Illegal Progression ( MKLP )
