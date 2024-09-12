@@ -46,14 +46,21 @@ order to install the plugin donwload `MKLP.dll` in releases after that put that 
 **Default code6** : HealOther Threshold
 
 # Commands
+
+### Default
 **/progression** : Displays defeated boss
+
 **/report** : Report any suspicious activity
 
+### Staff
 **/staffchat** : sends your message who has **Staff** permission
 
+### Admin
 **/tpmap** : toggle tp map ping
 
+### Moderator
 **/disable** : Acts as Ban but prevents players from doing anything
+
 **/enable** : enable's a player that got disabled
 
 **/unban** : Removes ban tickets
@@ -62,4 +69,5 @@ order to install the plugin donwload `MKLP.dll` in releases after that put that 
 **/unmute** : Unmutes a player
 **/mute** : Mutes a player
 
+### Inspect
 **/inventoryview** : "View's inventory of a player
