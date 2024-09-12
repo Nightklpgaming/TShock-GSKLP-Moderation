@@ -17,7 +17,7 @@ order to install the plugin donwload `MKLP.dll` in releases after that put that 
 # Guide
 **On Config File** `MKLP.json`
 - **Replace_Ban_TShockCommand** if set to true `/qban` from mklp will replace `/ban` from tshock
-- **Replace_Mute_TShockCommand** if set to true `/qmute` from mklp will replace `/qmute` from tshock
+- **Replace_Mute_TShockCommand** if set to true `/qmute` from mklp will replace `/mute` from tshock
 
 - All permissions are in `MKLP.json` in `tshock` folder which they can be modified ( require's restart when modifying it )
 
