@@ -34,11 +34,15 @@ order to install the plugin donwload `MKLP.dll` in releases after that put that 
 **Survival code3** : Illegal Tile Progression
 
 **Default code1** : Tile Kill Threshold
+
 **Default code2** : Tile Place Threshold
+
 **Default code3** : Tile Paint Threshold
+
 **Default code4** : Liquid Threshold
 
 **Default code5** : Projectile Threshold
+
 **Default code6** : HealOther Threshold
 
 # Commands
