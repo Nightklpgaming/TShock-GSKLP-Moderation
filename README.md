@@ -33,6 +33,8 @@ order to install the plugin donwload `MKLP.dll` in releases after that put that 
 
 **Survival code3** : Illegal Tile Progression
 
+**Survival code4** : Illegal Wall Progression
+
 **Default code1** : Tile Kill Threshold
 
 **Default code2** : Tile Place Threshold
@@ -58,7 +60,14 @@ order to install the plugin donwload `MKLP.dll` in releases after that put that 
 ### Admin
 **/tpmap** : toggle tp map ping
 
+**/clearlag** : Deletes low value npc/items and projectile
+
 ### Moderator
+
+**/managereport** : View/Delete any reports
+
+**/baninfo** : Displays ban information using ban ticket number
+
 **/disable** : Acts as Ban but prevents players from doing anything
 
 **/enable** : enable's a player that got disabled
