@@ -5,6 +5,8 @@ using IL.Terraria.Graphics;
 using Microsoft.Data.Sqlite;
 using Microsoft.Xna.Framework;
 using MKLP.Modules;
+using NuGet.Protocol;
+using NuGet.Protocol.Plugins;
 using Org.BouncyCastle.Asn1.X509;
 using System;
 
@@ -41,7 +43,7 @@ namespace MKLP
 
         #region [ Plugin Info ]
         public override string Author => "Nightklp";
-        public override string Description => "a plugin that allows users to form clans";
+        public override string Description => "Makes Moderating a bit more easy";
         public override string Name => "MKLP";
         public override Version Version => new Version(1, 0, 0);
         #endregion
@@ -54,15 +56,19 @@ namespace MKLP
 
         public static DiscordKLP Discordklp = new();
 
-        public static List<string> DisabledKey = new();
+        public static Dictionary<string, string> DisabledKey = new();
 
         public static AccountDLinked LinkAccountManager = new();
 
+
+        //illegal things list
         public static Dictionary<int, string> IllegalItemProgression = new();
 
         public static Dictionary<short, string> IllegalProjectileProgression = new();
 
         public static Dictionary<SurvivalManager.MKLP_Tile, string> IllegalTileProgression = new();
+
+        public static Dictionary<ushort, string> IllegalWallProgression = new();
 
         #endregion
 
@@ -79,12 +85,16 @@ namespace MKLP
 
             ServerApi.Hooks.ServerJoin.Register(this, OnPlayerJoin);
 
+            ServerApi.Hooks.ServerLeave.Register(this, OnPlayerLeave);
+
             PlayerHooks.PlayerCommand += OnPlayerCommand;
 
             //=====================game=====================
             ServerApi.Hooks.NetGetData.Register(this, OnGetData);
 
             GetDataHandlers.TileEdit += OnTileEdit;
+
+            GetDataHandlers.LiquidSet += HandleLiquidInteraction;
 
             GetDataHandlers.NewProjectile += OnNewProjectile;
 
@@ -97,7 +107,7 @@ namespace MKLP
             //GetDataHandlers.get
 
             //=====================Server===================
-            ServerApi.Hooks.GameUpdate.Register(this, OnUpdate);
+            //ServerApi.Hooks.GameUpdate.Register(this, OnUpdate);
 
             GeneralHooks.ReloadEvent += OnReload;
 
@@ -140,9 +150,24 @@ namespace MKLP
                 HelpText = "Able to TP anywhere using map ping"
             });
 
+            Commands.ChatCommands.Add(new Command(Config.Permissions.CMD_ClearLag, CMD_ClearLag, "clearlag")
+            {
+                HelpText = "Deletes low value npc/items"
+            });
+
             #endregion
 
             #region { moderation }
+
+            Commands.ChatCommands.Add(new Command(Config.Permissions.CMD_ManageReport, CMD_ManageReport, "managereport", "mreport")
+            {
+                HelpText = "View/Delete any reports"
+            });
+
+            Commands.ChatCommands.Add(new Command(Config.Permissions.CMD_Ban, CMD_BanInfo, "baninfo")
+            {
+                HelpText = "Displays ban information using ban ticket number"
+            });
 
             Commands.ChatCommands.Add(new Command(Config.Permissions.CMD_Disable, CMD_disable, "disable")
             {
@@ -222,12 +247,16 @@ namespace MKLP
 
                 ServerApi.Hooks.ServerJoin.Deregister(this, OnPlayerJoin);
 
+                ServerApi.Hooks.ServerLeave.Deregister(this, OnPlayerLeave);
+
                 PlayerHooks.PlayerCommand -= OnPlayerCommand;
 
                 //=====================game=====================
                 ServerApi.Hooks.NetGetData.Deregister(this, OnGetData);
 
                 GetDataHandlers.TileEdit -= OnTileEdit;
+
+                GetDataHandlers.LiquidSet += HandleLiquidInteraction;
 
                 GetDataHandlers.NewProjectile -= OnNewProjectile;
 
@@ -238,7 +267,7 @@ namespace MKLP
                 ServerApi.Hooks.NpcKilled.Deregister(this, OnNPCKilled);
 
                 //=====================Server===================
-                ServerApi.Hooks.GameUpdate.Deregister(this, OnUpdate);
+                //ServerApi.Hooks.GameUpdate.Deregister(this, OnUpdate);
 
                 GeneralHooks.ReloadEvent -= OnReload;
             }
@@ -257,9 +286,9 @@ namespace MKLP
 
             var player = TShock.Players[args.Msg.whoAmI];
 
-            if (DisabledKey.Contains(Identifier.Name + player.Name) ||
-                DisabledKey.Contains(Identifier.IP + player.IP) ||
-                DisabledKey.Contains(Identifier.UUID + player.UUID))
+            if (DisabledKey.ContainsKey(Identifier.Name + player.Name) ||
+                DisabledKey.ContainsKey(Identifier.IP + player.IP) ||
+                DisabledKey.ContainsKey(Identifier.UUID + player.UUID))
             {
                 if (player == null || !player.Active || player.Dead)
                     return;
@@ -275,6 +304,31 @@ namespace MKLP
                 return;
             }
 
+            #region ( Inventory Checking )
+            if (args.MsgID == PacketTypes.PlayerSlot ||
+                args.MsgID == PacketTypes.ItemOwner ||
+                args.MsgID == PacketTypes.ClientSyncedInventory)
+            {
+                if ((!player.HasPermission("tshock.item") || !player.HasPermission("tshock.item.*")) && !player.HasPermission(Config.Permissions.IgnoreSurvivalCode_1)) ManagePlayer.CheckIllegalItemInventory(player);
+
+                if (player.ContainsData("MKLP_PrevInventory"))
+                {
+
+                    Item[] prevplayer = player.GetData<Item[]>("MKLP_PrevInventory");
+
+                    ManagePlayer.CheckPreviousInventory(player, player.TPlayer.inventory, prevplayer);
+
+                    player.SetData("MKLP_PrevInventory", player.TPlayer.inventory.Clone());
+                }
+                else
+                {
+                    player.SetData("MKLP_PrevInventory", player.TPlayer.inventory.Clone());
+                }
+            }
+
+            #endregion
+
+            #region { spawn boss/invasion }
             using (var data = new MemoryStream(args.Msg.readBuffer, args.Index, args.Length - 1))
             {
                 if (args.MsgID == PacketTypes.SpawnBossorInvasion)
@@ -291,6 +345,7 @@ namespace MKLP
                     }
                 }
             }
+            #endregion
 
             #region { Ping Map }
             using (var stream = new MemoryStream(args.Msg.readBuffer, args.Index, args.Length))
@@ -326,7 +381,27 @@ namespace MKLP
         #region { Player }
         private static void OnPlayerUpdate(object? sender, GetDataHandlers.PlayerUpdateEventArgs args)
         {
+            #region
+            if (args.Player == null || !args.Player.Active) return;
 
+            if (!args.Player.IsLoggedIn)
+            {
+                return;
+            }
+
+            if (DisabledKey.ContainsKey(Identifier.Name + args.Player.Name) ||
+                DisabledKey.ContainsKey(Identifier.IP + args.Player.IP) ||
+                DisabledKey.ContainsKey(Identifier.UUID + args.Player.UUID))
+            {
+                if (TShockAPI.Utils.Distance(value2: new Vector2((int)args.Player.TPlayer.position.X / 16, (int)args.Player.TPlayer.position.Y / 16), value1: new Vector2(Main.spawnTileX, Main.spawnTileY)) >= 3f)
+                {
+                    args.Player.Teleport(Main.spawnTileX * 16, Main.spawnTileY * 16);
+
+                }
+                args.Player.SetBuff(149, 330, true);
+                return;
+            }
+            #endregion
         }
 
         private void OnPlayerJoin(JoinEventArgs args)
@@ -338,6 +413,14 @@ namespace MKLP
             IllegalProjectileProgression = SurvivalManager.GetIllegalProjectile();
 
             IllegalTileProgression = SurvivalManager.GetIllegalTile();
+
+            IllegalWallProgression = SurvivalManager.GetIllegalWall();
+
+            if (TShock.Players.Count() > 0 && !IsChecking)
+            {
+                IsChecking = true;
+                Slow_Checking();
+            }
 
             var player = TShock.Players[args.Who];
             if (player != null)
@@ -365,17 +448,18 @@ namespace MKLP
                 }
                 #endregion
 
-                foreach (string check in DisabledKey)
+                foreach (var check in DisabledKey)
                 {
-                    if (check == Identifier.Name + player.Name ||
-                        check == Identifier.IP + player.IP ||
-                        check == Identifier.UUID + player.UUID)
+                    if (check.Key == Identifier.Name + player.Name ||
+                        check.Key == Identifier.IP + player.IP ||
+                        check.Key == Identifier.UUID + player.UUID)
                     {
-                        player.SendErrorMessage("Your still disabled");
+                        player.SendErrorMessage("Your still disabled" +
+                            "\nReason : " + check.Value);
                     }
                 }
 
-                if (DBManager.CheckPlayer(player))
+                if (DBManager.CheckPlayerMute(player, true))
                 {
                     player.SendErrorMessage("You're still muted!");
                 }
@@ -411,8 +495,21 @@ namespace MKLP
             #endregion
         }
 
+        private void OnPlayerLeave(LeaveEventArgs args)
+        {
+            #region code
+
+            if (TShock.Players.Count() == 0 && IsChecking)
+            {
+                IsChecking = false;
+            }
+
+            #endregion
+        }
+
         private void OnPlayerCommand(PlayerCommandEventArgs args)
         {
+            #region code
             if (args.Handled || args.Player == null)
                 return;
             if (!args.Player.RealPlayer)
@@ -423,9 +520,9 @@ namespace MKLP
             if (command == null)
                 return;
 
-            if (DisabledKey.Contains(Identifier.Name + args.Player.Name) ||
-                DisabledKey.Contains(Identifier.IP + args.Player.IP) ||
-                DisabledKey.Contains(Identifier.UUID + args.Player.UUID))
+            if (DisabledKey.ContainsKey(Identifier.Name + args.Player.Name) ||
+                DisabledKey.ContainsKey(Identifier.IP + args.Player.IP) ||
+                DisabledKey.ContainsKey(Identifier.UUID + args.Player.UUID))
             {
                 if (command.Name == "register" ||
                     command.Name == "login" ||
@@ -453,63 +550,13 @@ namespace MKLP
                 Discordklp.KLPBotSendMessageLog((ulong)Config.Discord.CommandLogChannel, $"Player **{args.Player.Account.Name}** ⛔Tried" +
                     $" `/{command.Name}{((string.Join(" ", args.Parameters.ToArray(), 0, args.Parameters.Count) == "") ? "" : " ")}{string.Join(" ", args.Parameters.ToArray(), 0, args.Parameters.Count)}`");
             }
-            
+            #endregion
         }
 
-        
+
         #endregion
 
         #region { Game }
-        private void OnUpdate(EventArgs e)
-        {
-            #region code
-
-            foreach (TSPlayer player in TShock.Players)
-            {
-
-                if (player == null || !player.Active) continue;
-
-                if (!player.IsLoggedIn)
-                {
-                    continue;
-                }
-
-                if (DisabledKey.Contains(Identifier.Name + player.Name) ||
-                    DisabledKey.Contains(Identifier.IP + player.IP) ||
-                    DisabledKey.Contains(Identifier.UUID + player.UUID))
-                {
-                    if (TShockAPI.Utils.Distance(value2: new Vector2((int)player.TPlayer.position.X / 16, (int)player.TPlayer.position.Y / 16), value1: new Vector2(Main.spawnTileX, Main.spawnTileY)) >= 3f)
-                    {
-                        player.Teleport(Main.spawnTileX * 16, Main.spawnTileY * 16);
-                        
-                    }
-                    player.SetBuff(149, 330, true);
-                    continue;
-                }
-
-                #region ( Inventory Checking )
-
-                if ((!player.HasPermission("tshock.item") || !player.HasPermission("tshock.item.*")) && !player.HasPermission(Config.Permissions.IgnoreSurvivalCode_1)) ManagePlayer.CheckIllegalItemInventory(player);
-
-                if (player.ContainsData("MKLP_PrevInventory"))
-                {
-
-                    Item[] prevplayer = player.GetData<Item[]>("MKLP_PrevInventory");
-
-                    ManagePlayer.CheckPreviousInventory(player, player.TPlayer.inventory, prevplayer);
-
-                    player.SetData("MKLP_PrevInventory", player.TPlayer.inventory.Clone());
-                }
-                else
-                {
-                    player.SetData("MKLP_PrevInventory", player.TPlayer.inventory.Clone());
-                }
-
-                #endregion
-
-            }
-            #endregion
-        }
         
         private void OnTileEdit(object? sender, GetDataHandlers.TileEditEventArgs args)
         {
@@ -521,19 +568,26 @@ namespace MKLP
             if (KillThreshold()) return;
             if (PlaceThreshold()) return;
             if (PaintThreshold()) return;
-            if (LiquidThreshold()) return;
+
+            if ((bool)Config.Main.Prevent_Place_BastStatueNearDoor && PossibleTransmutationGlitch())
+            {
+                args.Player.SendErrorMessage("You cannot place 'Bast_Statue/Door' near each other!");
+                args.Player.SendTileSquareCentered(tileX, tileY, 4);
+                args.Handled = true;
+                return;
+            }
 
             if (args.Action == GetDataHandlers.EditAction.PlaceTile ||
                 args.Action == GetDataHandlers.EditAction.ReplaceTile)
             {
-                if (IllegalTileProgression.ContainsKey(new(Main.tile[tileX, tileY].type, args.Style)) && args.Player.HasPermission(Config.Permissions.IgnoreSurvivalCode_3))
+                if (IllegalTileProgression.ContainsKey(new(Main.tile[tileX, tileY].type, args.Style)) && args.Player.HasPermission(Config.Permissions.IgnoreSurvivalCode_3) && (bool)Config.Main.Using_Survival_Code3)
                 {
                     ManagePlayer.DisablePlayer(args.Player, $"{IllegalTileProgression[new(Main.tile[tileX, tileY].type, args.Style)]} Block Place", ServerReason: $"Survival,code,3|{Main.tile[tileX, tileY].type}|{args.Style}|{IllegalTileProgression[new(Main.tile[tileX, tileY].type, args.Style)]}");
                     args.Player.SendTileSquareCentered(tileX, tileY, 4);
                     args.Handled = true;
                     return;
                 }
-                if (IllegalTileProgression.ContainsKey(new(Main.tile[tileX, tileY].type, 0, true)) && args.Player.HasPermission(Config.Permissions.IgnoreSurvivalCode_3))
+                if (IllegalTileProgression.ContainsKey(new(Main.tile[tileX, tileY].type, 0, true)) && args.Player.HasPermission(Config.Permissions.IgnoreSurvivalCode_3) && (bool)Config.Main.Using_Survival_Code3)
                 {
                     ManagePlayer.DisablePlayer(args.Player, $"{IllegalTileProgression[new(Main.tile[tileX, tileY].type, 0, true)]} Block Place", ServerReason: $"Survival,code,3|{Main.tile[tileX, tileY].type}|{args.Style}|{IllegalTileProgression[new(Main.tile[tileX, tileY].type, 0, true)]}");
                     args.Player.SendTileSquareCentered(tileX, tileY, 4);
@@ -541,8 +595,18 @@ namespace MKLP
                     return;
                 }
             }
-            
 
+            if (args.Action == GetDataHandlers.EditAction.PlaceTile ||
+                args.Action == GetDataHandlers.EditAction.ReplaceTile)
+            {
+                if (IllegalWallProgression.ContainsKey(Main.tile[tileX, tileY].wall) && args.Player.HasPermission(Config.Permissions.IgnoreSurvivalCode_4) && (bool)Config.Main.Using_Survival_Code4)
+                {
+                    ManagePlayer.DisablePlayer(args.Player, $"{IllegalWallProgression[Main.tile[tileX, tileY].wall]} Wall Place", ServerReason: $"Survival,code,4|{Main.tile[tileX, tileY].wall}|{IllegalWallProgression[Main.tile[tileX, tileY].wall]}");
+                    args.Player.SendTileSquareCentered(tileX, tileY, 4);
+                    args.Handled = true;
+                    return;
+                }
+            }
 
             if (args.Action == GetDataHandlers.EditAction.KillTile ||
                 args.Action == GetDataHandlers.EditAction.KillWall ||
@@ -613,30 +677,6 @@ namespace MKLP
                     }
                 }
             }
-
-            /*
-            if ()
-            {
-                if (tileY < (int)Main.worldSurface)
-                {
-                    ushort[] whitelist =
-                    {
-                        LiquidID.Water
-                    };
-                    if (args.Action == GetDataHandlers.EditAction.PlaceTile &&
-                        whitelist.Contains(Main.tile[tileX, tileY].type)) return;
-
-
-                    if (!args.Player.HasPermission(Config.Permissions.IgnoreAntiGrief_protectsurface_placeliquid) && (bool)Config.Main.Message_AntiGrief_Surface_PlaceLiquid)
-                    {
-                        args.Player.SendErrorMessage(Config.Main.Message_AntiGrief_Surface_PlaceLiquid);
-                        args.Player.SendTileSquareCentered(tileX, tileY, 4);
-                        args.Handled = true;
-                        return;
-                    }
-                }
-            }
-            */
 
             if (!NPC.downedBoss3)
             {
@@ -832,51 +872,47 @@ namespace MKLP
                 return false;
             }
 
-            bool LiquidThreshold()
+            
+
+            #endregion
+
+            #region ( door near at bast statue )
+
+            bool PossibleTransmutationGlitch()
             {
-                if (!(bool)Config.Main.Using_Default_Code4) return false;
-                if (args.Player.HasPermission(Config.Permissions.IgnoreDefaultCode_4)) return false;
-
-                int max = (int)Config.Main.default_code4_maxdefault;
-
-                int[] boost =
+                if (Main.tile[tileX, tileY].type == TileID.OpenDoor ||
+                    Main.tile[tileX, tileY].type == TileID.ClosedDoor  ||
+                    Main.tile[tileX, tileY].type == TileID.TrapdoorOpen ||
+                    Main.tile[tileX, tileY].type == TileID.TrapdoorClosed)
                 {
-                    ItemID.HandOfCreation,
-                    ItemID.ArchitectGizmoPack,
-                    ItemID.BrickLayer,
-                    ItemID.PortableCementMixer
-                };
-                foreach (Item check in args.Player.TPlayer.armor)
-                {
-                    if (boost.Contains(check.netID))
+                    for (int x = tileX - 8; x <= tileX + 8; x++)
                     {
-                        max = (int)Config.Main.default_code4_maxboost;
-                        break;
+                        for (int y = tileY - 8; y <= tileY + 8; y++)
+                        {
+                            if (x == tileX && y == tileY)
+                                continue;
+                            if (Main.tile[x, y].type == TileID.CatBast) return true;
+                        }
+                    }
+                } else if (Main.tile[tileX, tileY].type == TileID.CatBast)
+                {
+                    for (int x = tileX - 8; x <= tileX + 8; x++)
+                    {
+                        for (int y = tileY - 8; y <= tileY + 8; y++)
+                        {
+                            if (x == tileX && y == tileY)
+                                continue;
+                            if (Main.tile[x, y].type == TileID.OpenDoor ||
+                                Main.tile[x, y].type == TileID.ClosedDoor ||
+                                Main.tile[x, y].type == TileID.TrapdoorOpen ||
+                                Main.tile[x, y].type == TileID.TrapdoorClosed)
+                            {
+                                return true;
+                            }
+                        }
                     }
                 }
-
-                int[] bomb =
-                {
-                    ItemID.WetBomb,
-                    ItemID.LavaBomb,
-                    ItemID.HoneyBomb
-                };
-                foreach (Item check in args.Player.Inventory)
-                {
-                    if (bomb.Contains(check.netID))
-                    {
-                        max = (int)Config.Main.default_code4_maxbomb;
-                        break;
-                    }
-                }
-
-                if (args.Player.TileLiquidThreshold >= max)
-                {
-                    ManagePlayer.DisablePlayer(args.Player, $"Exceeded Liquid place", ServerReason: $"Default,code,4|{args.Player.SelectedItem.netID}");
-                    args.Player.SendTileSquareCentered(tileX, tileY, 4);
-                    args.Handled = true;
-                    return true;
-                }
+                
 
                 return false;
             }
@@ -895,18 +931,108 @@ namespace MKLP
             #endregion
         }
 
+        private void HandleLiquidInteraction(object? sender, GetDataHandlers.LiquidSetEventArgs args)
+        {
+            #region code
+            int TileX = args.TileX;
+            int TileY = args.TileY;
+
+            if (LiquidThreshold()) return;
+
+            // Log the interaction details
+            string liquidName = args.Type switch
+            {
+                GetDataHandlers.LiquidType.Removal => "Removal",
+                GetDataHandlers.LiquidType.Water => "Water",
+                GetDataHandlers.LiquidType.Lava => "Lava",
+                GetDataHandlers.LiquidType.Honey => "Honey",
+                GetDataHandlers.LiquidType.Shimmer => "Shimmer"
+            };
+
+            if (TileY >= (int)Main.worldSurface)
+            {
+                // Log liquid placed
+                if (!args.Player.HasPermission(Config.Permissions.IgnoreAntiGrief_protectsurface_placeliquid) && (bool)Config.Main.Using_AntiGrief_Surface_PlaceLiquid)
+                {
+                    args.Player.SendErrorMessage(Config.Main.Message_AntiGrief_Surface_Break);
+                    args.Player.SendTileSquareCentered(TileX, TileY, 4);
+                    args.Handled = true;
+                    return;
+                }
+            }
+            else
+            {
+                // Log liquid removed
+                TShock.Log.ConsoleInfo($"{args.Player.Name} removed {liquidName} at ({TileX}, {TileY}).");
+            }
+
+            #region ( Threshold )
+
+            bool LiquidThreshold()
+            {
+                if (!(bool)Config.Main.Using_Default_Code4) return false;
+                if (args.Player.HasPermission(Config.Permissions.IgnoreDefaultCode_4)) return false;
+
+                int max = (int)Config.Main.default_code4_maxdefault;
+
+                int[] boost =
+                {
+                ItemID.HandOfCreation,
+                ItemID.ArchitectGizmoPack,
+                ItemID.BrickLayer,
+                ItemID.PortableCementMixer
+            };
+                foreach (Item check in args.Player.TPlayer.armor)
+                {
+                    if (boost.Contains(check.netID))
+                    {
+                        max = (int)Config.Main.default_code4_maxboost;
+                        break;
+                    }
+                }
+
+                int[] bomb =
+                {
+                ItemID.WetBomb,
+                ItemID.LavaBomb,
+                ItemID.HoneyBomb
+            };
+                foreach (Item check in args.Player.Inventory)
+                {
+                    if (bomb.Contains(check.netID))
+                    {
+                        max = (int)Config.Main.default_code4_maxbomb;
+                        break;
+                    }
+                }
+
+                if (args.Player.TileLiquidThreshold >= max)
+                {
+                    ManagePlayer.DisablePlayer(args.Player, $"Exceeded Liquid place", ServerReason: $"Default,code,4|{args.Player.SelectedItem.netID}");
+                    args.Player.SendTileSquareCentered(TileX, TileY, 4);
+                    args.Handled = true;
+                    return true;
+                }
+
+                return false;
+            }
+            #endregion
+
+            #endregion
+        }
+
         private void OnNewProjectile(object sender, GetDataHandlers.NewProjectileEventArgs args)
         {
             #region code
             short ident = args.Identity;
-            Vector2 pos = args.Position;
-            Vector2 vel = args.Velocity;
-            float knockback = args.Knockback;
-            short damage = args.Damage;
+            //Vector2 pos = args.Position;
+            //Vector2 vel = args.Velocity;
+            //float knockback = args.Knockback;
+            //short damage = args.Damage;
             byte owner = args.Owner;
             short type = args.Type;
-            int index = args.Index;
-            float[] ai = args.Ai;
+            //int index = args.Index;
+            //float[] ai = args.Ai;
 
             if (ProjectileThreshold()) return;
 
@@ -1278,6 +1404,8 @@ namespace MKLP
                 IllegalProjectileProgression = SurvivalManager.GetIllegalProjectile();
 
                 IllegalTileProgression = SurvivalManager.GetIllegalTile();
+
+                IllegalWallProgression = SurvivalManager.GetIllegalWall();
             }
             
 
@@ -1505,12 +1633,11 @@ namespace MKLP
                         case 35: // Skeletron
                         case 36:
                             {
-                                if (args.Player.Accessories.All(i => i.type == 1307))
+                                if (NPC.downedBoss3)
                                 {
                                     ManagePlayer.DisablePlayer(args.Player, $"null item boss spawn", ServerReason: $"Main,code,2|{args.Player.SelectedItem.netID}|{getnpc.FullName}");
                                     return true;
                                 }
-
                                 break;
                             }
                         case 113: // Wall of Flesh
@@ -1645,9 +1772,41 @@ namespace MKLP
         private void OnReload(ReloadEventArgs args)
         {
             Config = Config.Read();
-            args.Player.SendInfoMessage("MKLP config reloaded!");
+            args.Player.SendMessage("MKLP config reloaded!", Microsoft.Xna.Framework.Color.Purple);
         }
 
+        #endregion
+
+        #region { Auto Check }
+
+        private static bool IsChecking = false;
+        private async void Slow_Checking()
+        {
+            /*
+            if (!IsChecking) return;
+            await Task.Delay(1000);
+
+            check1();
+            
+
+            Slow_Checking();
+            */
+        }
+
+        private void check1()
+        {
+            #region code
+            foreach (TSPlayer player in TShock.Players)
+            {
+                try
+                {
+                    DBManager.CheckPlayerMute(player, true);
+                } catch { }
+            }
+            #endregion
+        }
+
+        
         #endregion
 
         #endregion
@@ -2051,6 +2210,7 @@ namespace MKLP
         private static Dictionary<string, DateTime> ReportCD = new();
         private void CMD_Report(CommandArgs args)
         {
+            #region code
             if (args.Parameters.Count == 0)
             {
                 args.Player.SendErrorMessage("Usage: /report <message>" +
@@ -2177,7 +2337,7 @@ namespace MKLP
                     $"\nmessage: {report_message}");
                 return;
             }
-
+            #endregion
         }
 
         #endregion
@@ -2386,6 +2546,59 @@ namespace MKLP
             #endregion
         }
 
+        private void CMD_ClearLag(CommandArgs args)
+        {
+            #region code
+            int ClearedItems = 0;
+            for (int i = 0; i < Main.maxItems; i++)
+            {
+                if (Main.item[i].value < Config.Main.Ignore_Value_ClearLag && Main.item[i].active)
+                {
+                    Main.item[i].active = false;
+                    TSPlayer.All.SendData(PacketTypes.ItemDrop, "", i);
+                    ClearedItems++;
+                }
+            }
+            int ClearedNPC = 0;
+            for (int i = 0; i < Main.maxNPCs; i++)
+            {
+                if (Main.npc[i].boss) continue;
+                if (Main.npc[i].townNPC) continue;
+                if (Main.npc[i].type == 68 ||
+                    Main.npc[i].type == 551 ||
+                    Main.npc[i].type == 576 ||
+                    Main.npc[i].type == 577 ||
+                    Main.npc[i].type == 564 ||
+                    Main.npc[i].type == 565) continue;
+                if (Main.npc[i].rarity > 0) continue;
+                if (Main.npc[i].active)
+                {
+                    Main.npc[i].active = false;
+                    Main.npc[i].type = 0;
+                    TSPlayer.All.SendData(PacketTypes.NpcUpdate, "", i);
+                    ClearedNPC++;
+                }
+            }
+            int ClearedProjectile = 0;
+            for (int i = 0; i < Main.maxProjectiles; i++)
+            {
+                if (Main.projectile[i].minion) continue;
+                if (Main.projectile[i].active)
+                {
+                    Main.projectile[i].active = false;
+                    Main.projectile[i].type = 0;
+                    TSPlayer.All.SendData(PacketTypes.ProjectileNew, "", i);
+                    ClearedProjectile++;
+                }
+            }
+
+            TShock.Utils.Broadcast($"[MKLP] ClearLag - {args.Player.Name} Removed" +
+                $" {(ClearedItems >= 2 ? $"{ClearedItems} Items" : $"{ClearedItems} Item")}" +
+                $" {(ClearedProjectile >= 2 ? $"{ClearedProjectile} Projectiles" : $"{ClearedProjectile} Projectile")}" +
+                $" {(ClearedNPC >= 2 ? $"{ClearedNPC} Entities" : $"{ClearedNPC} Entity")}", Color.Yellow);
+            #endregion
+        }
+
         private void CMD_Boss(CommandArgs args)
         {
             #region code
@@ -2399,6 +2612,205 @@ namespace MKLP
 
         #region { Moderator }
 
+        private void CMD_ManageReport(CommandArgs args)
+        {
+            #region code
+            if (args.Parameters.Count == 0)
+            {
+                args.Player.SendErrorMessage("Proper Usage: /managereport <info/delete>");
+                args.Player.SendMessage(
+                    "Info: get report info by id" +
+                    "\n'/report info fromlist <accountname>' : get this user list of his reports" +
+                    "\n'/report info targetlist <targetname>' : get list of report from this player" +
+                    "\n" +
+                    "\ndelete: delete any reports by id", Color.WhiteSmoke);
+                return;
+            }
+
+            switch (args.Parameters[0].ToLower())
+            {
+                case "info":
+                    {
+                        if (args.Parameters.Count == 1)
+                        {
+                            return;
+                        }
+
+                        int getid = -1;
+
+                        if (int.TryParse(args.Parameters[1], out getid))
+                        {
+                            try
+                            {
+                                MKLP_Report getreport = DBManager.GetReportByID(getid);
+
+                                args.Player.SendMessage($"Report id: {getreport.ID} Info" +
+                                    $"\nFrom: [c/ff7c34:{getreport.From}]" +
+                                    $"\nTarget: [c/ff7c34:{(getreport.Target == "" ? $"{DiscordKLP.S_}none{DiscordKLP.S_}" : $"{getreport.Target}")}]" +
+                                    $"\nLocation: [c/ff7c34:{getreport.Location}]" +
+                                    $"\nPlayers Online: [c/ff7c34:{getreport.Players.Replace($"{DiscordKLP.S_}", ", ")}]" +
+                                    $"\n" +
+                                    $"\nMessage: [c/ff7c34:{getreport.Message}]" +
+                                    $"\n" +
+                                    $"\nReported Since: [c/ff7c34:{getreport.Since}]"
+                                    , Color.OrangeRed);
+                                return;
+                            } catch (NullReferenceException)
+                            {
+                                args.Player.SendErrorMessage("No reports found with this id");
+                                return;
+                            }
+                        } else
+                        {
+                            switch (args.Parameters[1])
+                            {
+                                case "fromlist":
+                                    {
+                                        if (args.Parameters.Count == 2)
+                                        {
+                                            args.Player.SendErrorMessage("Proper Usage: /managereport info fromlist <accountname>");
+                                            return;
+                                        }
+
+                                        MKLP_Report[] getreport = DBManager.GetReport(from: args.Parameters[2]).ToArray();
+
+                                        if (getreport.Count() <= 0)
+                                        {
+                                            args.Player.SendErrorMessage($"No reports from {args.Parameters[2]}");
+                                            return;
+                                        }
+
+                                        string result = "";
+
+                                        foreach (MKLP_Report r in getreport)
+                                        {
+                                            result += $"[c/ff7c34:<{r.ID}> target {r.Target}]\n";
+                                        }
+
+                                        args.Player.SendMessage($"Report List from [ {args.Parameters[2]} ]" +
+                                            $"\n{result}", Color.OrangeRed);
+
+                                        return;
+                                    }
+                                case "targetlist":
+                                    {
+                                        if (args.Parameters.Count == 2)
+                                        {
+                                            args.Player.SendErrorMessage("Proper Usage: /managereport info target <accountname>");
+                                            return;
+                                        }
+
+                                        MKLP_Report[] getreport = DBManager.GetReport(target: args.Parameters[2]).ToArray();
+
+                                        if (getreport.Count() <= 0)
+                                        {
+                                            args.Player.SendErrorMessage($"{args.Parameters[2]} has no reports from someone");
+                                            return;
+                                        }
+
+                                        string result = "";
+
+                                        foreach (MKLP_Report r in getreport)
+                                        {
+                                            result += $"[c/ff7c34:<{r.ID}> from {r.From}]\n";
+                                        }
+
+                                        args.Player.SendMessage($"Players Report List from [ {args.Parameters[2]} ]" +
+                                            $"\n{result}", Color.OrangeRed);
+
+                                        return;
+                                    }
+                                default:
+                                    {
+                                        args.Player.SendErrorMessage("Invalid Report ID");
+                                        return;
+                                    }
+                            }
+                        }
+                    }
+                case "delete":
+                    {
+                        if (args.Parameters.Count == 1)
+                        {
+                            args.Player.SendErrorMessage("Proper Usage: /managereport delete <reportID>");
+                            return;
+                        }
+
+                        int getid = -1;
+
+                        if (int.TryParse(args.Parameters[1], out getid))
+                        {
+                            if (DBManager.DeleteReport(getid))
+                            {
+                                args.Player.SendSuccessMessage($"Successfully deleted report no. {getid}");
+                                return;
+                            } else
+                            {
+                                args.Player.SendSuccessMessage($"Unable to delete report no. {getid}");
+                                return;
+                            }
+                        }
+
+                        return;
+                    }
+                default:
+                    {
+                        args.Player.SendSuccessMessage($"Invalid Type");
+                        args.Player.SendMessage(
+                            "Info: get report info by id" +
+                            "\n'/report info fromlist <accountname>' : get this user list of his reports" +
+                            "\n'/report info targetlist <accountname>' : get list of report from this player" +
+                            "\n" +
+                            "\ndelete: delete any reports by id", Color.WhiteSmoke);
+                        return;
+                    }
+            }
+            #endregion
+        }
+
+        private void CMD_BanInfo(CommandArgs args)
+        {
+            #region code
+            if (args.Parameters.Count == 0)
+            {
+                args.Player.SendErrorMessage("Usage: /baninfo <ticketban>");
+                return;
+            }
+
+            int targetid;
+            if (!int.TryParse(args.Parameters[0], out targetid))
+            {
+                args.Player.SendErrorMessage("Invalid ticket number");
+                return;
+            }
+
+            Ban ban = TShock.Bans.GetBanById(targetid);
+
+            if (ban == null)
+            {
+                args.Player.SendErrorMessage("No bans found");
+                return;
+            }
+
+            args.Player.SendMessage("[c/3bf000:Ban Info]" +
+                $"\nTicket No. : [c/84ff5b:{ban.TicketNumber}]" +
+                $"\nIdentifier : [c/84ff5b:{ban.Identifier}]" +
+                $"\nBanned by : [c/84ff5b:{ban.BanningUser}]" +
+                $"\nReason : [c/84ff5b:{ban.Reason}]" +
+                $"\n{(ban.ExpirationDateTime < DateTime.UtcNow ? $":Ban expired : [c/84ff5b:{ban.ExpirationDateTime.ToString("yyyy/MM/dd")} ({ban.GetPrettyExpirationString()} ago)]" : "" )}"
+                , Color.Green);
+
+            /*
+            switch (args.Parameters[0])
+            {
+                default:
+                    {
+                        return;
+                    }
+            }
+            */
+            #endregion
+        }
         private void CMD_Ban(CommandArgs args)
         {
             #region code
@@ -2929,7 +3341,7 @@ namespace MKLP
 
             var targetplayer = players[0];
 
-            if (ManagePlayer.UnDisablePlayer(targetplayer, args.Player.Account.Name))
+            if (ManagePlayer.UnDisablePlayer(targetplayer, args.Player.Name))
             {
                 args.Player.SendSuccessMessage($"Player {targetplayer.Name} enabled");
             } else

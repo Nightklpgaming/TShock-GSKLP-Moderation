@@ -74,7 +74,7 @@ namespace MKLP
             throw new NullReferenceException();
         }
 
-        public IEnumerable<MKLP_Report> GetReport(int ID = -1, string from = "", string target = "")
+        public IEnumerable<MKLP_Report> GetReport(string from = "", string target = "")
         {
             if (target != "")
             {
@@ -106,37 +106,49 @@ namespace MKLP
                         reader.Get<string>("Players")
                         );
                 }
-            } else
-            {
-                using var reader = _db.QueryReader("SELECT * FROM Reports WHERE ID = @0", ID);
-                while (reader.Read())
-                {
-                    yield return new(
-                        reader.Get<int>("ID"),
-                        reader.Get<string>("Reporter"),
-                        reader.Get<string>("Target"),
-                        reader.Get<string>("Message"),
-                        reader.Get<DateTime>("Since"),
-                        reader.Get<string>("Location"),
-                        reader.Get<string>("Players")
-                        );
-                }
             }
             
         }
 
+        public MKLP_Report GetReportByID(int ID)
+        {
+            using var reader = _db.QueryReader("SELECT * FROM Reports WHERE ID = @0", ID);
+            while (reader.Read())
+            {
+                return new(
+                    reader.Get<int>("ID"),
+                    reader.Get<string>("Reporter"),
+                    reader.Get<string>("Target"),
+                    reader.Get<string>("Message"),
+                    reader.Get<DateTime>("Since"),
+                    reader.Get<string>("Location"),
+                    reader.Get<string>("Players")
+                    );
+            }
+
+            throw new NullReferenceException();
+        }
+
         public int AddReport(string reporter, string target, string message, DateTime Since, string location, string playerlist)
         {
-            return _db.Query("INSERT INTO Reports (" +
-                "ID, " +
+            string query = "INSERT INTO Reports (" +
                 "Reporter, " +
                 "Target, " +
                 "Message, " +
                 "Since, " +
                 "Location, " +
                 "Players) " +
-                "VALUES (@0, @1, @2, @3, @4, @5, @6)",
-                null,
+                "VALUES (@0, @1, @2, @3, @4, @5);";
+            if (_db.GetSqlType() == SqlType.Mysql)
+            {
+                query += "SELECT LAST_INSERT_ID();";
+            }
+            else
+            {
+                query += "SELECT CAST(last_insert_rowid() as INT);";
+            }
+
+            int id = _db.QueryScalar<int>(query,
                 reporter,
                 target,
                 message,
@@ -144,6 +156,13 @@ namespace MKLP
                 location,
                 playerlist
                 );
+
+            if (id == 0)
+            {
+                throw new NullReferenceException();
+            }
+
+            return id;
         }
 
         public bool DeleteReport(int ID)
@@ -210,7 +229,7 @@ namespace MKLP
         }
 
         
-        public bool CheckPlayer(TSPlayer player)
+        public bool CheckPlayerMute(TSPlayer player, bool inform_unmuted = false)
         {
             bool IsExist = false;
             try
@@ -292,6 +311,11 @@ namespace MKLP
                 return player.mute;
             }
             */
+
+            if (IsExist && !player.mute && inform_unmuted)
+            {
+                player.SendSuccessMessage("You're no longer muted");
+            }
 
             return player.mute;
 

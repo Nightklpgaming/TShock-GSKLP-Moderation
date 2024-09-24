@@ -28,6 +28,7 @@ namespace MKLP.Modules
 
         public static void CheckIllegalItemInventory(TSPlayer player)
         {
+            if (!player.IsLoggedIn) return;
             
             Dictionary<int, string> illegalitems = MKLP.IllegalItemProgression;
 
@@ -142,6 +143,7 @@ namespace MKLP.Modules
 
         public static void CheckPreviousInventory(TSPlayer tsplayer, Item[] playerinv, Item[] prevplayerinv)
         {
+            if (!tsplayer.IsLoggedIn) return;
 
             for (int i = 0; i < playerinv.Count(); i++)
             {
@@ -156,6 +158,7 @@ namespace MKLP.Modules
                     if (playerinv[i].stack == 255)
                     {
                         if (prevplayerinv[i].stack > 240) return;
+                        if (prevplayerinv[i].netID != playerinv[i].netID) return;
                         if (prevplayerinv[i].netID == 0 || prevplayerinv[i].stack == 0) return;
                         if (tsplayer.ActiveChest != -1) return;
 
@@ -168,6 +171,7 @@ namespace MKLP.Modules
                     if (playerinv[i].stack == 500)
                     {
                         if (prevplayerinv[i].stack > 485) return;
+                        if (prevplayerinv[i].netID != playerinv[i].netID) return;
                         if (prevplayerinv[i].netID == 0 || prevplayerinv[i].stack == 0) return;
                         if (tsplayer.ActiveChest != -1) return;
 
@@ -180,6 +184,7 @@ namespace MKLP.Modules
                     if (playerinv[i].stack == 1000)
                     {
                         if (prevplayerinv[i].stack > 950) return;
+                        if (prevplayerinv[i].netID != playerinv[i].netID) return;
                         if (prevplayerinv[i].netID == 0 || prevplayerinv[i].stack == 0) return;
                         if (tsplayer.ActiveChest != -1) return;
 
@@ -192,6 +197,7 @@ namespace MKLP.Modules
                     if (playerinv[i].stack == 5000)
                     {
                         if (prevplayerinv[i].stack > 4905) return;
+                        if (prevplayerinv[i].netID != playerinv[i].netID) return;
                         if (prevplayerinv[i].netID == 0 || prevplayerinv[i].stack == 0) return;
                         if (tsplayer.ActiveChest != -1) return;
 
@@ -204,6 +210,7 @@ namespace MKLP.Modules
                     if (playerinv[i].stack == 9999)
                     {
                         if (prevplayerinv[i].stack > 9905) return;
+                        if (prevplayerinv[i].netID != playerinv[i].netID) return;
                         if (prevplayerinv[i].netID == 0 || prevplayerinv[i].stack == 0) return;
                         if (tsplayer.ActiveChest != -1) return;
 
@@ -229,17 +236,17 @@ namespace MKLP.Modules
 
         public static bool DisablePlayer(TSPlayer player, string Reason = "No Reason Specified", string executername = "Unknown", string ServerReason = "")
         {
-            if (MKLP.DisabledKey.Contains(Identifier.Name + player.Name) ||
-                MKLP.DisabledKey.Contains(Identifier.IP + player.IP) ||
-                MKLP.DisabledKey.Contains(Identifier.UUID + player.UUID))
+            if (MKLP.DisabledKey.ContainsKey(Identifier.Name + player.Name) ||
+                MKLP.DisabledKey.ContainsKey(Identifier.IP + player.IP) ||
+                MKLP.DisabledKey.ContainsKey(Identifier.UUID + player.UUID))
             {
                 return false;
             }
             else
             {
-                MKLP.DisabledKey.Add(Identifier.Name + player.Name);
-                MKLP.DisabledKey.Add(Identifier.IP + player.IP);
-                MKLP.DisabledKey.Add(Identifier.UUID + player.UUID);
+                MKLP.DisabledKey.Add(Identifier.Name + player.Name, Reason);
+                MKLP.DisabledKey.Add(Identifier.IP + player.IP, Reason);
+                MKLP.DisabledKey.Add(Identifier.UUID + player.UUID, Reason);
 
                 if (player.ActiveChest != -1)
                 {
@@ -426,18 +433,18 @@ namespace MKLP.Modules
 
         public static bool UnDisablePlayer(TSPlayer player, string executername = "Unknown")
         {
-            if (!MKLP.DisabledKey.Contains(Identifier.Name + player.Name) ||
-                !MKLP.DisabledKey.Contains(Identifier.IP + player.IP) ||
-                !MKLP.DisabledKey.Contains(Identifier.UUID + player.UUID))
+            if (!MKLP.DisabledKey.ContainsKey(Identifier.Name + player.Name) ||
+                !MKLP.DisabledKey.ContainsKey(Identifier.IP + player.IP) ||
+                !MKLP.DisabledKey.ContainsKey(Identifier.UUID + player.UUID))
             {
 
                 return false;
             }
             else
             {
-                if (MKLP.DisabledKey.Contains(Identifier.Name + player.Name)) MKLP.DisabledKey.Remove(Identifier.Name + player.Name);
-                if (MKLP.DisabledKey.Contains(Identifier.IP + player.IP)) MKLP.DisabledKey.Remove(Identifier.IP + player.IP);
-                if (MKLP.DisabledKey.Contains(Identifier.UUID + player.UUID)) MKLP.DisabledKey.Remove(Identifier.UUID + player.UUID);
+                if (MKLP.DisabledKey.ContainsKey(Identifier.Name + player.Name)) MKLP.DisabledKey.Remove(Identifier.Name + player.Name);
+                if (MKLP.DisabledKey.ContainsKey(Identifier.IP + player.IP)) MKLP.DisabledKey.Remove(Identifier.IP + player.IP);
+                if (MKLP.DisabledKey.ContainsKey(Identifier.UUID + player.UUID)) MKLP.DisabledKey.Remove(Identifier.UUID + player.UUID);
 
                 player.SendMessage("You're now enabled", Microsoft.Xna.Framework.Color.Lime);
 

@@ -307,7 +307,7 @@ namespace MKLP.Modules
                                                     $"\n> **Registered:** `{targetplayer.Account.Registered}`" +
                                                     $"\n" +
                                                     $"\n`LoggedIn: {(targetplayer.IsLoggedIn ? "✅" : "❌")}` " +
-                                                    $"`Disabled: {((MKLP.DisabledKey.Contains(targetplayer.IP) || MKLP.DisabledKey.Contains(targetplayer.UUID)) ? "✅" : "❌")}` " +
+                                                    $"`Disabled: {((MKLP.DisabledKey.ContainsKey(Identifier.Name + targetplayer.Name) || MKLP.DisabledKey.ContainsKey(Identifier.IP + targetplayer.IP) || MKLP.DisabledKey.ContainsKey(Identifier.UUID + targetplayer.UUID)) ? "✅" : "❌")}` " +
                                                     $"`Muted: {(targetplayer.mute ? "✅" : "❌")}`")
                                                     .WithColor(EmbedColor);
 
@@ -538,7 +538,7 @@ namespace MKLP.Modules
                                                     $"\n> **Registered:** `{targetplayer.Account.Registered}`" +
                                                     $"\n" +
                                                     $"\n`LoggedIn: {(targetplayer.IsLoggedIn ? "✅" : "❌")}` " +
-                                                    $"`Disabled: {((MKLP.DisabledKey.Contains(targetplayer.IP) || MKLP.DisabledKey.Contains(targetplayer.UUID)) ? "✅" : "❌")}` " +
+                                                    $"`Disabled: {((MKLP.DisabledKey.ContainsKey(Identifier.Name + targetplayer.Name) || MKLP.DisabledKey.ContainsKey(Identifier.IP + targetplayer.IP) || MKLP.DisabledKey.ContainsKey(Identifier.UUID + targetplayer.UUID)) ? "✅" : "❌")}` " +
                                                     $"`Muted: {(targetplayer.mute ? "✅" : "❌")}`")
                                                     .WithColor(EmbedColor);
 
@@ -1894,7 +1894,7 @@ namespace MKLP.Modules
                                                     $"\n> **Registered:** `{targetplayer.Account.Registered}`" +
                                                     $"\n" +
                                                     $"\n`LoggedIn: {(targetplayer.IsLoggedIn ? "✅" : "❌")}` " +
-                                                    $"`Disabled: {((MKLP.DisabledKey.Contains(targetplayer.IP) || MKLP.DisabledKey.Contains(targetplayer.UUID)) ? "✅" : "❌")}` " +
+                                                    $"`Disabled: {((MKLP.DisabledKey.ContainsKey(Identifier.Name + targetplayer.Name) || MKLP.DisabledKey.ContainsKey(Identifier.IP + targetplayer.IP) || MKLP.DisabledKey.ContainsKey(Identifier.UUID + targetplayer.UUID)) ? "✅" : "❌")}` " +
                                                     $"`Muted: {(targetplayer.mute ? "✅" : "❌")}`")
                                                     .WithColor(EmbedColor);
 
@@ -2847,7 +2847,7 @@ namespace MKLP.Modules
                 var buttons = new ComponentBuilder()
                     .WithButton("Dismiss [ Report ]", "MKLP_DismissMsg_Report2_".Replace('_', S_) + ID, ButtonStyle.Secondary);
 
-                await ((SocketTextChannel)targetchannel).SendMessageAsync(TitleLog + $"New report from **{reporter}** <t:{TimestampTag.FormatFromDateTime(Since, TimestampTagStyles.Relative)}:R>" +
+                await ((SocketTextChannel)targetchannel).SendMessageAsync(TitleLog + $"New report from **{reporter}** {TimestampTag.FormatFromDateTime(Since, TimestampTagStyles.Relative)}" +
                     $"\n> **ID:** `{ID}`" +
                     $"\n> **Location:** `{location}`" +
                     $"\n> **Players Online:** `{playerlist}`" +

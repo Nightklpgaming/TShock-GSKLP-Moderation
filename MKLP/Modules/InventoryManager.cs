@@ -17,13 +17,15 @@ namespace MKLP.Modules
 
         public static void TryAddInvLog(TSPlayer tsplayer, Item playerinv, Item prevplayerinv, int slot, string Type)
         {
+            if (!(bool)MKLP.Config.Main.Save_Inventory_Log) return;
+
             InvLog_index++;
 
-            if (InventoryLogs.Count >= 100)
+            if (InventoryLogs.Count >= 70)
             {
                 InventoryLogs.RemoveRange(0, 40);
             }
-
+            //OutOfMemoryException
 
             string log = $"{tsplayer.Account.Name}{DiscordKLP.S_}{Type}{DiscordKLP.S_}{slot}{DiscordKLP.S_}" +
                 $"{prevplayerinv.netID},{prevplayerinv.stack},{prevplayerinv.prefix}" +

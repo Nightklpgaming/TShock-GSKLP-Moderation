@@ -14,6 +14,7 @@ namespace MKLP
     {
         public CONFIG_HELPTEXT Guide;
         public CONFIG_MAIN Main;
+        public CONFIG_PROGRESSION Progression;
         public CONFIG_PERMISSIONS Permissions;
         public CONFIG_DISCORD Discord;
         public CONFIG_BOSSES BossManager;
@@ -38,6 +39,9 @@ namespace MKLP
 
             if (args.Main == null) args.Main = new();
             args.Main.FixNull();
+
+            if (args.Progression == null) args.Progression = new();
+            args.Progression.FixNull();
 
             if (args.Discord == null) args.Discord = new();
             args.Discord.FixNull();
@@ -77,6 +81,7 @@ namespace MKLP
             {
                 Guide = new(),
                 Main = new(),
+                Progression = new(),
                 Permissions = new(),
                 Discord = new(),
                 BossManager = new(),
@@ -167,12 +172,15 @@ namespace MKLP
         public bool? RecievedWarning_SuspiciousDupe = true;
         public bool? Prevent_IllegalWire_Progression = false;
 
+        public bool? Prevent_Place_BastStatueNearDoor = true;
+
         public bool? Using_Main_Code1 = false;
         public bool? Using_Main_Code2 = false;
 
         public bool? Using_Survival_Code1 = false;
         public bool? Using_Survival_Code2 = false;
         public bool? Using_Survival_Code3 = false;
+        public bool? Using_Survival_Code4 = false;
 
         public bool? Using_Default_Code1 = false;
         public int? default_code1_maxdefault = 140;
@@ -202,6 +210,9 @@ namespace MKLP
         public int? default_code6_maxdefault = 30;
         public int? default_code6_maxPlant = 50;
         public int? default_code6_addmax_spectrehood = 15;
+
+        public int? Ignore_Value_ClearLag = 12000;
+        public bool? Save_Inventory_Log = false;
 
         public CONFIG_MAIN() { }
 
@@ -242,12 +253,15 @@ namespace MKLP
             if (RecievedWarning_SuspiciousDupe == null) RecievedWarning_SuspiciousDupe = getdefault.RecievedWarning_SuspiciousDupe;
             if (Prevent_IllegalWire_Progression == null) Prevent_IllegalWire_Progression = getdefault.Prevent_IllegalWire_Progression;
 
+            if (Prevent_Place_BastStatueNearDoor == null) Prevent_Place_BastStatueNearDoor = getdefault.Prevent_Place_BastStatueNearDoor;
+
             if (Using_Main_Code1 == null) Using_Main_Code1 = getdefault.Using_Main_Code1;
             if (Using_Main_Code2 == null) Using_Main_Code2 = getdefault.Using_Main_Code2;
 
             if (Using_Survival_Code1 == null) Using_Survival_Code1 = getdefault.Using_Survival_Code1;
             if (Using_Survival_Code2 == null) Using_Survival_Code2 = getdefault.Using_Survival_Code2;
             if (Using_Survival_Code3 == null) Using_Survival_Code3 = getdefault.Using_Survival_Code3;
+            if (Using_Survival_Code4 == null) Using_Survival_Code4 = getdefault.Using_Survival_Code4;
 
             if (Using_Default_Code1 == null) Using_Default_Code1 = getdefault.Using_Default_Code1;
             if (default_code1_maxdefault == null) default_code1_maxdefault = getdefault.default_code1_maxdefault;
@@ -278,10 +292,33 @@ namespace MKLP
             if (default_code6_maxPlant == null) default_code6_maxPlant = getdefault.default_code6_maxPlant;
             if (default_code6_addmax_spectrehood == null) default_code6_addmax_spectrehood = getdefault.default_code6_addmax_spectrehood;
 
+            if (Save_Inventory_Log == null) Save_Inventory_Log = getdefault.Save_Inventory_Log;
 
+            if (Ignore_Value_ClearLag == null) Ignore_Value_ClearLag = getdefault.Ignore_Value_ClearLag;
         }
     }
-    
+
+    public class CONFIG_PROGRESSION
+    {
+        public bool? AllowVanityCloth = true;
+        public bool? AllowDungeonRush = false;
+        public bool? AllowTempleRush = true;
+        public bool? AllowBanners = false;
+        public bool? AllowMusicBox = true;
+        public CONFIG_PROGRESSION() { }
+
+        public void FixNull()
+        {
+            CONFIG_PROGRESSION getdefault = new();
+
+            if (AllowVanityCloth == null) AllowVanityCloth = getdefault.AllowVanityCloth;
+            if (AllowDungeonRush == null) AllowDungeonRush = getdefault.AllowDungeonRush;
+            if (AllowTempleRush == null) AllowTempleRush = getdefault.AllowTempleRush;
+            if (AllowBanners == null) AllowBanners = getdefault.AllowBanners;
+            if (AllowMusicBox == null) AllowMusicBox = getdefault.AllowMusicBox;
+            return;
+        }
+    }
     public class CONFIG_DISCORD
     {
         public string BotToken = "NONE";
@@ -296,13 +333,15 @@ namespace MKLP
 
         public void FixNull()
         {
-            if (BotToken == null) BotToken = "NONE";
-            if (MainGuildID == null) MainGuildID = 0;
-            if (MainChannelID == null) MainChannelID = 0;
-            if (MainChannelLog == null) MainChannelLog = 0;
-            if (ReportChannel == null) ReportChannel = 0;
-            if (CommandLogChannel == null) CommandLogChannel = 0;
-            if (AllowUser_UseIngame_ModPermission == null) AllowUser_UseIngame_ModPermission = false;
+            CONFIG_DISCORD getdefault = new();
+
+            if (BotToken == null) BotToken = getdefault.BotToken;
+            if (MainGuildID == null) MainGuildID = getdefault.MainGuildID;
+            if (MainChannelID == null) MainChannelID = getdefault.MainChannelID;
+            if (MainChannelLog == null) MainChannelLog = getdefault.MainChannelLog;
+            if (ReportChannel == null) ReportChannel = getdefault.ReportChannel;
+            if (CommandLogChannel == null) CommandLogChannel = getdefault.CommandLogChannel;
+            if (AllowUser_UseIngame_ModPermission == null) AllowUser_UseIngame_ModPermission = getdefault.AllowUser_UseIngame_ModPermission;
         }
     }
 
@@ -318,8 +357,10 @@ namespace MKLP
 
         //admin
         public string CMD_MapPingTP = "MKLP.mapping.tp";
+        public string CMD_ClearLag = "MKLP.clearlag";
 
         //moderator
+        public string CMD_ManageReport = "MKLP.moderator.report";
         public string CMD_Ban = "MKLP.moderator.ban";
         public string CMD_OfflineBan = "MKLP.moderator.offline.ban";
         public string CMD_UnBan = "MKLP.moderator.unban";
@@ -352,7 +393,8 @@ namespace MKLP
         public string IgnoreSurvivalCode_1 = "MKLP.bypass.Survival.code1";
         public string IgnoreSurvivalCode_2 = "MKLP.bypass.Survival.code2";
         public string IgnoreSurvivalCode_3 = "MKLP.bypass.Survival.code3";
-        
+        public string IgnoreSurvivalCode_4 = "MKLP.bypass.Survival.code4";
+
         public CONFIG_PERMISSIONS() { }
 
         public void FixNull()
@@ -366,7 +408,9 @@ namespace MKLP
             if (Staff == null) Staff = getdefault.Staff;
 
             if (CMD_MapPingTP == null) CMD_MapPingTP = getdefault.CMD_MapPingTP;
+            if (CMD_ClearLag == null) CMD_ClearLag = getdefault.CMD_ClearLag;
 
+            if (CMD_ManageReport == null) CMD_ManageReport = getdefault.CMD_ManageReport;
             if (CMD_Ban == null) CMD_Ban = getdefault.CMD_Ban;
             if (CMD_OfflineBan == null) CMD_OfflineBan = getdefault.CMD_OfflineBan;
             if (CMD_UnBan == null) CMD_UnBan = getdefault.CMD_UnBan;
@@ -397,7 +441,7 @@ namespace MKLP
             if (IgnoreSurvivalCode_1 == null) IgnoreSurvivalCode_1 = getdefault.IgnoreSurvivalCode_1;
             if (IgnoreSurvivalCode_2 == null) IgnoreSurvivalCode_2 = getdefault.IgnoreSurvivalCode_2;
             if (IgnoreSurvivalCode_3 == null) IgnoreSurvivalCode_3 = getdefault.IgnoreSurvivalCode_3;
-
+            if (IgnoreSurvivalCode_4 == null) IgnoreSurvivalCode_4 = getdefault.IgnoreSurvivalCode_4;
 
 
         }

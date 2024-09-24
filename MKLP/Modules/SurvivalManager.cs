@@ -25,11 +25,11 @@ namespace MKLP.Modules
 
             //bool bothevilworld = (Main.drunkWorld || Main.remixWorld || Main.zenithWorld);
 
-            bool allowvanity = true;
-            bool allowmusicbox = true;
+            bool allowvanity = (bool)MKLP.Config.Progression.AllowVanityCloth;
+            bool allowmusicbox = (bool)MKLP.Config.Progression.AllowMusicBox;
 
-            bool allowdungeonrush = true;
-            bool allowtemplerush = true;
+            bool allowdungeonrush = (bool)MKLP.Config.Progression.AllowDungeonRush;
+            bool allowtemplerush = (bool)MKLP.Config.Progression.AllowTempleRush;
 
             #region | unobtainable |
 
@@ -95,7 +95,7 @@ namespace MKLP.Modules
             
             if (!allowbanners)
             {
-                if (!NPC.downedMechBoss2)
+                if (!NPC.downedBoss2)
                 {
                     int[] addin = { 1669 };
                     foreach (int add in addin)
@@ -187,7 +187,7 @@ namespace MKLP.Modules
 
             //2223 
 
-            //118
+            //100
 
             #region ( Boss )
 
@@ -250,7 +250,7 @@ namespace MKLP.Modules
                     }
                 }
 
-                int[] addin = { 100, 101, 102, 103, 104, 123, 124, 125, 127, 197, 198, 199,
+                int[] addin = { 103, 104, 123, 124, 125, 127, 197, 198, 199,
                     200, 201, 202, 203, 204, 792, 793, 794, 797, 798, 994, 1361, 1362, 2104,
                     2111, 2457, 3060, 3100, 3101, 3126, 3129, 3132, 3135, 3138, 3141, 3144,
                     3147, 3150, 3153, 3156, 3159, 3162, 3165, 3168, 3171, 3174, 3177, 3180,
@@ -375,7 +375,7 @@ namespace MKLP.Modules
 
                 if (!Main.drunkWorld && !Main.remixWorld)
                 {
-                    int[] skeleids = { 154, 327, 768, 808, 811, 820, 827, 890, 891, 932, 959,
+                    int[] skeleids = { 154, 327, 768, 808, 811, 820, 827, 890, 891, 904, 932, 959,
                         1307, 3095, 3122, 3124, 4076, 4131, 5074, 5325, 5328, 5358, 5359, 5360,
                         5361, 5438 };
                     foreach (int add in skeleids)
@@ -569,7 +569,7 @@ namespace MKLP.Modules
                     501, 502, 507, 508, 531, 532, 534, 535, 536, 537, 544, 545, 546, 556, 557, 575,
                     604, 605, 672, 682, 683, 684, 685, 686, 723, 725, 726, 761, 763, 770, 776, 777,
                     778, 785, 822, 828, 854, 855, 856, 860, 861, 862, 886, 888, 889, 892, 893, 897,
-                    901, 902, 903, 904, 905, 970, 971, 972, 973, 991, 992, 993, 995, 996, 1104,
+                    901, 903, 905, 970, 971, 972, 973, 991, 992, 993, 995, 996, 1104,
                     1105, 1106, 1171, 1181, 1244, 1247, 1253, 1264, 1265, 1306, 1308, 1312, 1314,
                     1315, 1321, 1324, 1326, 1328, 1332, 1333, 1334, 1335, 1336, 1347, 1348, 1351,
                     1352, 1353, 1355, 1356, 1365, 1519, 1589, 1590, 1591, 1592, 1593, 1594, 1612,
@@ -836,6 +836,7 @@ namespace MKLP.Modules
             {
                 for (int i = 1155; i <= 1162; i++)
                 {
+                    if (i == 1158) continue;
                     if (!getillegalitems.ContainsKey(i))
                     {
                         getillegalitems.Add(i, "Plantera");
@@ -1360,8 +1361,8 @@ namespace MKLP.Modules
 
             //bool bothevilworld = (Main.drunkWorld || Main.remixWorld || Main.zenithWorld);
 
-            bool allowdungeonrush = true;
-            bool allowtemplerush = true;
+            bool allowdungeonrush = (bool)MKLP.Config.Progression.AllowDungeonRush;
+            bool allowtemplerush = (bool)MKLP.Config.Progression.AllowTempleRush;
 
             #region | unobtainable |
 
@@ -2069,9 +2070,9 @@ namespace MKLP.Modules
         public struct MKLP_Tile
         {
             public ushort ID;
-            public byte SubID;
+            public short SubID;
             bool AllSubID;
-            public MKLP_Tile(ushort ID, byte SubID, bool AllSubID = false)
+            public MKLP_Tile(ushort ID, short SubID, bool AllSubID = false)
             {
                 this.ID = ID;
                 this.SubID = SubID;
@@ -2087,10 +2088,10 @@ namespace MKLP.Modules
 
             //bool bothevilworld = (Main.drunkWorld || Main.remixWorld || Main.zenithWorld);
 
-            bool allowdungeonrush = true;
-            bool allowtemplerush = true;
+            bool allowdungeonrush = (bool)MKLP.Config.Progression.AllowDungeonRush;
+            bool allowtemplerush = (bool)MKLP.Config.Progression.AllowTempleRush;
 
-            bool allowmusicbox = true;
+            bool allowmusicbox = (bool)MKLP.Config.Progression.AllowMusicBox;
 
             #region | unobtainable |
 
@@ -2123,9 +2124,190 @@ namespace MKLP.Modules
 
             #endregion
 
-            #region [ Banners ]
+            #region ( Banners )
+
+            bool allowbanners = (bool)MKLP.Config.Progression.AllowBanners;
+
+            if (!allowbanners)
+            {
+                if (!NPC.downedBoss2)
+                {
+                    MKLP_Tile[] addin = { new(91, 76) };
+                    foreach (MKLP_Tile add in addin)
+                    {
+                        getillegaltile.Add(add, "Evil Boss");
+                    }
+                }
+
+                if (!NPC.downedBoss3)
+                {
+                    if (!Main.drunkWorld && !Main.remixWorld)
+                    {
+                        MKLP_Tile[] addin = { new(91, 89), new(91, 123), new(91, 128), new(91, 268) };
+                        foreach (MKLP_Tile add in addin)
+                        {
+                            getillegaltile.Add(add, "Skeletron");
+                        }
+                    }
+                }
+
+                if (!Main.hardMode)
+                {
+                    MKLP_Tile[] addin = { new(91, 22), new(91, 23), new(91, 26), new(91, 27), new(91, 30), new(91, 32), 
+                       new(91, 33), new(91, 36), new(91, 37), new(91, 38), new(91, 43), new(91, 44), new(91, 47),
+                        new(91, 49), new(91, 52), new(91, 57), new(91, 58), new(91, 67), new(91, 69), new(91, 70),
+                        new(91, 73), new(91, 78), new(91, 80), new(91, 83), new(91, 84), new(91, 95), new(91, 96),
+                        new(91, 102), new(91, 103), new(91, 104), new(91, 107), new(91, 109), new(91, 110), new(91, 117),
+                        new(91, 120), new(91, 121), new(91, 122), new(91, 135), new(91, 137), new(91, 144), new(91, 146),
+                        new(91, 148), new(91, 149), new(91, 150), new(91, 174), new(91, 178), new(91, 181), new(91, 185),
+                        new(91, 188), new(91, 207), new(91, 229), new(91, 232), new(91, 233), new(91, 234), new(91, 235),
+                        new(91, 236), new(91, 258), new(91, 259), new(91, 260), new(91, 261), new(91, 265), new(91, 266),
+                        new(91, 267), new(91, 269), new(91, 272), new(91, 273), new(91, 274), new(91, 275), new(91, 276), 
+                        new(91, 281), new(91, 282), new(91, 283), new(91, 284), new(91, 291), new(91, 292), new(91, 293),
+                        new(91, 294), new(91, 297), new(91, 298), new(91, 305), new(91, 306), new(91, 307), new(91, 308),
+                        new(91, 309) };
+                    foreach (MKLP_Tile add in addin)
+                    {
+                        getillegaltile.Add(add, "HardMode | Wall of Flesh");
+                    }
+                }
+
+                if (!NPC.downedMechBoss1 && !NPC.downedMechBoss2 && !NPC.downedMechBoss3) // mech
+                {
+                    MKLP_Tile[] addin = { new(91, 55), new(91, 77), new(91, 94), new(91, 99), new(91, 132), new(91, 155),
+                        new(91, 211), new(91, 212), new(91, 216), new(91, 263) };
+                    foreach (MKLP_Tile add in addin)
+                    {
+                        getillegaltile.Add(add, "Mechanical Boss");
+                    }
+                }
+
+                if (!NPC.downedMechBoss1 || !NPC.downedMechBoss2 || !NPC.downedMechBoss3) // post mech
+                {
+                    MKLP_Tile[] addin = { new(91, 86) };
+                    foreach (MKLP_Tile add in addin)
+                    {
+                        getillegaltile.Add(add, "Post Mechanical Boss");
+                    }
+                }
+
+                if (!NPC.downedPlantBoss)
+                {
+                    MKLP_Tile[] addin = { new(91, 112), new(91, 116), new(91, 126), new(91, 129), new(91, 130), new(91, 131),
+                        new(91, 133), new(91, 136), new(91, 138), new(91, 141), new(91, 142), new(91, 143), new(91, 153),
+                        new(91, 157), new(91, 158), new(91, 159), new(91, 160), new(91, 161), new(91, 162), new(91, 163),
+                        new(91, 164), new(91, 165), new(91, 168), new(91, 169), new(91, 170), new(91, 173), new(91, 175),
+                        new(91, 177), new(91, 182), new(91, 183), new(91, 186), new(91, 187), new(91, 194), new(91, 196),
+                        new(91, 205), new(91, 206), new(91, 0), new(91, 213), new(91, 214), new(91, 217), new(91, 218),
+                        new(91, 219), new(91, 220), new(91, 287) };
+                    foreach (MKLP_Tile add in addin)
+                    {
+                        getillegaltile.Add(add, "Plantera");
+                    }
+                    if (!allowtemplerush)
+                    {
+                        MKLP_Tile[] templeids = { new(91, 54), new(91, 74) };
+                        foreach (MKLP_Tile add in templeids)
+                        {
+                            getillegaltile.Add(add, "Plantera");
+                        }
+                    }
+                }
+
+                if (!NPC.downedGolemBoss)
+                {
+                    MKLP_Tile[] addin = { new(91, 113), new(91, 114), new(91, 184), new(91, 262) };
+                    foreach (MKLP_Tile add in addin)
+                    {
+                        getillegaltile.Add(add, "Golem");
+                    }
+                }
+
+                if (!NPC.downedAncientCultist)
+                {
+                    MKLP_Tile[] addin = { new(91, 237), new(91, 238), new(91, 239), new(91, 240), new(91, 241), new(91, 242),
+                        new(91, 243), new(91, 244), new(91, 245), new(91, 246), new(91, 247), new(91, 248), new(91, 249),
+                        new(91, 250), new(91, 251), new(91, 252), new(91, 253), new(91, 254), new(91, 255), new(91, 256),
+                        new(91, 257) };
+                    foreach (MKLP_Tile add in addin)
+                    {
+                        getillegaltile.Add(add, "Lunatic Cultist");
+                    }
+                }
+
+                getillegaltile.Add(new(91, 115), "Unobtainable");
+                getillegaltile.Add(new(91, 201), "Unobtainable");
+                getillegaltile.Add(new(91, 202), "Unobtainable");
+                getillegaltile.Add(new(91, 203), "Unobtainable");
+                getillegaltile.Add(new(91, 215), "Unobtainable");
+                getillegaltile.Add(new(91, 221), "Unobtainable");
+            }
+
+            #endregion
+
+            #region ( Music Box )
+
+            if (!allowmusicbox)
+            {
+                if (!Main.hardMode)
+                {
+                    getillegaltile.Add(new(139, 0, true), "HardMode | Wall of Flesh");
+                }
+
+                if (!NPC.downedMechBossAny)
+                {
+                    MKLP_Tile[] addin = { new(139, 26) };
 
 
+                    foreach (MKLP_Tile add in addin)
+                    {
+                        if (!getillegaltile.ContainsKey(add))
+                        {
+                            getillegaltile.Add(add, "Mechanical Bosses");
+                        }
+                    }
+                }
+
+                if (!NPC.downedMechBoss1 || !NPC.downedMechBoss2 || !NPC.downedMechBoss3)
+                {
+                    MKLP_Tile[] addin = { new(139, 23), new(139, 81) };
+
+                    foreach (MKLP_Tile add in addin)
+                    {
+                        if (!getillegaltile.ContainsKey(add))
+                        {
+                            getillegaltile.Add(add, "Post Mechanical Bosses");
+                        }
+                    }
+                }
+
+                if (!NPC.downedPlantBoss)
+                {
+                    MKLP_Tile[] addin = { new(139, 16), new(139, 28), new(139, 30), new(139, 53) };
+                    foreach (MKLP_Tile add in addin)
+                    {
+                        getillegaltile.Add(add, "Plantera");
+                    }
+                }
+
+                if (!NPC.downedGolemBoss)
+                {
+                    MKLP_Tile[] addin = { new(139, 33), new(139, 46) };
+                    foreach (MKLP_Tile add in addin)
+                    {
+                        getillegaltile.Add(add, "Golem");
+                    }
+                }
+
+                if (!NPC.downedAncientCultist)
+                {
+                    MKLP_Tile[] addin = { new(139, 36), new(139, 79), new(139, 32), new(139, 80), new(139, 85) };
+                    foreach (MKLP_Tile add in addin)
+                    {
+                        getillegaltile.Add(add, "Lunatic Cultist");
+                    }
+                }
+            }
 
             #endregion
 
@@ -2709,6 +2891,287 @@ namespace MKLP.Modules
             #endregion
 
             return getillegaltile;
+        }
+
+        public static Dictionary<ushort, string> GetIllegalWall()
+        {
+            #region [ get Illegal Walls ]
+            Dictionary<ushort, string> getillegalwalls = new();
+
+            //bool bothevilworld = (Main.drunkWorld || Main.remixWorld || Main.zenithWorld);
+            
+            #region | unobtainable |
+
+            ushort[] unobtainableids = { 2, 3, 13, 14, 15, 28, 61, 63, 64, 65, 69, 70, 71, 79, 80, 81, 83,
+                86, 170, 171, 178, 180, 185, 244 };
+
+            foreach (ushort add in unobtainableids)
+            {
+                getillegalwalls.Add(add, "Unobtainable");
+            }
+
+            for (ushort i = 48; i <= 59; i++)
+            {
+                if (!getillegalwalls.ContainsKey(i))
+                {
+                    getillegalwalls.Add(i, "Unobtainable");
+                }
+            }
+
+            for (ushort i = 188; i <= 215; i++)
+            {
+                if (!getillegalwalls.ContainsKey(i))
+                {
+                    getillegalwalls.Add(i, "Unobtainable");
+                }
+            }
+
+            for (ushort i = 217; i <= 222; i++)
+            {
+                if (!getillegalwalls.ContainsKey(i))
+                {
+                    getillegalwalls.Add(i, "Unobtainable");
+                }
+            }
+
+            #endregion
+
+            //2223 
+
+            //100
+
+            #region ( Boss )
+
+            #region [ king Slime ]
+            if (!NPC.downedSlimeKing) //king slime
+            {
+                ushort[] addin = { 76 };
+                foreach (ushort add in addin)
+                {
+                    if (!getillegalwalls.ContainsKey(add))
+                    {
+                        getillegalwalls.Add(add, "King Slime");
+                    }
+                }
+            }
+            #endregion
+
+            #region [ Evil Boss ]
+            if (!NPC.downedBoss2)
+            {
+                ushort[] addin = { 182 };
+                foreach (ushort add in addin)
+                {
+                    if (!getillegalwalls.ContainsKey(add))
+                    {
+                        getillegalwalls.Add(add, "Evil Boss");
+                    }
+                }
+
+                if (!Main.hardMode)
+                {
+                    ushort[] hellstoneid = { 116, 117, 119, 120, 121, 122, 174, 175,
+                        217, 219, 221, 231, 232, 233, 273, 2365, 4533, 4534, 4535, 4536, 4821 };
+
+                    foreach (ushort add in hellstoneid) // hellstone are breakable from bombs on hm
+                    {
+                        if (!getillegalwalls.ContainsKey(add))
+                        {
+                            getillegalwalls.Add(add, "Evil Boss");
+                        }
+                    }
+                }
+            }
+            #endregion
+
+            #region [ Skeletron ]
+            if (!NPC.downedBoss3)
+            {
+
+                int[] addin = { 346, 509, 510, 513, 541, 849, 850, 851, 852, 853, 1263, 1273,
+                    1313, 1363, 2295, 2296, 2739, 2799, 3085, 3205, 3220, 3221, 3245, 3282,
+                    3323, 3619, 3620, 3625, 3629, 3707, 3725, 4264, 4484, 4485, 4703, 4801,
+                    4818, 4927, 4993 };
+
+                int[] dungeonrushids = { 112, 113, 151, 152, 153, 155, 156, 157, 163, 164,
+                    218, 220, 273, 274, 328, 329, 1613, 3019, 3317, 5010, 5126 };
+
+                int[] vanityids = { 254, 260, 269, 270, 271, 322, 325, 326, 978, 979, 980,
+                    981, 1275, 1276, 1281, 1288, 1289, 1429, 1740, 3242, 3243, 3244, 3246,
+                    3247, 3362, 3363, 3627, 3730, 3731, 3733, 3734, 3735, 4128, 4129,
+                    4130, 4132, 4133, 4134, 4685, 4686, 4704, 4705, 4706, 4707, 4708,
+                    4709 };
+                
+
+                if (!Main.drunkWorld && !Main.remixWorld)
+                {
+                    ushort[] skeleids = { 75 };
+                    foreach (ushort add in skeleids)
+                    {
+                        if (!getillegalwalls.ContainsKey(add))
+                        {
+                            getillegalwalls.Add(add, "Skeletron");
+                        }
+                    }
+                }
+            }
+            #endregion
+
+            #region [ HardMode | Wall of Flesh ]
+            if (!Main.hardMode)
+            {
+                ushort[] addin = { 22, 25, 26, 32, 109, 110, 111, 136, 137, 168, 169, 172,
+                    186, 226, 227, 236, 242, 243, 248, 265, 288, 289, 290, 291, 310, 339,
+                    340 };
+
+                foreach (ushort add in addin)
+                {
+                    if (!getillegalwalls.ContainsKey(add))
+                    {
+                        getillegalwalls.Add(add, "HardMode | Wall of Flesh");
+                    }
+                }
+
+                if (!Main.tenthAnniversaryWorld)
+                {
+                    ushort[] hminprehm = { 43, 140 };
+
+                    foreach (ushort add in hminprehm)
+                    {
+                        if (!getillegalwalls.ContainsKey(add))
+                        {
+                            getillegalwalls.Add(add, "HardMode | Wall of Flesh");
+                        }
+                    }
+                    if (!Main.zenithWorld)
+                    {
+                        if (!getillegalwalls.ContainsKey(44))
+                        {
+                            getillegalwalls.Add(44, "HardMode | Wall of Flesh");
+                        }
+                    }
+                }
+            }
+            #endregion
+
+            #region ( Mechanical Bosses )
+
+            if (!NPC.downedMechBoss1 && !NPC.downedMechBoss2 && !NPC.downedMechBoss3)
+            {
+                ushort[] addin = { 77, 225, 233 };
+
+                foreach (ushort add in addin)
+                {
+                    if (!getillegalwalls.ContainsKey(add))
+                    {
+                        getillegalwalls.Add(add, "Mechanical Bosses");
+                    }
+                }
+            }
+
+
+            if (!NPC.downedMechBoss1 || !NPC.downedMechBoss2 || !NPC.downedMechBoss3)
+            {
+                ushort[] addin = { 173 };
+
+                foreach (ushort add in addin)
+                {
+                    if (!getillegalwalls.ContainsKey(add))
+                    {
+                        getillegalwalls.Add(add, "Post Mechanical Bosses");
+                    }
+                }
+            }
+
+            #endregion
+
+            #region [ Plantera ]
+
+            if (!NPC.downedPlantBoss)
+            {
+                ushort[] addin = { 115, 175, 318 };
+
+                foreach (ushort add in addin)
+                {
+                    if (!getillegalwalls.ContainsKey(add))
+                    {
+                        getillegalwalls.Add(add, "Plantera");
+                    }
+                }
+            }
+
+            #endregion
+
+            #region [ Golem ]
+
+            if (!NPC.downedGolemBoss)
+            {
+                ushort[] addin = { 112, 176 };
+
+                foreach (ushort add in addin)
+                {
+                    if (!getillegalwalls.ContainsKey(add))
+                    {
+                        getillegalwalls.Add(add, "Golem");
+                    }
+                }
+            }
+
+            #endregion
+
+            #region [ Lunatic Cultist ]
+
+            if (!NPC.downedAncientCultist)
+            {
+                ushort[] addin = { 237, 238, 239, 240 };
+
+                foreach (ushort add in addin)
+                {
+                    if (!getillegalwalls.ContainsKey(add))
+                    {
+                        getillegalwalls.Add(add, "Lunatic Cultist");
+                    }
+                }
+            }
+
+            #endregion
+
+            #region [ Moon Lord ]
+
+            if (!NPC.downedMoonlord)
+            {
+                ushort[] addin = { 224, 323, 324, 325, 326, 327, 328, 329, 330 };
+
+                foreach (ushort add in addin)
+                {
+                    if (!getillegalwalls.ContainsKey(add))
+                    {
+                        getillegalwalls.Add(add, "Moon Lord");
+                    }
+                }
+            }
+
+            #endregion
+
+            #endregion
+
+
+            #endregion
+
+            return getillegalwalls;
+        }
+
+        public static bool ItemSuspicion(Item item)
+        {
+            int maxvalue = 10;
+
+            if (Main.hardMode) maxvalue = 100;
+
+            if ((item.value * item.stack) / 5000000 >= maxvalue && item.netID != 74) return true;
+
+            if (MKLP.IllegalItemProgression.ContainsKey(item.netID)) return true;
+
+            return false;
         }
 
         public static void BossManager()
