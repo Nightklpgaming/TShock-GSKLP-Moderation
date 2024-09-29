@@ -2787,10 +2787,17 @@ namespace MKLP.Modules
         {
             if (channel == 0) return;
 
-            var targetchannel = _client.GetChannel(channel);
+            try
+            {
+                var targetchannel = _client.GetChannel(channel);
 
-            await ((SocketTextChannel)targetchannel).SendMessageAsync(TitleLog + message);
-            return;
+                await ((SocketTextChannel)targetchannel).SendMessageAsync(TitleLog + message);
+                return;
+            }
+            catch (Exception e)
+            {
+                MKLP_Console.SendLog_Message_DiscordBot(e, "=[Log Exception]=", ConsoleColor.Red, ConsoleColor.DarkRed);
+            }
         }
 
         public async void KLPBotSendMessageMainLog(string message)
@@ -2798,63 +2805,83 @@ namespace MKLP.Modules
             if ((ulong)MKLP.Config.Discord.MainChannelLog == 0) return;
             if ((ulong)MKLP.Config.Discord.MainChannelLog == null) return;
 
-            var targetchannel = _client.GetChannel((ulong)MKLP.Config.Discord.MainChannelLog);
+            try
+            {
+                var targetchannel = _client.GetChannel((ulong)MKLP.Config.Discord.MainChannelLog);
 
-            await ((SocketTextChannel)targetchannel).SendMessageAsync(TitleLog + message);
-            return;
+                await ((SocketTextChannel)targetchannel).SendMessageAsync(TitleLog + message);
+                return;
+            }
+            catch (Exception e)
+            {
+                MKLP_Console.SendLog_Message_DiscordBot(e, "=[Log Exception]=", ConsoleColor.Red, ConsoleColor.DarkRed);
+            }
         }
 
         public async void KLPBotSendMessage_Disabled(string message, string playername = "none", string reason = "No Reason Provided")
         {
-            if ((ulong)MKLP.Config.Discord.MainChannelLog == 0) return;
-            if ((ulong)MKLP.Config.Discord.MainChannelLog == null) return;
+            try
+            {
+                if ((ulong)MKLP.Config.Discord.MainChannelLog == 0) return;
+                if ((ulong)MKLP.Config.Discord.MainChannelLog == null) return;
 
-            var targetchannel = _client.GetChannel((ulong)MKLP.Config.Discord.MainChannelLog);
+                var targetchannel = _client.GetChannel((ulong)MKLP.Config.Discord.MainChannelLog);
 
-            var buttons = new ComponentBuilder()
-                .WithButton("Dismiss", "MKLP_DismissMsg_Disabled".Replace('_', S_), ButtonStyle.Secondary)
-                .WithButton("Check Player", "MKLP_SendMsg_PlayerModView_Main_".Replace('_', S_) + playername, emote: new Emoji("\U0001F4B3"))
-                .WithButton("Quick Ban [ permanent ]", $"MKLP_InGame_PlayerAction_QBan_".Replace('_', S_) + playername + S_ +reason, ButtonStyle.Danger, emote: new Emoji("\U0001F528"), row: 1)
-                .WithButton("Enable", "MKLP_InGame_PlayerAction_Undisable_".Replace('_', S_) + playername, ButtonStyle.Success, emote: new Emoji("\U00002705"), row: 1);
+                var buttons = new ComponentBuilder()
+                    .WithButton("Dismiss", "MKLP_DismissMsg_Disabled".Replace('_', S_), ButtonStyle.Secondary)
+                    .WithButton("Check Player", "MKLP_SendMsg_PlayerModView_Main_".Replace('_', S_) + playername, emote: new Emoji("\U0001F4B3"))
+                    .WithButton("Quick Ban [ permanent ]", $"MKLP_InGame_PlayerAction_QBan_".Replace('_', S_) + playername + S_ + reason, ButtonStyle.Danger, emote: new Emoji("\U0001F528"), row: 1)
+                    .WithButton("Enable", "MKLP_InGame_PlayerAction_Undisable_".Replace('_', S_) + playername, ButtonStyle.Success, emote: new Emoji("\U00002705"), row: 1);
 
-            await ((SocketTextChannel)targetchannel).SendMessageAsync(TitleLog + message, components: buttons.Build());
-            return;
+                await ((SocketTextChannel)targetchannel).SendMessageAsync(TitleLog + message, components: buttons.Build());
+                return;
+            } catch (Exception e)
+            {
+                MKLP_Console.SendLog_Message_DiscordBot(e, "=[Log Exception]=", ConsoleColor.Red, ConsoleColor.DarkRed);
+            }
         }
 
         public async void KLPBotSendMessage_Report(int ID, string reporter, string target, string message, DateTime Since, string location, string playerlist)
         {
             if ((ulong)MKLP.Config.Discord.MainChannelLog == 0) return;
             if ((ulong)MKLP.Config.Discord.MainChannelLog == null) return;
-
-            var targetchannel = _client.GetChannel((ulong)MKLP.Config.Discord.MainChannelLog);
-
-            if (target != DiscordKLP.S_ + "none" + DiscordKLP.S_)
+            try
             {
-                var buttons = new ComponentBuilder()
-                .WithButton("Dismiss [ Report ]", "MKLP_DismissMsg_Report1_".Replace('_', S_) + ID, ButtonStyle.Secondary)
-                .WithButton("Check Player", "MKLP_SendMsg_PlayerModView_Main_".Replace('_', S_) + target, emote: new Emoji("\U0001F4B3"))
-                .WithButton("Ban", $"MKLP_InGame_PlayerAction_Ban_".Replace('_', S_) + target, ButtonStyle.Danger, emote: new Emoji("\U0001F528"), row: 1);
+                var targetchannel = _client.GetChannel((ulong)MKLP.Config.Discord.MainChannelLog);
 
-                await ((SocketTextChannel)targetchannel).SendMessageAsync(TitleLog + $"New report from **{reporter}** {TimestampTag.FormatFromDateTime(Since, TimestampTagStyles.Relative)}" +
-                    $"\n> **ID:** `{ID}`" +
-                    $"\n> **Target:** `{target}`" +
-                    $"\n> **Location:** `{location}`" +
-                    $"\n> **Players Online:** `{playerlist}`" +
-                    $"\n\n> **Message:** `{message}`",
-                    components: buttons.Build());
-            } else
-            {
-                var buttons = new ComponentBuilder()
-                    .WithButton("Dismiss [ Report ]", "MKLP_DismissMsg_Report2_".Replace('_', S_) + ID, ButtonStyle.Secondary);
+                if (target != DiscordKLP.S_ + "none" + DiscordKLP.S_)
+                {
+                    var buttons = new ComponentBuilder()
+                    .WithButton("Dismiss [ Report ]", "MKLP_DismissMsg_Report1_".Replace('_', S_) + ID, ButtonStyle.Secondary)
+                    .WithButton("Check Player", "MKLP_SendMsg_PlayerModView_Main_".Replace('_', S_) + target, emote: new Emoji("\U0001F4B3"))
+                    .WithButton("Ban", $"MKLP_InGame_PlayerAction_Ban_".Replace('_', S_) + target, ButtonStyle.Danger, emote: new Emoji("\U0001F528"), row: 1);
 
-                await ((SocketTextChannel)targetchannel).SendMessageAsync(TitleLog + $"New report from **{reporter}** {TimestampTag.FormatFromDateTime(Since, TimestampTagStyles.Relative)}" +
-                    $"\n> **ID:** `{ID}`" +
-                    $"\n> **Location:** `{location}`" +
-                    $"\n> **Players Online:** `{playerlist}`" +
-                    $"\n\n> **Message:** `{message}`",
-                    components: buttons.Build());
+                    await ((SocketTextChannel)targetchannel).SendMessageAsync(TitleLog + $"New report from **{reporter}** {TimestampTag.FormatFromDateTime(Since, TimestampTagStyles.Relative)}" +
+                        $"\n> **ID:** `{ID}`" +
+                        $"\n> **Target:** `{target}`" +
+                        $"\n> **Location:** `{location}`" +
+                        $"\n> **Players Online:** `{playerlist}`" +
+                        $"\n\n> **Message:** `{message}`",
+                        components: buttons.Build());
+                }
+                else
+                {
+                    var buttons = new ComponentBuilder()
+                        .WithButton("Dismiss [ Report ]", "MKLP_DismissMsg_Report2_".Replace('_', S_) + ID, ButtonStyle.Secondary);
+
+                    await ((SocketTextChannel)targetchannel).SendMessageAsync(TitleLog + $"New report from **{reporter}** {TimestampTag.FormatFromDateTime(Since, TimestampTagStyles.Relative)}" +
+                        $"\n> **ID:** `{ID}`" +
+                        $"\n> **Location:** `{location}`" +
+                        $"\n> **Players Online:** `{playerlist}`" +
+                        $"\n\n> **Message:** `{message}`",
+                        components: buttons.Build());
+                }
+                return;
             }
-            return;
+            catch (Exception e)
+            {
+                MKLP_Console.SendLog_Message_DiscordBot(e, "=[Log Exception]=", ConsoleColor.Red, ConsoleColor.DarkRed);
+            }
         }
 
         public async void KLPBotSendMessage_Warning(string message, string playername = "none", string reason = "No Reason Provided")
@@ -2862,15 +2889,22 @@ namespace MKLP.Modules
             if ((ulong)MKLP.Config.Discord.MainChannelLog == 0) return;
             if ((ulong)MKLP.Config.Discord.MainChannelLog == null) return;
 
-            var targetchannel = _client.GetChannel((ulong)MKLP.Config.Discord.MainChannelLog);
+            try
+            {
+                var targetchannel = _client.GetChannel((ulong)MKLP.Config.Discord.MainChannelLog);
 
-            var buttons = new ComponentBuilder()
-                .WithButton("Dismiss", "MKLP_DismissMsg_Warning".Replace('_', S_), ButtonStyle.Secondary)
-                .WithButton("Check Player", "MKLP_SendMsg_PlayerModView_Main_".Replace('_', S_) + playername, emote: new Emoji("\U0001F4B3"))
-                .WithButton("Quick Ban [ permanent ]", $"MKLP_InGame_PlayerAction_QBan_".Replace('_', S_) + playername + S_ + reason, ButtonStyle.Danger, emote: new Emoji("\U0001F528"), row: 1);
+                var buttons = new ComponentBuilder()
+                    .WithButton("Dismiss", "MKLP_DismissMsg_Warning".Replace('_', S_), ButtonStyle.Secondary)
+                    .WithButton("Check Player", "MKLP_SendMsg_PlayerModView_Main_".Replace('_', S_) + playername, emote: new Emoji("\U0001F4B3"))
+                    .WithButton("Quick Ban [ permanent ]", $"MKLP_InGame_PlayerAction_QBan_".Replace('_', S_) + playername + S_ + reason, ButtonStyle.Danger, emote: new Emoji("\U0001F528"), row: 1);
 
-            await ((SocketTextChannel)targetchannel).SendMessageAsync(TitleLog + message, components: buttons.Build());
-            return;
+                await ((SocketTextChannel)targetchannel).SendMessageAsync(TitleLog + message, components: buttons.Build());
+                return;
+            }
+            catch (Exception e)
+            {
+                MKLP_Console.SendLog_Message_DiscordBot(e, "=[Log Exception]=", ConsoleColor.Red, ConsoleColor.DarkRed);
+            }
         }
 
         #endregion

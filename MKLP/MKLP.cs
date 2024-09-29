@@ -56,9 +56,9 @@ namespace MKLP
 
         public static DiscordKLP Discordklp = new();
 
-        public static Dictionary<string, string> DisabledKey = new();
-
         public static AccountDLinked LinkAccountManager = new();
+
+        public static Dictionary<string, string> DisabledKey = new();
 
 
         //illegal things list
@@ -81,7 +81,7 @@ namespace MKLP
         public override void Initialize()
         {
             //=====================Player===================
-            GetDataHandlers.PlayerUpdate += OnPlayerUpdate;
+            //GetDataHandlers.PlayerUpdate += OnPlayerUpdate;
 
             ServerApi.Hooks.ServerJoin.Register(this, OnPlayerJoin);
 
@@ -243,7 +243,7 @@ namespace MKLP
             if (disposing)
             {
                 //=====================Player===================
-                GetDataHandlers.PlayerUpdate -= OnPlayerUpdate;
+                //GetDataHandlers.PlayerUpdate -= OnPlayerUpdate;
 
                 ServerApi.Hooks.ServerJoin.Deregister(this, OnPlayerJoin);
 
@@ -286,10 +286,11 @@ namespace MKLP
 
             var player = TShock.Players[args.Msg.whoAmI];
 
-            if (DisabledKey.ContainsKey(Identifier.Name + player.Name) ||
-                DisabledKey.ContainsKey(Identifier.IP + player.IP) ||
-                DisabledKey.ContainsKey(Identifier.UUID + player.UUID))
+            if (player.ContainsData("MKLP_IsDisabled"))
             {
+                if (!player.GetData<bool>("MKLP_IsDisabled"))
+                    return;
+
                 if (player == null || !player.Active || player.Dead)
                     return;
 
@@ -299,15 +300,19 @@ namespace MKLP
                     args.MsgID == PacketTypes.ClientSyncedInventory)
                     return;
 
+                if (TShockAPI.Utils.Distance(value2: new Vector2((int)player.TPlayer.position.X / 16, (int)player.TPlayer.position.Y / 16), value1: new Vector2(Main.spawnTileX, Main.spawnTileY)) >= 3f)
+                {
+                    player.Teleport(Main.spawnTileX * 16, Main.spawnTileY * 16);
+                }
+                player.SetBuff(149, 330, true);
+
                 // Prevent the packet from being processed
                 args.Handled = true;
                 return;
             }
 
             #region ( Inventory Checking )
-            if (args.MsgID == PacketTypes.PlayerSlot ||
-                args.MsgID == PacketTypes.ItemOwner ||
-                args.MsgID == PacketTypes.ClientSyncedInventory)
+            if (args.MsgID == PacketTypes.PlayerSlot)
             {
                 if ((!player.HasPermission("tshock.item") || !player.HasPermission("tshock.item.*")) && !player.HasPermission(Config.Permissions.IgnoreSurvivalCode_1)) ManagePlayer.CheckIllegalItemInventory(player);
 
@@ -325,13 +330,12 @@ namespace MKLP
                     player.SetData("MKLP_PrevInventory", player.TPlayer.inventory.Clone());
                 }
             }
-
             #endregion
 
             #region { spawn boss/invasion }
-            using (var data = new MemoryStream(args.Msg.readBuffer, args.Index, args.Length - 1))
+            if (args.MsgID == PacketTypes.SpawnBossorInvasion)
             {
-                if (args.MsgID == PacketTypes.SpawnBossorInvasion)
+                using (var data = new MemoryStream(args.Msg.readBuffer, args.Index, args.Length - 1))
                 {
                     try
                     {
@@ -348,9 +352,10 @@ namespace MKLP
             #endregion
 
             #region { Ping Map }
-            using (var stream = new MemoryStream(args.Msg.readBuffer, args.Index, args.Length))
+
+            if (args.MsgID == PacketTypes.LoadNetModule)
             {
-                if (args.MsgID == PacketTypes.LoadNetModule)
+                using (var stream = new MemoryStream(args.Msg.readBuffer, args.Index, args.Length))
                 {
                     using (var reader = new BinaryReader(stream))
                     {
@@ -381,7 +386,8 @@ namespace MKLP
         #region { Player }
         private static void OnPlayerUpdate(object? sender, GetDataHandlers.PlayerUpdateEventArgs args)
         {
-            #region
+            #region code
+            /*
             if (args.Player == null || !args.Player.Active) return;
 
             if (!args.Player.IsLoggedIn)
@@ -401,6 +407,25 @@ namespace MKLP
                 args.Player.SetBuff(149, 330, true);
                 return;
             }
+
+            #region ( Inventory Checking )
+            if ((!args.Player.HasPermission("tshock.item") || !args.Player.HasPermission("tshock.item.*")) && !args.Player.HasPermission(Config.Permissions.IgnoreSurvivalCode_1)) ManagePlayer.CheckIllegalItemInventory(args.Player);
+
+            if (args.Player.ContainsData("MKLP_PrevInventory"))
+            {
+
+                Item[] prevplayer = args.Player.GetData<Item[]>("MKLP_PrevInventory");
+
+                ManagePlayer.CheckPreviousInventory(args.Player, args.Player.TPlayer.inventory, prevplayer);
+
+                args.Player.SetData("MKLP_PrevInventory", args.Player.TPlayer.inventory.Clone());
+            }
+            else
+            {
+                args.Player.SetData("MKLP_PrevInventory", args.Player.TPlayer.inventory.Clone());
+            }
+            #endregion
+            */
             #endregion
         }
 
@@ -436,6 +461,16 @@ namespace MKLP
                     player.Disconnect($"You Can't use {DiscordKLP.S_} in your Name!");
                     return;
                 }
+                if (player.Name.Length < (byte)Config.Main.Minimum_CharacterName)
+                {
+                    player.Disconnect($"You're Character Name has less than {(byte)Config.Main.Minimum_CharacterName}");
+                    return;
+                }
+                if (player.Name.Length > (byte)Config.Main.Maximum_CharacterName)
+                {
+                    player.Disconnect($"You're Character Name has more than {(byte)Config.Main.Maximum_CharacterName}");
+                    return;
+                }
                 if (!HasSymbols(player.Name) && !(bool)Config.Main.Allow_PlayerName_Symbols)
                 {
                     player.Disconnect("Your name contains Symbols and is not allowed on this server.");
@@ -454,6 +489,7 @@ namespace MKLP
                         check.Key == Identifier.IP + player.IP ||
                         check.Key == Identifier.UUID + player.UUID)
                     {
+                        player.SetData("MKLP_IsDisabled", true);
                         player.SendErrorMessage("Your still disabled" +
                             "\nReason : " + check.Value);
                     }
@@ -569,17 +605,17 @@ namespace MKLP
             if (PlaceThreshold()) return;
             if (PaintThreshold()) return;
 
-            if ((bool)Config.Main.Prevent_Place_BastStatueNearDoor && PossibleTransmutationGlitch())
-            {
-                args.Player.SendErrorMessage("You cannot place 'Bast_Statue/Door' near each other!");
-                args.Player.SendTileSquareCentered(tileX, tileY, 4);
-                args.Handled = true;
-                return;
-            }
-
+            
             if (args.Action == GetDataHandlers.EditAction.PlaceTile ||
                 args.Action == GetDataHandlers.EditAction.ReplaceTile)
             {
+                if ((bool)Config.Main.Prevent_Place_BastStatueNearDoor && PossibleTransmutationGlitch())
+                {
+                    args.Player.SendErrorMessage("You cannot place 'Bast_Statue/Door' near each other!");
+                    args.Player.SendTileSquareCentered(tileX, tileY, 4);
+                    args.Handled = true;
+                    return;
+                }
                 if (IllegalTileProgression.ContainsKey(new(Main.tile[tileX, tileY].type, args.Style)) && args.Player.HasPermission(Config.Permissions.IgnoreSurvivalCode_3) && (bool)Config.Main.Using_Survival_Code3)
                 {
                     ManagePlayer.DisablePlayer(args.Player, $"{IllegalTileProgression[new(Main.tile[tileX, tileY].type, args.Style)]} Block Place", ServerReason: $"Survival,code,3|{Main.tile[tileX, tileY].type}|{args.Style}|{IllegalTileProgression[new(Main.tile[tileX, tileY].type, args.Style)]}");
@@ -596,8 +632,9 @@ namespace MKLP
                 }
             }
 
-            if (args.Action == GetDataHandlers.EditAction.PlaceTile ||
-                args.Action == GetDataHandlers.EditAction.ReplaceTile)
+            if (args.Action == GetDataHandlers.EditAction.PlaceWall ||
+                args.Action == GetDataHandlers.EditAction.KillWall ||
+                args.Action == GetDataHandlers.EditAction.ReplaceWall)
             {
                 if (IllegalWallProgression.ContainsKey(Main.tile[tileX, tileY].wall) && args.Player.HasPermission(Config.Permissions.IgnoreSurvivalCode_4) && (bool)Config.Main.Using_Survival_Code4)
                 {
@@ -2560,6 +2597,35 @@ namespace MKLP
                 }
             }
             int ClearedNPC = 0;
+            int[] IgnoreNPCIDs = {
+                NPCID.DungeonGuardian,
+
+                NPCID.DD2DarkMageT1,
+                NPCID.DD2DarkMageT3,
+                NPCID.DD2OgreT2,
+                NPCID.DD2OgreT3,
+                NPCID.DD2Betsy,
+
+                NPCID.PirateShip,
+                NPCID.PirateShipCannon,
+
+                NPCID.Everscream,
+                NPCID.SantaNK1,
+                NPCID.IceQueen,
+
+                NPCID.MourningWood,
+                NPCID.Pumpking,
+
+                NPCID.MartianSaucer,
+                NPCID.MartianSaucerCannon,
+                NPCID.MartianSaucerCore,
+                NPCID.MartianSaucerTurret,
+
+                NPCID.LunarTowerSolar,
+                NPCID.LunarTowerNebula,
+                NPCID.LunarTowerStardust,
+                NPCID.LunarTowerVortex,
+            };
             for (int i = 0; i < Main.maxNPCs; i++)
             {
                 if (Main.npc[i].boss) continue;
@@ -2569,7 +2635,8 @@ namespace MKLP
                     Main.npc[i].type == 576 ||
                     Main.npc[i].type == 577 ||
                     Main.npc[i].type == 564 ||
-                    Main.npc[i].type == 565) continue;
+                    Main.npc[i].type == 565
+                    ) continue;
                 if (Main.npc[i].rarity > 0) continue;
                 if (Main.npc[i].active)
                 {
@@ -3365,7 +3432,7 @@ namespace MKLP
             {
                 if (player == null) continue;
                 if (!player.HasPermission(Config.Permissions.Staff)) continue;
-                TSPlayer.All.SendMessage(message, messagecolor);
+                player.SendMessage(message, messagecolor);
             }
         }
         

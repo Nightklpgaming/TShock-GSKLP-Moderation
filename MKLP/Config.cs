@@ -141,6 +141,8 @@ namespace MKLP
     }
     public class CONFIG_MAIN
     {
+        public byte? Minimum_CharacterName = 1;
+        public byte? Maximum_CharacterName = 255;
         public string[] IllegalNames = { "ServerConsole", "Server" };
         public bool? Allow_PlayerName_Symbols = true;
         public bool? Allow_PlayerName_InappropriateWords = false;
@@ -220,6 +222,8 @@ namespace MKLP
         {
             CONFIG_MAIN getdefault = new();
 
+            if (Minimum_CharacterName == null) Minimum_CharacterName = getdefault.Minimum_CharacterName;
+            if (Maximum_CharacterName == null) Maximum_CharacterName = getdefault.Maximum_CharacterName;
             if (IllegalNames == null) IllegalNames = getdefault.IllegalNames;
             if (Allow_PlayerName_Symbols == null) Allow_PlayerName_Symbols = getdefault.Allow_PlayerName_Symbols;
             if (Allow_PlayerName_InappropriateWords == null) Allow_PlayerName_InappropriateWords = getdefault.Allow_PlayerName_InappropriateWords;

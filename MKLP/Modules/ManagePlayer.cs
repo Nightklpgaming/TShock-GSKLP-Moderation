@@ -248,6 +248,8 @@ namespace MKLP.Modules
                 MKLP.DisabledKey.Add(Identifier.IP + player.IP, Reason);
                 MKLP.DisabledKey.Add(Identifier.UUID + player.UUID, Reason);
 
+                player.SetData("MKLP_IsDisabled", true);
+
                 if (player.ActiveChest != -1)
                 {
                     player.ActiveChest = -1;
@@ -404,6 +406,28 @@ namespace MKLP.Modules
                                                 "Illegal item progression");
                                             break;
                                         }
+                                    #endregion
+                                    case 3:
+                                        #region ( code 3 )
+                                        {
+
+                                            MKLP.Discordklp.KLPBotSendMessage_Disabled(
+                                                $"Player **{player.Name}** Disabled for illegal Tile progression `tild id: {ServerReason.Split("|")[1]}` **{ServerReason.Split("|")[2]}**",
+                                                player.Account.Name,
+                                                "Illegal tile progression");
+                                            break;
+                                        }
+                                    #endregion
+                                    case 4:
+                                        #region ( code 4 )
+                                        {
+
+                                            MKLP.Discordklp.KLPBotSendMessage_Disabled(
+                                                $"Player **{player.Name}** Disabled for illegal Wall progression `wall id: {ServerReason.Split("|")[1]}` **{ServerReason.Split("|")[2]}**",
+                                                player.Account.Name,
+                                                "Illegal wall progression");
+                                            break;
+                                        }
                                         #endregion
                                 }
 
@@ -445,6 +469,8 @@ namespace MKLP.Modules
                 if (MKLP.DisabledKey.ContainsKey(Identifier.Name + player.Name)) MKLP.DisabledKey.Remove(Identifier.Name + player.Name);
                 if (MKLP.DisabledKey.ContainsKey(Identifier.IP + player.IP)) MKLP.DisabledKey.Remove(Identifier.IP + player.IP);
                 if (MKLP.DisabledKey.ContainsKey(Identifier.UUID + player.UUID)) MKLP.DisabledKey.Remove(Identifier.UUID + player.UUID);
+
+                player.SetData("MKLP_IsDisabled", false);
 
                 player.SendMessage("You're now enabled", Microsoft.Xna.Framework.Color.Lime);
 
