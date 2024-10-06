@@ -2007,7 +2007,7 @@ namespace MKLP
 
             if (changed)
             {
-                Config.Changeall(Config);
+                Config.Changeall();
                 Config.Read();
             }
             #endregion
@@ -3470,6 +3470,8 @@ namespace MKLP
                                     return;
                                 }
                         }
+                        Config.Changeall();
+                        Config.Read();
                         return;
                     }
                 #endregion
@@ -3756,6 +3758,8 @@ namespace MKLP
                                     return;
                                 }
                         }
+                        Config.Changeall();
+                        Config.Read();
                         return;
                     }
                 #endregion
@@ -3782,7 +3786,7 @@ namespace MKLP
                         Config.BossManager.AllowMoonLord = true;
 
                         args.Player.SendInfoMessage("All Bosses are enabled");
-                        Config.Changeall(Config);
+                        Config.Changeall();
                         Config.Read();
                         return;
                     }
@@ -3810,7 +3814,7 @@ namespace MKLP
                         Config.BossManager.AllowMoonLord = false;
 
                         args.Player.SendInfoMessage("All Bosses are enabled");
-                        Config.Changeall(Config);
+                        Config.Changeall();
                         Config.Read();
                         return;
                     }
@@ -4200,7 +4204,7 @@ namespace MKLP
                                     return;
                                 }
                         }
-                        Config.Changeall(Config);
+                        Config.Changeall();
                         Config.Read();
                         return;
                     }
@@ -4374,7 +4378,7 @@ namespace MKLP
                                     return;
                                 }
                         }
-                        Config.Changeall(Config);
+                        Config.Changeall();
                         Config.Read();
                         return;
                     }
@@ -4405,7 +4409,7 @@ namespace MKLP
 
                         args.Player.SendInfoMessage("Cancled All Boss Schedule");
 
-                        Config.Changeall(Config);
+                        Config.Changeall();
                         Config.Read();
                         return;
                     }
@@ -4448,7 +4452,7 @@ namespace MKLP
                                 }
                         }
 
-                        Config.Changeall(Config);
+                        Config.Changeall();
                         Config.Read();
                         return;
                     }
@@ -4479,7 +4483,7 @@ namespace MKLP
 
                         args.Player.SendInfoMessage("Reset Boss Schedule");
 
-                        Config.Changeall(Config);
+                        Config.Changeall();
                         Config.Read();
                         return;
                     }

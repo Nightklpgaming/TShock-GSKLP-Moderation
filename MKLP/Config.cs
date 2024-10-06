@@ -63,7 +63,7 @@ namespace MKLP
         /// changes config file
         /// </summary>
         /// <param name="config"></param>
-        public void Changeall(Config config)
+        public void Changeall()
         {
             if (!File.Exists(path))
             {
@@ -71,7 +71,7 @@ namespace MKLP
             }
             else
             {
-                File.WriteAllText(path, JsonConvert.SerializeObject(config, Formatting.Indented));
+                File.WriteAllText(path, JsonConvert.SerializeObject(this, Formatting.Indented));
             }
         }
 
