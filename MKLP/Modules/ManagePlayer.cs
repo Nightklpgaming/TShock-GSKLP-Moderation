@@ -155,71 +155,75 @@ namespace MKLP.Modules
 
                     InventoryManager.TryAddInvLog(tsplayer, prevplayerinv[i], playerinv[i], i, "Inv");
 
-                    if (playerinv[i].stack == 255)
+                    if ((bool)MKLP.Config.Main.ReceivedWarning_SuspiciousDupe)
                     {
-                        if (prevplayerinv[i].stack > 240) return;
-                        if (prevplayerinv[i].netID != playerinv[i].netID) return;
-                        if (prevplayerinv[i].netID == 0 || prevplayerinv[i].stack == 0) return;
-                        if (tsplayer.ActiveChest != -1) return;
+                        if (playerinv[i].stack == 255)
+                        {
+                            if (prevplayerinv[i].stack > 240) return;
+                            if (prevplayerinv[i].netID != playerinv[i].netID) return;
+                            if (prevplayerinv[i].netID == 0 || prevplayerinv[i].stack == 0) return;
+                            if (tsplayer.ActiveChest != -1) return;
 
-                        MKLP.Discordklp.KLPBotSendMessage_Warning($"**Warning!** Player named **{tsplayer.Account.Name}** has suspicious activity for **Split Dupe** `( {prevplayerinv[i].stack} ) {prevplayerinv[i].Name}` to `( {playerinv[i].stack} ) {playerinv[i].Name}` `ActiveChest: {tsplayer.ActiveChest}`" +
-                            $"\n- Please Check this player if they are duping", tsplayer.Account.Name, "Split Duplicating");
-                        MKLP.SendStaffMessage($"[MKLP] Player [c/8911f1:{tsplayer.Account.Name}]  has suspicious activity for Dupe [i/s{prevplayerinv[i].stack}:{prevplayerinv[i].netID}] to [i/s{playerinv[i].stack}:{playerinv[i].netID}]" +
-                            $"\nPlease Check this player if they are duping", Microsoft.Xna.Framework.Color.MediumPurple);
+                            MKLP.Discordklp.KLPBotSendMessage_Warning($"**Warning!** Player named **{tsplayer.Account.Name}** has suspicious activity for **Split Dupe** `( {prevplayerinv[i].stack} ) {prevplayerinv[i].Name}` to `( {playerinv[i].stack} ) {playerinv[i].Name}` `ActiveChest: {tsplayer.ActiveChest}`" +
+                                $"\n- Please Check this player if they are duping", tsplayer.Account.Name, "Split Duplicating");
+                            MKLP.SendStaffMessage($"[MKLP] Player [c/8911f1:{tsplayer.Account.Name}]  has suspicious activity for Dupe [i/s{prevplayerinv[i].stack}:{prevplayerinv[i].netID}] to [i/s{playerinv[i].stack}:{playerinv[i].netID}]" +
+                                $"\nPlease Check this player if they are duping", Microsoft.Xna.Framework.Color.MediumPurple);
 
+                        }
+                        if (playerinv[i].stack == 500)
+                        {
+                            if (prevplayerinv[i].stack > 485) return;
+                            if (prevplayerinv[i].netID != playerinv[i].netID) return;
+                            if (prevplayerinv[i].netID == 0 || prevplayerinv[i].stack == 0) return;
+                            if (tsplayer.ActiveChest != -1) return;
+
+                            MKLP.Discordklp.KLPBotSendMessage_Warning($"**Warning!** Player named **{tsplayer.Account.Name}** has suspicious activity for **Dupe** `( {prevplayerinv[i].stack} ) {prevplayerinv[i].Name}` to `( {playerinv[i].stack} ) {playerinv[i].Name}` `ActiveChest: {tsplayer.ActiveChest}`" +
+                                $"\n- Please Check this player if they are duping", tsplayer.Account.Name, "Duplicating");
+                            MKLP.SendStaffMessage($"[MKLP] Player [c/8911f1:{tsplayer.Account.Name}]  has suspicious activity for Dupe [i/s{prevplayerinv[i].stack}:{prevplayerinv[i].netID}] to [i/s{playerinv[i].stack}:{playerinv[i].netID}]" +
+                                $"\nPlease Check this player if they are duping", Microsoft.Xna.Framework.Color.MediumPurple);
+
+                        }
+                        if (playerinv[i].stack == 1000)
+                        {
+                            if (prevplayerinv[i].stack > 950) return;
+                            if (prevplayerinv[i].netID != playerinv[i].netID) return;
+                            if (prevplayerinv[i].netID == 0 || prevplayerinv[i].stack == 0) return;
+                            if (tsplayer.ActiveChest != -1) return;
+
+                            MKLP.Discordklp.KLPBotSendMessage_Warning($"**Warning!** Player named **{tsplayer.Account.Name}** has suspicious activity for **Dupe** `( {prevplayerinv[i].stack} ) {prevplayerinv[i].Name}` to `( {playerinv[i].stack} ) {playerinv[i].Name}` `ActiveChest: {tsplayer.ActiveChest}`" +
+                                $"\n- Please Check this player if they are duping", tsplayer.Account.Name, "Duplicating");
+                            MKLP.SendStaffMessage($"[MKLP] Player [c/8911f1:{tsplayer.Account.Name}]  has suspicious activity for Dupe [i/s{prevplayerinv[i].stack}:{prevplayerinv[i].netID}] to [i/s{playerinv[i].stack}:{playerinv[i].netID}]" +
+                                $"\nPlease Check this player if they are duping", Microsoft.Xna.Framework.Color.MediumPurple);
+
+                        }
+                        if (playerinv[i].stack == 5000)
+                        {
+                            if (prevplayerinv[i].stack > 4905) return;
+                            if (prevplayerinv[i].netID != playerinv[i].netID) return;
+                            if (prevplayerinv[i].netID == 0 || prevplayerinv[i].stack == 0) return;
+                            if (tsplayer.ActiveChest != -1) return;
+
+                            MKLP.Discordklp.KLPBotSendMessage_Warning($"**Warning!** Player named **{tsplayer.Account.Name}** has suspicious activity for **Dupe** `( {prevplayerinv[i].stack} ) {prevplayerinv[i].Name}` to `( {playerinv[i].stack} ) {playerinv[i].Name}` `ActiveChest: {tsplayer.ActiveChest}`" +
+                                $"\n- Please Check this player if they are duping", tsplayer.Account.Name, "Duplicating");
+                            MKLP.SendStaffMessage($"[MKLP] Player [c/8911f1:{tsplayer.Account.Name}]  has suspicious activity for Dupe [i/s{prevplayerinv[i].stack}:{prevplayerinv[i].netID}] to [i/s{playerinv[i].stack}:{playerinv[i].netID}]" +
+                                $"\nPlease Check this player if they are duping", Microsoft.Xna.Framework.Color.MediumPurple);
+
+                        }
+                        if (playerinv[i].stack == 9999)
+                        {
+                            if (prevplayerinv[i].stack > 9905) return;
+                            if (prevplayerinv[i].netID != playerinv[i].netID) return;
+                            if (prevplayerinv[i].netID == 0 || prevplayerinv[i].stack == 0) return;
+                            if (tsplayer.ActiveChest != -1) return;
+
+                            MKLP.Discordklp.KLPBotSendMessage_Warning($"**Warning!** Player named **{tsplayer.Account.Name}** has suspicious activity for **Dupe** `( {prevplayerinv[i].stack} ) {prevplayerinv[i].Name}` to `( {playerinv[i].stack} ) {playerinv[i].Name}` `ActiveChest: {tsplayer.ActiveChest}`" +
+                                $"\n- Please Check this player if they are duping", tsplayer.Account.Name, "Duplicating");
+                            MKLP.SendStaffMessage($"[MKLP] Player [c/8911f1:{tsplayer.Account.Name}]  has suspicious activity for Dupe [i/s{prevplayerinv[i].stack}:{prevplayerinv[i].netID}] to [i/s{playerinv[i].stack}:{playerinv[i].netID}]" +
+                                $"\nPlease Check this player if they are duping", Microsoft.Xna.Framework.Color.MediumPurple);
+
+                        }
                     }
-                    if (playerinv[i].stack == 500)
-                    {
-                        if (prevplayerinv[i].stack > 485) return;
-                        if (prevplayerinv[i].netID != playerinv[i].netID) return;
-                        if (prevplayerinv[i].netID == 0 || prevplayerinv[i].stack == 0) return;
-                        if (tsplayer.ActiveChest != -1) return;
-
-                        MKLP.Discordklp.KLPBotSendMessage_Warning($"**Warning!** Player named **{tsplayer.Account.Name}** has suspicious activity for **Dupe** `( {prevplayerinv[i].stack} ) {prevplayerinv[i].Name}` to `( {playerinv[i].stack} ) {playerinv[i].Name}` `ActiveChest: {tsplayer.ActiveChest}`" +
-                            $"\n- Please Check this player if they are duping", tsplayer.Account.Name, "Duplicating");
-                        MKLP.SendStaffMessage($"[MKLP] Player [c/8911f1:{tsplayer.Account.Name}]  has suspicious activity for Dupe [i/s{prevplayerinv[i].stack}:{prevplayerinv[i].netID}] to [i/s{playerinv[i].stack}:{playerinv[i].netID}]" +
-                            $"\nPlease Check this player if they are duping", Microsoft.Xna.Framework.Color.MediumPurple);
-
-                    }
-                    if (playerinv[i].stack == 1000)
-                    {
-                        if (prevplayerinv[i].stack > 950) return;
-                        if (prevplayerinv[i].netID != playerinv[i].netID) return;
-                        if (prevplayerinv[i].netID == 0 || prevplayerinv[i].stack == 0) return;
-                        if (tsplayer.ActiveChest != -1) return;
-
-                        MKLP.Discordklp.KLPBotSendMessage_Warning($"**Warning!** Player named **{tsplayer.Account.Name}** has suspicious activity for **Dupe** `( {prevplayerinv[i].stack} ) {prevplayerinv[i].Name}` to `( {playerinv[i].stack} ) {playerinv[i].Name}` `ActiveChest: {tsplayer.ActiveChest}`" +
-                            $"\n- Please Check this player if they are duping", tsplayer.Account.Name, "Duplicating");
-                        MKLP.SendStaffMessage($"[MKLP] Player [c/8911f1:{tsplayer.Account.Name}]  has suspicious activity for Dupe [i/s{prevplayerinv[i].stack}:{prevplayerinv[i].netID}] to [i/s{playerinv[i].stack}:{playerinv[i].netID}]" +
-                            $"\nPlease Check this player if they are duping", Microsoft.Xna.Framework.Color.MediumPurple);
-
-                    }
-                    if (playerinv[i].stack == 5000)
-                    {
-                        if (prevplayerinv[i].stack > 4905) return;
-                        if (prevplayerinv[i].netID != playerinv[i].netID) return;
-                        if (prevplayerinv[i].netID == 0 || prevplayerinv[i].stack == 0) return;
-                        if (tsplayer.ActiveChest != -1) return;
-
-                        MKLP.Discordklp.KLPBotSendMessage_Warning($"**Warning!** Player named **{tsplayer.Account.Name}** has suspicious activity for **Dupe** `( {prevplayerinv[i].stack} ) {prevplayerinv[i].Name}` to `( {playerinv[i].stack} ) {playerinv[i].Name}` `ActiveChest: {tsplayer.ActiveChest}`" +
-                            $"\n- Please Check this player if they are duping", tsplayer.Account.Name, "Duplicating");
-                        MKLP.SendStaffMessage($"[MKLP] Player [c/8911f1:{tsplayer.Account.Name}]  has suspicious activity for Dupe [i/s{prevplayerinv[i].stack}:{prevplayerinv[i].netID}] to [i/s{playerinv[i].stack}:{playerinv[i].netID}]" +
-                            $"\nPlease Check this player if they are duping", Microsoft.Xna.Framework.Color.MediumPurple);
-
-                    }
-                    if (playerinv[i].stack == 9999)
-                    {
-                        if (prevplayerinv[i].stack > 9905) return;
-                        if (prevplayerinv[i].netID != playerinv[i].netID) return;
-                        if (prevplayerinv[i].netID == 0 || prevplayerinv[i].stack == 0) return;
-                        if (tsplayer.ActiveChest != -1) return;
-
-                        MKLP.Discordklp.KLPBotSendMessage_Warning($"**Warning!** Player named **{tsplayer.Account.Name}** has suspicious activity for **Dupe** `( {prevplayerinv[i].stack} ) {prevplayerinv[i].Name}` to `( {playerinv[i].stack} ) {playerinv[i].Name}` `ActiveChest: {tsplayer.ActiveChest}`" +
-                            $"\n- Please Check this player if they are duping", tsplayer.Account.Name, "Duplicating");
-                        MKLP.SendStaffMessage($"[MKLP] Player [c/8911f1:{tsplayer.Account.Name}]  has suspicious activity for Dupe [i/s{prevplayerinv[i].stack}:{prevplayerinv[i].netID}] to [i/s{playerinv[i].stack}:{playerinv[i].netID}]" +
-                            $"\nPlease Check this player if they are duping", Microsoft.Xna.Framework.Color.MediumPurple);
-
-                    }
+                    
                 }
 
             }
@@ -290,7 +294,7 @@ namespace MKLP.Modules
                                         {
 
                                             MKLP.Discordklp.KLPBotSendMessage_Disabled(
-                                                $"Player **{player.Name}** Disabled for Item Null Boss/Invasion Spawn `ItemID_Held: ({ServerReason.Split("|")[1]}) boss: {ServerReason.Split("|")[2]}`",
+                                                $"Player **{player.Name}** Disabled for Item Null Boss/Invasion Spawn `ItemID_Held: ( {Lang.GetItemName(int.Parse(ServerReason.Split("|")[1]))} ) boss: {ServerReason.Split("|")[2]}`",
                                                 player.Account.Name,
                                                 "Item Null Boss Spawn");
                                             break;

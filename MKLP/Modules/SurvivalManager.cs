@@ -187,7 +187,7 @@ namespace MKLP.Modules
 
             //2223 
 
-            //100
+            //5344
 
             #region ( Boss )
 
@@ -1350,6 +1350,14 @@ namespace MKLP.Modules
 
             #endregion
 
+            foreach (int whitelist in MKLP.Config.Main.WhiteList_Survival_Code1)
+            {
+                if (getillegalitems.ContainsKey(whitelist))
+                {
+                    getillegalitems.Remove(whitelist);
+                }
+            }
+
             return getillegalitems;
         }
 
@@ -2063,6 +2071,14 @@ namespace MKLP.Modules
             #endregion
 
             #endregion
+
+            foreach (short whitelist in MKLP.Config.Main.WhiteList_Survival_Code2)
+            {
+                if (getillegalprojectile.ContainsKey(whitelist))
+                {
+                    getillegalprojectile.Remove(whitelist);
+                }
+            }
 
             return getillegalprojectile;
         }
@@ -3157,6 +3173,14 @@ namespace MKLP.Modules
 
 
             #endregion
+
+            foreach (ushort whitelist in MKLP.Config.Main.WhiteList_Survival_Code4)
+            {
+                if (getillegalwalls.ContainsKey(whitelist))
+                {
+                    getillegalwalls.Remove(whitelist);
+                }
+            }
 
             return getillegalwalls;
         }

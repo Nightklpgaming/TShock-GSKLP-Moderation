@@ -33,7 +33,7 @@ namespace MKLP.Modules
 
         private static readonly Discord.Color EmbedColor = Discord.Color.DarkBlue;
 
-        public const char S_ = '¤';
+        public static char S_ = MKLP.Config.Main.Seperator;
 
         public async void Initialize()
         {
@@ -2711,9 +2711,14 @@ namespace MKLP.Modules
                         messagecontent = messagecontent.Replace($"<@!{user.Id}>", $"[c/{MKLP.Config.Main.StaffChat_HexColor_Discord_Mention_User}:@{user.Username.Replace("[", "").Replace("]", "")}]");
                     }
 
+                    foreach (var roles in message.MentionedRoles)
+                    {
+                        messagecontent = messagecontent.Replace($"<@&{roles.Id}>", $"[c/{MKLP.Config.Main.StaffChat_HexColor_Discord_Mention_Role}:@" + roles.Name.Replace("[", "").Replace("]", "") + "]");
+                    }
+
                     foreach (var channel in message.MentionedChannels)
                     {
-                        messagecontent = messagecontent.Replace($"<@{channel.Id}>", $"[c/{MKLP.Config.Main.StaffChat_HexColor_Discord_Mention_Channel}:@{channel.Name.Replace("[", "").Replace("]", "")}]");
+                        messagecontent = messagecontent.Replace($"<@{channel.Id}>", $"[c/{MKLP.Config.Main.StaffChat_HexColor_Discord_Mention_Channel}:#{channel.Name.Replace("[", "").Replace("]", "")}]");
                     }
 
                     if (message.Attachments.Count > 0) messagecontent += MKLP.Config.Main.StaffChat_Message_Discord_HasAttachment;

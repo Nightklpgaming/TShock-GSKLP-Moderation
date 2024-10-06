@@ -96,6 +96,35 @@ namespace MKLP
     
     public class CONFIG_HELPTEXT
     {
+        public string HelpText_Seperator1 = "■▶▶▶▶ Seperator ◀◀◀◀■";
+        public string HelpText_Seperator2 = "- Warning this is used for discord buttons! if a player tried to use this character they woudn't able to join!";
+        public string HelpText_Codes0a = "■▶▶▶▶ Disable Codes ◀◀◀◀■";
+        public string HelpText_Codes1a = "▮▬▬▬ Main Code 1 ▬▬▮";
+        public string HelpText_Codes1b = "[ High Stack Value ]";
+        public string HelpText_Codes1c = "- Checks if that player has a item which sells a bunch of platinum coins like 5000 chlorophyte which sells a ton of platinum coins";
+        public string HelpText_Codes2a = "▮▬▬▬ Main Code 2 ▬▬▮";
+        public string HelpText_Codes2b = "[ Null Item Boss/Invasion Spawn ]";
+        public string HelpText_Codes2c = "- Checks if that player summons a boss with a wrong item they held";
+        public string HelpText_Codes3a = "▮▬▬▬ Survival Code 1 ▬▬▮";
+        public string HelpText_Codes3b = "[ Illegal Item Progression ]";
+        public string HelpText_Codes3c = "- Checks if that player has item isn't right on progression ( unobtainable included )";
+        public string HelpText_Codes4a = "▮▬▬▬ Survival Code 2 ▬▬▮";
+        public string HelpText_Codes4b = "[ Illegal Projectile Progression ]";
+        public string HelpText_Codes4c = "- Checks if that player summon a projectile that isn't right on progression ( unobtainable included )";
+        public string HelpText_Codes5a = "▮▬▬▬ Survival Code 3 ▬▬▮";
+        public string HelpText_Codes5b = "[ Illegal Tile Progression ]";
+        public string HelpText_Codes5c = "- Checks if that player place a tile that isn't right on progression";
+        public string HelpText_Codes6a = "▮▬▬▬ Survival Code 4 ▬▬▮";
+        public string HelpText_Codes6b = "[ Illegal Wall Progression ]";
+        public string HelpText_Codes6c = "- Checks if that player place a wall that isn't right on progression";
+        public string HelpText_Codes7a = "▮▬▬▬ Default Codes ▬▬▮";
+        public string HelpText_Codes7b = "[ Default Codes are from tshock anticheat ]";
+        public string HelpText_Codes7c = "'Code 1' : Tile Kill Threshold";
+        public string HelpText_Codes7d = "'Code 2' : Tile Place Threshold";
+        public string HelpText_Codes7e = "'Code 3' : Tile Paint Threshold";
+        public string HelpText_Codes7f = "'Code 4' : Liquid Threshold";
+        public string HelpText_Codes7g = "'Code 5' : Projectile Threshold";
+        public string HelpText_Codes7h = "'Code 6' : HealOther Threshold";
         public string HelpText_StaffChat0a = "■▶▶▶▶ StaffChat ◀◀◀◀■";
         public string HelpText_StaffChat1a = "▮▬▬▬ MessageRecieved_Discord ▬▬▮";
         public string HelpText_StaffChat1b = "- %discordname% : Discord username";
@@ -141,8 +170,10 @@ namespace MKLP
     }
     public class CONFIG_MAIN
     {
+        public char Seperator = '¤';
         public byte? Minimum_CharacterName = 1;
         public byte? Maximum_CharacterName = 255;
+        public string[] Ban_NameContains = { "fuck", "卍" };
         public string[] IllegalNames = { "ServerConsole", "Server" };
         public bool? Allow_PlayerName_Symbols = true;
         public bool? Allow_PlayerName_InappropriateWords = false;
@@ -152,6 +183,7 @@ namespace MKLP
 
         public string StaffChat_MessageRecieved_Discord = "[c/0aa3ef:[StaffChat][c/0aa3ef:]] %discordname% : %message%";
         public string StaffChat_HexColor_Discord_Mention_User = "f28f0c";
+        public string StaffChat_HexColor_Discord_Mention_Role = "f28f0c";
         public string StaffChat_HexColor_Discord_Mention_Channel = "00FFFF";
         public string StaffChat_Message_Discord_HasAttachment = "[c/34e718:[Attachment][c/34e718:]]";
 
@@ -171,8 +203,9 @@ namespace MKLP
         public string Message_AntiGrief_Surface_Place = "You Cannot Place Blocks on Surface!";
         public string Message_AntiGrief_Surface_PlaceLiquid = "You Cannot use Liquids on Surface!";
 
-        public bool? RecievedWarning_SuspiciousDupe = true;
+        public bool? ReceivedWarning_SuspiciousDupe = true;
         public bool? Prevent_IllegalWire_Progression = false;
+        public bool? ReceivedWarning_WirePlaceUnderground = false;
 
         public bool? Prevent_Place_BastStatueNearDoor = true;
 
@@ -180,9 +213,13 @@ namespace MKLP
         public bool? Using_Main_Code2 = false;
 
         public bool? Using_Survival_Code1 = false;
+        public int[]? WhiteList_Survival_Code1 = { 1 };
         public bool? Using_Survival_Code2 = false;
+        public short[]? WhiteList_Survival_Code2 = { 1 };
         public bool? Using_Survival_Code3 = false;
+        //public int[,]? WhiteList_Survival_Code3 = { { 0, 0 }, { 1, 0 } };
         public bool? Using_Survival_Code4 = false;
+        public ushort[]? WhiteList_Survival_Code4 = { 1 };
 
         public bool? Using_Default_Code1 = false;
         public int? default_code1_maxdefault = 140;
@@ -233,6 +270,7 @@ namespace MKLP
 
             if (StaffChat_MessageRecieved_Discord == null) StaffChat_MessageRecieved_Discord = getdefault.StaffChat_MessageRecieved_Discord;
             if (StaffChat_HexColor_Discord_Mention_User == null) StaffChat_HexColor_Discord_Mention_User = getdefault.StaffChat_HexColor_Discord_Mention_User;
+            if (StaffChat_HexColor_Discord_Mention_Role == null) StaffChat_HexColor_Discord_Mention_Role = getdefault.StaffChat_HexColor_Discord_Mention_Role;
             if (StaffChat_HexColor_Discord_Mention_Channel == null) StaffChat_HexColor_Discord_Mention_Channel = getdefault.StaffChat_HexColor_Discord_Mention_Channel;
             if (StaffChat_Message_Discord_HasAttachment == null) StaffChat_Message_Discord_HasAttachment = getdefault.StaffChat_Message_Discord_HasAttachment;
             
@@ -254,8 +292,9 @@ namespace MKLP
             if (Message_AntiGrief_Surface_Place == null) Message_AntiGrief_Surface_Place = getdefault.Message_AntiGrief_Surface_Place;
             if (Message_AntiGrief_Surface_PlaceLiquid == null) Message_AntiGrief_Surface_PlaceLiquid = getdefault.Message_AntiGrief_Surface_PlaceLiquid;
 
-            if (RecievedWarning_SuspiciousDupe == null) RecievedWarning_SuspiciousDupe = getdefault.RecievedWarning_SuspiciousDupe;
+            if (ReceivedWarning_SuspiciousDupe == null) ReceivedWarning_SuspiciousDupe = getdefault.ReceivedWarning_SuspiciousDupe;
             if (Prevent_IllegalWire_Progression == null) Prevent_IllegalWire_Progression = getdefault.Prevent_IllegalWire_Progression;
+            if (ReceivedWarning_WirePlaceUnderground == null) ReceivedWarning_WirePlaceUnderground = getdefault.ReceivedWarning_WirePlaceUnderground;
 
             if (Prevent_Place_BastStatueNearDoor == null) Prevent_Place_BastStatueNearDoor = getdefault.Prevent_Place_BastStatueNearDoor;
 
@@ -263,9 +302,13 @@ namespace MKLP
             if (Using_Main_Code2 == null) Using_Main_Code2 = getdefault.Using_Main_Code2;
 
             if (Using_Survival_Code1 == null) Using_Survival_Code1 = getdefault.Using_Survival_Code1;
+            if (WhiteList_Survival_Code1 == null) WhiteList_Survival_Code1 = getdefault.WhiteList_Survival_Code1;
             if (Using_Survival_Code2 == null) Using_Survival_Code2 = getdefault.Using_Survival_Code2;
+            if (WhiteList_Survival_Code2 == null) WhiteList_Survival_Code2 = getdefault.WhiteList_Survival_Code2;
             if (Using_Survival_Code3 == null) Using_Survival_Code3 = getdefault.Using_Survival_Code3;
+            //wip
             if (Using_Survival_Code4 == null) Using_Survival_Code4 = getdefault.Using_Survival_Code4;
+            if (WhiteList_Survival_Code4 == null) WhiteList_Survival_Code4 = getdefault.WhiteList_Survival_Code4;
 
             if (Using_Default_Code1 == null) Using_Default_Code1 = getdefault.Using_Default_Code1;
             if (default_code1_maxdefault == null) default_code1_maxdefault = getdefault.default_code1_maxdefault;
@@ -362,6 +405,8 @@ namespace MKLP
         //admin
         public string CMD_MapPingTP = "MKLP.mapping.tp";
         public string CMD_ClearLag = "MKLP.clearlag";
+        public string CMD_ManageBoss = "MKLP.ManageBoss";
+        public string CMD_ManageBoss_SetKilled = "MKLP.ManageBoss.SetKilled";
 
         //moderator
         public string CMD_ManageReport = "MKLP.moderator.report";
@@ -413,6 +458,8 @@ namespace MKLP
 
             if (CMD_MapPingTP == null) CMD_MapPingTP = getdefault.CMD_MapPingTP;
             if (CMD_ClearLag == null) CMD_ClearLag = getdefault.CMD_ClearLag;
+            if (CMD_ManageBoss == null) CMD_ManageBoss = getdefault.CMD_ManageBoss;
+            if (CMD_ManageBoss_SetKilled == null) CMD_ManageBoss_SetKilled = getdefault.CMD_ManageBoss_SetKilled;
 
             if (CMD_ManageReport == null) CMD_ManageReport = getdefault.CMD_ManageReport;
             if (CMD_Ban == null) CMD_Ban = getdefault.CMD_Ban;
@@ -453,6 +500,54 @@ namespace MKLP
 
     public class CONFIG_BOSSES
     {
+        public DateTime? ScheduleAllowKingSlime = DateTime.MaxValue;
+        public DateTime? ScheduleAllowEyeOfCthulhu = DateTime.MaxValue;
+        public DateTime? ScheduleAllowEaterOfWorlds = DateTime.MaxValue;
+        public DateTime? ScheduleAllowBrainOfCthulhu = DateTime.MaxValue;
+        public DateTime? ScheduleAllowQueenBee = DateTime.MaxValue;
+        public DateTime? ScheduleAllowSkeletron = DateTime.MaxValue;
+        public DateTime? ScheduleAllowDeerclops = DateTime.MaxValue;
+        public DateTime? ScheduleAllowWallOfFlesh = DateTime.MaxValue;
+        public DateTime? ScheduleAllowQueenSlime = DateTime.MaxValue;
+
+        public DateTime? ScheduleAllowMechdusa = DateTime.MaxValue;
+
+        public DateTime? ScheduleAllowTheTwins = DateTime.MaxValue;
+        public DateTime? ScheduleAllowTheDestroyer = DateTime.MaxValue;
+        public DateTime? ScheduleAllowSkeletronPrime = DateTime.MaxValue;
+
+        public DateTime? ScheduleAllowPlantera = DateTime.MaxValue;
+        public DateTime? ScheduleAllowGolem = DateTime.MaxValue;
+        public DateTime? ScheduleAllowDukeFishron = DateTime.MaxValue;
+        public DateTime? ScheduleAllowEmpressOfLight = DateTime.MaxValue;
+        public DateTime? ScheduleAllowLunaticCultist = DateTime.MaxValue;
+        public DateTime? ScheduleAllowMoonLord = DateTime.MaxValue;
+
+        public int? Default_ScheduleDay_AllowKingSlime = 0;
+        public int? Default_ScheduleDay_AllowEyeOfCthulhu = 1;
+        public int? Default_ScheduleDay_AllowEaterOfWorlds = 2;
+        public int? Default_ScheduleDay_AllowBrainOfCthulhu = 2;
+        public int? Default_ScheduleDay_AllowQueenBee = 3;
+        public int? Default_ScheduleDay_AllowSkeletron = 4;
+        public int? Default_ScheduleDay_AllowDeerclops = 2;
+        public int? Default_ScheduleDay_AllowWallOfFlesh = 6;
+        public int? Default_ScheduleDay_AllowQueenSlime = 6;
+
+        public int? Default_ScheduleDay_AllowMechdusa = 8;
+
+        public int? Default_ScheduleDay_AllowTheTwins = 7;
+        public int? Default_ScheduleDay_AllowTheDestroyer = 8;
+        public int? Default_ScheduleDay_AllowSkeletronPrime = 9;
+
+        public int? Default_ScheduleDay_AllowPlantera = 10;
+        public int? Default_ScheduleDay_AllowGolem = 12;
+        public int? Default_ScheduleDay_AllowDukeFishron = 11;
+        public int? Default_ScheduleDay_AllowEmpressOfLight = 13;
+        public int? Default_ScheduleDay_AllowLunaticCultist = 14;
+        public int? Default_ScheduleDay_AllowMoonLord = 14;
+
+        public bool? UseBossSchedule = false;
+
         public bool? AllowKingSlime = true;
         public bool? AllowEyeOfCthulhu = true;
         public bool? AllowEaterOfWorlds = true;
@@ -482,9 +577,55 @@ namespace MKLP
         {
             CONFIG_BOSSES getdefault = new();
 
-            if (AllowJoinDuringBoss == null) AllowJoinDuringBoss = getdefault.AllowJoinDuringBoss;
-            if (PreventIllegalBoss == null) PreventIllegalBoss = getdefault.PreventIllegalBoss;
-            if (RequiredPlayersforBoss == null) RequiredPlayersforBoss = getdefault.RequiredPlayersforBoss;
+            //schedule
+            if (ScheduleAllowKingSlime == null) ScheduleAllowKingSlime = getdefault.ScheduleAllowKingSlime;
+            if (ScheduleAllowEyeOfCthulhu == null) ScheduleAllowEyeOfCthulhu = getdefault.ScheduleAllowEyeOfCthulhu;
+            if (ScheduleAllowEaterOfWorlds == null) ScheduleAllowEaterOfWorlds = getdefault.ScheduleAllowEaterOfWorlds;
+            if (ScheduleAllowBrainOfCthulhu == null) ScheduleAllowBrainOfCthulhu = getdefault.ScheduleAllowBrainOfCthulhu;
+            if (ScheduleAllowQueenBee == null) ScheduleAllowQueenBee = getdefault.ScheduleAllowQueenBee;
+            if (ScheduleAllowSkeletron == null) ScheduleAllowSkeletron = getdefault.ScheduleAllowSkeletron;
+            if (ScheduleAllowDeerclops == null) ScheduleAllowDeerclops = getdefault.ScheduleAllowDeerclops;
+            if (ScheduleAllowWallOfFlesh == null) ScheduleAllowWallOfFlesh = getdefault.ScheduleAllowWallOfFlesh;
+            if (ScheduleAllowQueenSlime == null) ScheduleAllowQueenSlime = getdefault.ScheduleAllowQueenSlime;
+
+            if (ScheduleAllowMechdusa == null) ScheduleAllowMechdusa = getdefault.ScheduleAllowMechdusa;
+
+            if (ScheduleAllowTheTwins == null) ScheduleAllowTheTwins = getdefault.ScheduleAllowTheTwins;
+            if (ScheduleAllowTheDestroyer == null) ScheduleAllowTheDestroyer = getdefault.ScheduleAllowTheDestroyer;
+            if (ScheduleAllowSkeletronPrime == null) ScheduleAllowSkeletronPrime = getdefault.ScheduleAllowSkeletronPrime;
+
+            if (ScheduleAllowPlantera == null) ScheduleAllowPlantera = getdefault.ScheduleAllowPlantera;
+            if (ScheduleAllowGolem == null) ScheduleAllowGolem = getdefault.ScheduleAllowGolem;
+            if (ScheduleAllowDukeFishron == null) ScheduleAllowDukeFishron = getdefault.ScheduleAllowDukeFishron;
+            if (ScheduleAllowEmpressOfLight == null) ScheduleAllowEmpressOfLight = getdefault.ScheduleAllowEmpressOfLight;
+            if (ScheduleAllowLunaticCultist == null) ScheduleAllowLunaticCultist = getdefault.ScheduleAllowLunaticCultist;
+            if (ScheduleAllowMoonLord == null) ScheduleAllowMoonLord = getdefault.ScheduleAllowMoonLord;
+
+            //default
+            if (Default_ScheduleDay_AllowKingSlime == null) Default_ScheduleDay_AllowKingSlime = getdefault.Default_ScheduleDay_AllowKingSlime;
+            if (Default_ScheduleDay_AllowEyeOfCthulhu == null) Default_ScheduleDay_AllowEyeOfCthulhu = getdefault.Default_ScheduleDay_AllowEyeOfCthulhu;
+            if (Default_ScheduleDay_AllowEaterOfWorlds == null) Default_ScheduleDay_AllowEaterOfWorlds = getdefault.Default_ScheduleDay_AllowEaterOfWorlds;
+            if (Default_ScheduleDay_AllowBrainOfCthulhu == null) Default_ScheduleDay_AllowBrainOfCthulhu = getdefault.Default_ScheduleDay_AllowBrainOfCthulhu;
+            if (Default_ScheduleDay_AllowQueenBee == null) Default_ScheduleDay_AllowQueenBee = getdefault.Default_ScheduleDay_AllowQueenBee;
+            if (Default_ScheduleDay_AllowSkeletron == null) Default_ScheduleDay_AllowSkeletron = getdefault.Default_ScheduleDay_AllowSkeletron;
+            if (Default_ScheduleDay_AllowDeerclops == null) Default_ScheduleDay_AllowDeerclops = getdefault.Default_ScheduleDay_AllowDeerclops;
+            if (Default_ScheduleDay_AllowWallOfFlesh == null) Default_ScheduleDay_AllowWallOfFlesh = getdefault.Default_ScheduleDay_AllowWallOfFlesh;
+            if (Default_ScheduleDay_AllowQueenSlime == null) Default_ScheduleDay_AllowQueenSlime = getdefault.Default_ScheduleDay_AllowQueenSlime;
+
+            if (Default_ScheduleDay_AllowMechdusa == null) Default_ScheduleDay_AllowMechdusa = getdefault.Default_ScheduleDay_AllowMechdusa;
+
+            if (Default_ScheduleDay_AllowTheTwins == null) Default_ScheduleDay_AllowTheTwins = getdefault.Default_ScheduleDay_AllowTheTwins;
+            if (Default_ScheduleDay_AllowTheDestroyer == null) Default_ScheduleDay_AllowTheDestroyer = getdefault.Default_ScheduleDay_AllowTheDestroyer;
+            if (Default_ScheduleDay_AllowSkeletronPrime == null) Default_ScheduleDay_AllowSkeletronPrime = getdefault.Default_ScheduleDay_AllowSkeletronPrime;
+
+            if (Default_ScheduleDay_AllowPlantera == null) Default_ScheduleDay_AllowPlantera = getdefault.Default_ScheduleDay_AllowPlantera;
+            if (Default_ScheduleDay_AllowGolem == null) Default_ScheduleDay_AllowGolem = getdefault.Default_ScheduleDay_AllowGolem;
+            if (Default_ScheduleDay_AllowDukeFishron == null) Default_ScheduleDay_AllowDukeFishron = getdefault.Default_ScheduleDay_AllowDukeFishron;
+            if (Default_ScheduleDay_AllowEmpressOfLight == null) Default_ScheduleDay_AllowEmpressOfLight = getdefault.Default_ScheduleDay_AllowEmpressOfLight;
+            if (Default_ScheduleDay_AllowLunaticCultist == null) Default_ScheduleDay_AllowLunaticCultist = getdefault.Default_ScheduleDay_AllowLunaticCultist;
+            if (Default_ScheduleDay_AllowMoonLord == null) Default_ScheduleDay_AllowMoonLord = getdefault.Default_ScheduleDay_AllowMoonLord;
+
+            if (UseBossSchedule == null) UseBossSchedule = getdefault.UseBossSchedule;
 
             if (AllowKingSlime == null) AllowKingSlime = getdefault.AllowKingSlime;
             if (AllowEyeOfCthulhu == null) AllowEyeOfCthulhu = getdefault.AllowEyeOfCthulhu;
@@ -504,6 +645,11 @@ namespace MKLP
             if (AllowEmpressOfLight == null) AllowEmpressOfLight = getdefault.AllowEmpressOfLight;
             if (AllowLunaticCultist == null) AllowLunaticCultist = getdefault.AllowLunaticCultist;
             if (AllowMoonLord == null) AllowMoonLord = getdefault.AllowMoonLord;
+
+            if (AllowJoinDuringBoss == null) AllowJoinDuringBoss = getdefault.AllowJoinDuringBoss;
+            if (PreventIllegalBoss == null) PreventIllegalBoss = getdefault.PreventIllegalBoss;
+            if (RequiredPlayersforBoss == null) RequiredPlayersforBoss = getdefault.RequiredPlayersforBoss;
+
         }
     }
 

@@ -16,8 +16,10 @@ using System;
 //System
 using System.ComponentModel;
 using System.Data;
+using System.Data.Common;
 using System.Diagnostics;
 using System.IO.Streams;
+using System.Net;
 using System.Reflection.PortableExecutable;
 using System.Text.RegularExpressions;
 using System.Threading.Channels;
@@ -43,9 +45,9 @@ namespace MKLP
 
         #region [ Plugin Info ]
         public override string Author => "Nightklp";
-        public override string Description => "Makes Moderating a bit more easy";
+        public override string Description => "Makes Moderating a bit easy";
         public override string Name => "MKLP";
-        public override Version Version => new Version(1, 0, 0);
+        public override Version Version => new Version(1, 0);
         #endregion
 
         #region [ Variables ]
@@ -109,6 +111,8 @@ namespace MKLP
             //=====================Server===================
             //ServerApi.Hooks.GameUpdate.Register(this, OnUpdate);
 
+            ServerApi.Hooks.GamePostInitialize.Register(this, OnServerStart);
+
             GeneralHooks.ReloadEvent += OnReload;
 
             #region [ Commands Initialize ]
@@ -153,6 +157,11 @@ namespace MKLP
             Commands.ChatCommands.Add(new Command(Config.Permissions.CMD_ClearLag, CMD_ClearLag, "clearlag")
             {
                 HelpText = "Deletes low value npc/items"
+            });
+
+            Commands.ChatCommands.Add(new Command(Config.Permissions.CMD_ManageBoss, CMD_ManageBoss, "manageboss", "mboss")
+            {
+                HelpText = "Manage it by enable/disable boss or schedule it"
             });
 
             #endregion
@@ -232,7 +241,6 @@ namespace MKLP
             {
                 MKLP_Console.SendLog_Message_DiscordBot("Discord bot token has not been set!", " {Setup}");
             }
-            
         }
 
         #endregion
@@ -269,10 +277,35 @@ namespace MKLP
                 //=====================Server===================
                 //ServerApi.Hooks.GameUpdate.Deregister(this, OnUpdate);
 
+                ServerApi.Hooks.GamePostInitialize.Deregister(this, OnServerStart);
+
                 GeneralHooks.ReloadEvent -= OnReload;
             }
             base.Dispose(disposing);
         }
+        #endregion
+
+        #region [ Get Latest Version ]
+
+        public async Task InformLatestVersion()
+        {
+            var http = HttpWebRequest.CreateHttp("https://raw.githubusercontent.com/Nightklpgaming/TShock-GSKLP-Moderation/master/version.txt");
+
+            WebResponse res = await http.GetResponseAsync();
+
+            using (StreamReader sr = new StreamReader(res.GetResponseStream()))
+            {
+                Version latestversion = new(sr.ReadToEnd());
+
+                if (latestversion > Version)
+                {
+                    MKLP_Console.SendLog_LatestVersion(Version.ToString(), latestversion.ToString());
+                }
+
+                return;
+            }
+        }
+
         #endregion
 
         #region [ Events ]
@@ -441,12 +474,6 @@ namespace MKLP
 
             IllegalWallProgression = SurvivalManager.GetIllegalWall();
 
-            if (TShock.Players.Count() > 0 && !IsChecking)
-            {
-                IsChecking = true;
-                Slow_Checking();
-            }
-
             var player = TShock.Players[args.Who];
             if (player != null)
             {
@@ -534,11 +561,6 @@ namespace MKLP
         private void OnPlayerLeave(LeaveEventArgs args)
         {
             #region code
-
-            if (TShock.Players.Count() == 0 && IsChecking)
-            {
-                IsChecking = false;
-            }
 
             #endregion
         }
@@ -632,11 +654,11 @@ namespace MKLP
                 }
             }
 
-            if (args.Action == GetDataHandlers.EditAction.PlaceWall ||
-                args.Action == GetDataHandlers.EditAction.KillWall ||
-                args.Action == GetDataHandlers.EditAction.ReplaceWall)
+            if (args.Action == GetDataHandlers.EditAction.PlaceWall)
             {
-                if (IllegalWallProgression.ContainsKey(Main.tile[tileX, tileY].wall) && args.Player.HasPermission(Config.Permissions.IgnoreSurvivalCode_4) && (bool)Config.Main.Using_Survival_Code4)
+                if (IllegalWallProgression.ContainsKey(Main.tile[tileX, tileY].wall) &&
+                    args.Player.HasPermission(Config.Permissions.IgnoreSurvivalCode_4) &&
+                    (bool)Config.Main.Using_Survival_Code4)
                 {
                     ManagePlayer.DisablePlayer(args.Player, $"{IllegalWallProgression[Main.tile[tileX, tileY].wall]} Wall Place", ServerReason: $"Survival,code,4|{Main.tile[tileX, tileY].wall}|{IllegalWallProgression[Main.tile[tileX, tileY].wall]}");
                     args.Player.SendTileSquareCentered(tileX, tileY, 4);
@@ -752,7 +774,7 @@ namespace MKLP
                     args.Action == GetDataHandlers.EditAction.PlaceWire3 ||
                     args.Action == GetDataHandlers.EditAction.KillWire4 ||
                     args.Action == GetDataHandlers.EditAction.PlaceWire4 &&
-                    ( tileY <= Main.worldSurface ) && (bool)Config.Main.Prevent_IllegalWire_Progression
+                    ( tileY <= Main.worldSurface ) && (bool)Config.Main.ReceivedWarning_WirePlaceUnderground
                     )
             {
                 Discordklp.KLPBotSendMessageMainLog($"Player **{args.Player.Name}** Used wire below surface `{tileX}, {tileY}`");
@@ -1076,7 +1098,9 @@ namespace MKLP
             Dictionary<short, string> GetIllegalProj = SurvivalManager.GetIllegalProjectile();
 
             
-            if (args.Player.IsLoggedIn && IllegalProjectileProgression.ContainsKey(type) && !args.Player.HasPermission(Config.Permissions.IgnoreSurvivalCode_2) && (bool)Config.Main.Using_Survival_Code2)
+            if (args.Player.IsLoggedIn && IllegalProjectileProgression.ContainsKey(type) &&
+                !args.Player.HasPermission(Config.Permissions.IgnoreSurvivalCode_2) &&
+                (bool)Config.Main.Using_Survival_Code2)
             {
                 ManagePlayer.DisablePlayer(args.Player, $"{GetIllegalProj[type]} Projectile", ServerReason: $"Survival,code,2|{type}|{GetIllegalProj[type]}");
                 args.Player.RemoveProjectile(ident, owner);
@@ -1449,6 +1473,7 @@ namespace MKLP
             #endregion
         }
 
+        private static bool nullboss_Confirmed_Twins = false;
         private static bool HandleSpawnBoss(GetDataHandlerArgs args)
         {
             #region code
@@ -1693,14 +1718,26 @@ namespace MKLP
                                 break;
                             }
                         case 125: // The Twins
-                        case 126:
                             {
                                 if (args.Player.SelectedItem.type != 1133)
                                 {
                                     ManagePlayer.DisablePlayer(args.Player, $"null item boss spawn", ServerReason: $"Main,code,2|{args.Player.SelectedItem.netID}|{getnpc.FullName}");
                                     return true;
                                 }
-
+                                nullboss_Confirmed_Twins = true;
+                                break;
+                            }
+                        case 126: // The Twins
+                            {
+                                if (!nullboss_Confirmed_Twins)
+                                {
+                                    if (args.Player.SelectedItem.type != 1133)
+                                    {
+                                        ManagePlayer.DisablePlayer(args.Player, $"null item boss spawn", ServerReason: $"Main,code,2|{args.Player.SelectedItem.netID}|{getnpc.FullName}");
+                                        return true;
+                                    }
+                                }
+                                nullboss_Confirmed_Twins = false;
                                 break;
                             }
                         case 134: // Destroyer
@@ -1816,18 +1853,164 @@ namespace MKLP
 
         #region { Auto Check }
 
-        private static bool IsChecking = false;
-        private async void Slow_Checking()
+        private void OnServerStart(EventArgs args)
         {
-            /*
-            if (!IsChecking) return;
-            await Task.Delay(1000);
-
-            check1();
-            
+            #region code
 
             Slow_Checking();
-            */
+            
+            #endregion
+        }
+
+        private static int interval_informlatestversion = 3;
+        private async void Slow_Checking()
+        {
+            interval_informlatestversion++;
+
+            check1();
+
+            if ((bool)Config.BossManager.UseBossSchedule)
+            {
+                check_bosssched();
+            }
+
+            if (interval_informlatestversion >= 3)
+            {
+                try
+                {
+                    InformLatestVersion();
+                } catch { }
+                interval_informlatestversion = 0;
+            }
+            await Task.Delay(60000);
+            Slow_Checking();
+            
+        }
+
+        private void check_bosssched()
+        {
+            #region code
+            bool changed = false;
+            if (DateTime.UtcNow > (DateTime)Config.BossManager.ScheduleAllowKingSlime && !(bool)Config.BossManager.AllowKingSlime)
+            {
+                Config.BossManager.AllowKingSlime = true;
+                changed = true;
+            }
+            if (DateTime.UtcNow > (DateTime)Config.BossManager.ScheduleAllowEyeOfCthulhu && !(bool)Config.BossManager.AllowEyeOfCthulhu)
+            {
+                Config.BossManager.AllowEyeOfCthulhu = true;
+                changed = true;
+            }
+            if (DateTime.UtcNow > (DateTime)Config.BossManager.ScheduleAllowEaterOfWorlds && !(bool)Config.BossManager.AllowEaterOfWorlds)
+            {
+                Config.BossManager.AllowEaterOfWorlds = true;
+                changed = true;
+            }
+            if (DateTime.UtcNow > (DateTime)Config.BossManager.ScheduleAllowBrainOfCthulhu && !(bool)Config.BossManager.AllowBrainOfCthulhu)
+            {
+                Config.BossManager.AllowBrainOfCthulhu = true;
+                changed = true;
+            }
+            if (DateTime.UtcNow > (DateTime)Config.BossManager.ScheduleAllowQueenBee && !(bool)Config.BossManager.AllowQueenBee)
+            {
+                Config.BossManager.AllowQueenBee = true;
+                changed = true;
+            }
+            if (DateTime.UtcNow > (DateTime)Config.BossManager.ScheduleAllowSkeletron && !(bool)Config.BossManager.AllowSkeletron)
+            {
+                Config.BossManager.AllowSkeletron = true;
+                changed = true;
+            }
+            if (DateTime.UtcNow > (DateTime)Config.BossManager.ScheduleAllowDeerclops && !(bool)Config.BossManager.AllowDeerclops)
+            {
+                Config.BossManager.AllowDeerclops = true;
+                changed = true;
+            }
+            if (DateTime.UtcNow > (DateTime)Config.BossManager.ScheduleAllowWallOfFlesh && !(bool)Config.BossManager.AllowWallOfFlesh)
+            {
+                Config.BossManager.AllowWallOfFlesh = true;
+                changed = true;
+            }
+            if (DateTime.UtcNow > (DateTime)Config.BossManager.ScheduleAllowQueenSlime && !(bool)Config.BossManager.AllowQueenSlime)
+            {
+                Config.BossManager.AllowQueenSlime = true;
+                changed = true;
+            }
+
+            //mechanical boss
+            if (Main.zenithWorld)
+            {
+                if (DateTime.UtcNow > (DateTime)Config.BossManager.ScheduleAllowMechdusa &&
+                    (
+                    !(bool)Config.BossManager.AllowTheTwins &&
+                    !(bool)Config.BossManager.AllowTheDestroyer &&
+                    !(bool)Config.BossManager.AllowSkeletronPrime
+                    )
+                    )
+                {
+                    Config.BossManager.AllowTheTwins = true;
+                    Config.BossManager.AllowTheDestroyer = true;
+                    Config.BossManager.AllowSkeletronPrime = true;
+                    changed = true;
+                }
+            } else
+            {
+                if (DateTime.UtcNow > (DateTime)Config.BossManager.ScheduleAllowTheTwins && !(bool)Config.BossManager.AllowTheTwins)
+                {
+                    Config.BossManager.AllowTheTwins = true;
+                    changed = true;
+                }
+                if (DateTime.UtcNow > (DateTime)Config.BossManager.ScheduleAllowTheDestroyer && !(bool)Config.BossManager.AllowTheDestroyer)
+                {
+                    Config.BossManager.AllowTheDestroyer = true;
+                    changed = true;
+                }
+                if (DateTime.UtcNow > (DateTime)Config.BossManager.ScheduleAllowSkeletronPrime && !(bool)Config.BossManager.AllowSkeletronPrime)
+                {
+                    Config.BossManager.AllowSkeletronPrime = true;
+                    changed = true;
+                }
+            }
+
+            if (DateTime.UtcNow > (DateTime)Config.BossManager.ScheduleAllowPlantera && !(bool)Config.BossManager.AllowPlantera)
+            {
+                Config.BossManager.AllowPlantera = true;
+                changed = true;
+            }
+            if (DateTime.UtcNow > (DateTime)Config.BossManager.ScheduleAllowGolem && !(bool)Config.BossManager.AllowGolem)
+            {
+                Config.BossManager.AllowGolem = true;
+                changed = true;
+            }
+
+            if (DateTime.UtcNow > (DateTime)Config.BossManager.ScheduleAllowDukeFishron && !(bool)Config.BossManager.AllowDukeFishron)
+            {
+                Config.BossManager.AllowDukeFishron = true;
+                changed = true;
+            }
+            if (DateTime.UtcNow > (DateTime)Config.BossManager.ScheduleAllowEmpressOfLight && !(bool)Config.BossManager.AllowEmpressOfLight)
+            {
+                Config.BossManager.AllowEmpressOfLight = true;
+                changed = true;
+            }
+
+            if (DateTime.UtcNow > (DateTime)Config.BossManager.ScheduleAllowLunaticCultist && !(bool)Config.BossManager.AllowLunaticCultist)
+            {
+                Config.BossManager.AllowLunaticCultist = true;
+                changed = true;
+            }
+            if (DateTime.UtcNow > (DateTime)Config.BossManager.ScheduleAllowMoonLord && !(bool)Config.BossManager.AllowMoonLord)
+            {
+                Config.BossManager.AllowMoonLord = true;
+                changed = true;
+            }
+
+            if (changed)
+            {
+                Config.Changeall(Config);
+                Config.Read();
+            }
+            #endregion
         }
 
         private void check1()
@@ -1876,6 +2059,7 @@ namespace MKLP
         private void CMD_BE(CommandArgs args)
         {
             #region { stringdefeatedbosses }
+            /*
             string GetListDefeatedBoss()
             {
                 CONFIG_BOSSES getenabledboss = Config.BossManager;
@@ -2165,6 +2349,310 @@ namespace MKLP
 
                 return result;
             }
+            */
+            #endregion
+
+            #region { stringdefeatedbosses2 }
+            string GetListDefeatedBoss2()
+            {
+                CONFIG_BOSSES getenabledboss = Config.BossManager;
+                Dictionary<string, bool> defeatedbosses = new();
+                if ((bool)getenabledboss.AllowKingSlime)
+                {
+                    if (NPC.downedSlimeKing)
+                    {
+                        defeatedbosses.Add("[i:2493]", true);
+                    }
+                    else
+                    {
+                        defeatedbosses.Add("[i:2493]", false);
+                    }
+                }
+                else if (NPC.downedSlimeKing)
+                {
+                    defeatedbosses.Add("[i:2493]", true);
+                }
+                if ((bool)getenabledboss.AllowEyeOfCthulhu)
+                {
+                    if (NPC.downedBoss1)
+                    {
+                        defeatedbosses.Add("[i:2112]", true);
+                    }
+                    else
+                    {
+                        defeatedbosses.Add("[i:2112]", false);
+                    }
+                }
+                else if (NPC.downedBoss1)
+                {
+                    defeatedbosses.Add("[i:2112]", true);
+                }
+                if ((bool)getenabledboss.AllowEaterOfWorlds || (bool)getenabledboss.AllowBrainOfCthulhu)
+                {
+                    if (NPC.downedBoss2)
+                    {
+                        defeatedbosses.Add($"{(WorldGen.crimson ? "[i:2104]" : "[i:2111]")}", true);
+                    }
+                    else
+                    {
+                        defeatedbosses.Add($"{(WorldGen.crimson ? "[i:2104]" : "[i:2111]")}", false);
+                    }
+                }
+                else if (NPC.downedBoss2)
+                {
+                    defeatedbosses.Add($"{(WorldGen.crimson ? "[i:2104]" : "[i:2111]")}", true);
+                }
+                if ((bool)getenabledboss.AllowDeerclops)
+                {
+                    if (NPC.downedDeerclops)
+                    {
+                        defeatedbosses.Add("[i:5109]", true);
+                    }
+                    else
+                    {
+                        defeatedbosses.Add("[i:5109]", false);
+                    }
+                }
+                else if (NPC.downedDeerclops)
+                {
+                    defeatedbosses.Add("[i:5109]", true);
+                }
+                if ((bool)getenabledboss.AllowQueenBee)
+                {
+                    if (NPC.downedQueenBee)
+                    {
+                        defeatedbosses.Add("[i:2108]", true);
+                    }
+                    else
+                    {
+                        defeatedbosses.Add("[i:2108]", false);
+                    }
+                }
+                else if (NPC.downedQueenBee)
+                {
+                    defeatedbosses.Add("[i:2108]", true);
+                }
+                if ((bool)getenabledboss.AllowSkeletron)
+                {
+                    if (NPC.downedBoss3)
+                    {
+                        defeatedbosses.Add("[i:1281]", true);
+                    }
+                    else
+                    {
+                        defeatedbosses.Add("[i:1281]", false);
+                    }
+                }
+                else if (NPC.downedBoss3)
+                {
+                    defeatedbosses.Add("[i:1281]", true);
+                }
+                if ((bool)getenabledboss.AllowWallOfFlesh)
+                {
+                    if (Main.hardMode)
+                    {
+                        defeatedbosses.Add("[i:2105]", true);
+                    }
+                    else
+                    {
+                        defeatedbosses.Add("[i:2105]", false);
+                    }
+                }
+                else if (Main.hardMode)
+                {
+                    defeatedbosses.Add("[i:2105]", true);
+                }
+                if ((bool)getenabledboss.AllowQueenSlime)
+                {
+                    if (NPC.downedQueenSlime)
+                    {
+                        defeatedbosses.Add("[i:4959]", true);
+                    }
+                    else
+                    {
+                        defeatedbosses.Add("[i:4959]", false);
+                    }
+                }
+                else if (NPC.downedQueenSlime)
+                {
+                    defeatedbosses.Add("[i:4959]", true);
+                }
+                if (Main.zenithWorld)
+                {
+                    if ((bool)getenabledboss.AllowTheDestroyer && (bool)getenabledboss.AllowTheTwins && (bool)getenabledboss.AllowSkeletronPrime)
+                    {
+                        if (NPC.downedMechBoss1 && NPC.downedMechBoss2 && NPC.downedMechBoss3)
+                        {
+                            defeatedbosses.Add("[i:2113]", true);
+                        }
+                        else
+                        {
+                            defeatedbosses.Add("[i:2113]", false);
+                        }
+                    }
+                    else if (NPC.downedMechBoss1 && NPC.downedMechBoss2 && NPC.downedMechBoss3)
+                    {
+                        defeatedbosses.Add("[i:2113]", true);
+                    }
+                }
+                else
+                {
+                    if ((bool)getenabledboss.AllowTheDestroyer)
+                    {
+                        if (NPC.downedMechBoss1)
+                        {
+                            defeatedbosses.Add("[i:2113]", true);
+                        }
+                        else
+                        {
+                            defeatedbosses.Add("[i:2113]", false);
+                        }
+                    }
+                    else if (NPC.downedMechBoss1)
+                    {
+                        defeatedbosses.Add("[i:2113]", true);
+                    }
+                    if ((bool)getenabledboss.AllowTheTwins)
+                    {
+                        if (NPC.downedMechBoss2)
+                        {
+                            defeatedbosses.Add("[i:2106]", true);
+                        }
+                        else
+                        {
+                            defeatedbosses.Add("[i:2106]", false);
+                        }
+                    }
+                    else if (NPC.downedMechBoss2)
+                    {
+                        defeatedbosses.Add("[i:2106]", true);
+                    }
+                    if ((bool)getenabledboss.AllowSkeletronPrime)
+                    {
+                        if (NPC.downedMechBoss3)
+                        {
+                            defeatedbosses.Add("[i:2107]", true);
+                        }
+                        else
+                        {
+                            defeatedbosses.Add("[i:2107]", false);
+                        }
+                    }
+                    else if (NPC.downedMechBoss3)
+                    {
+                        defeatedbosses.Add("[i:2107]", true);
+                    }
+                }
+
+                if ((bool)getenabledboss.AllowDukeFishron)
+                {
+                    if (NPC.downedFishron)
+                    {
+                        defeatedbosses.Add("[i:2588]", true);
+                    }
+                    else
+                    {
+                        defeatedbosses.Add("[i:2588]", false);
+                    }
+                }
+                else if (NPC.downedFishron)
+                {
+                    defeatedbosses.Add("[i:2588]", true);
+                }
+                if ((bool)getenabledboss.AllowPlantera)
+                {
+                    if (NPC.downedPlantBoss)
+                    {
+                        defeatedbosses.Add("[i:2109]", true);
+                    }
+                    else
+                    {
+                        defeatedbosses.Add("[i:2109]", false);
+                    }
+                }
+                else if (NPC.downedPlantBoss)
+                {
+                    defeatedbosses.Add("[i:2109]", true);
+                }
+                if ((bool)getenabledboss.AllowEmpressOfLight)
+                {
+                    if (NPC.downedEmpressOfLight)
+                    {
+                        defeatedbosses.Add("[i:4784]", true);
+                    }
+                    else
+                    {
+                        defeatedbosses.Add("[i:4784]", false);
+                    }
+                }
+                else if (NPC.downedEmpressOfLight)
+                {
+                    defeatedbosses.Add("[i:4784]", true);
+                }
+                if ((bool)getenabledboss.AllowGolem)
+                {
+                    if (NPC.downedGolemBoss)
+                    {
+                        defeatedbosses.Add("[i:2110]", true);
+                    }
+                    else
+                    {
+                        defeatedbosses.Add("[i:2110]", false);
+                    }
+                }
+                else if (NPC.downedGolemBoss)
+                {
+                    defeatedbosses.Add("[i:2110]", true);
+                }
+                if ((bool)getenabledboss.AllowLunaticCultist)
+                {
+                    if (NPC.downedAncientCultist)
+                    {
+                        defeatedbosses.Add("[i:3372]", true);
+                    }
+                    else
+                    {
+                        defeatedbosses.Add("[i:3372]", false);
+                    }
+                }
+                else if (NPC.downedAncientCultist)
+                {
+                    defeatedbosses.Add("[i:3372]", true);
+                }
+                if ((bool)getenabledboss.AllowMoonLord)
+                {
+                    if (NPC.downedMoonlord)
+                    {
+                        defeatedbosses.Add("[i:3373]", true);
+                    }
+                    else
+                    {
+                        defeatedbosses.Add("[i:3373]", false);
+                    }
+                }
+                else if (NPC.downedMoonlord)
+                {
+                    defeatedbosses.Add("[i:3373]", true);
+                }
+                string getdefeatedboss = "";
+                string getenableboss = "";
+                foreach (var boss in defeatedbosses)
+                {
+                    if (boss.Value)
+                    {
+                        getdefeatedboss += $"{boss.Key},";
+                    } else
+                    {
+                        getenableboss += $"{boss.Key},";
+                    }
+                }
+
+                string result =
+                    $"[c/25ba14:Defeated Bosses:] {getdefeatedboss}\n" +
+                    $"[c/e0e50f:Enabled Bosses:] {getenableboss}";
+
+                return result;
+            }
             #endregion
 
             #region { stringdefeatedinvasion }
@@ -2240,7 +2728,7 @@ namespace MKLP
 
             args.Player.SendMessage(
                 $"List Of Bosses:" +
-                $"\n{GetListDefeatedBoss()}",
+                $"\n{GetListDefeatedBoss2()}",
                 Color.Gray);
         }
 
@@ -2666,11 +3154,1343 @@ namespace MKLP
             #endregion
         }
 
-        private void CMD_Boss(CommandArgs args)
+        private void CMD_ManageBoss(CommandArgs args)
         {
             #region code
 
+            if (args.Parameters.Count == 0)
+            {
+                args.Player.SendErrorMessage("Proper usage: /manageboss <type> <args...>" +
+                    "\ndo '/manageboss help' for more details");
+                return;
+            }
 
+            switch (args.Parameters[0].ToLower())
+            {
+                #region [ Help Text ]
+                case "help":
+                    {
+                        args.Player.SendMessage("Proper Usage: [c/31ff77:/manageboss <type> <args...>]" +
+                            "\n[c/ffd531:== Available Types ==]" +
+                            "\n'enable <boss name>' : Enable a boss" +
+                            "\n[c/b6b6b6:'disable <boss name>' : Disable a boss to prevent it from spawning]" +
+                            "\n'enableall' : Enables all bosses" +
+                            "\n[c/b6b6b6:'disableall' : Disables all bosses]" +
+                            $"{(args.Player.HasPermission(Config.Permissions.CMD_ManageBoss_SetKilled) ? "'setkilled <boss name>' : set boss killed or not\n" : "")}\n" +
+                            "\n[c/96b85f:== Boss Schedule Types ==]" +
+                            "\n'enablesched <boss name> <MM/DD/YY>' : Enable a boss in specific time" +
+                            "\n[c/b6b6b6:'disablesched <boss name> : cancel a specific boss schedule]" +
+                            "\n'disableschedall' : cancel all boss schedule" +
+                            "\n[c/b6b6b6:'usingschedule <yes/no>' : activate or deactivate boss schedule]" +
+                            "\n'resetschedule' : Restart the whole boss schedule to day 0 and assign the bosses each days on config file"
+                            , Color.WhiteSmoke);
+                        return;
+                    }
+                #endregion
+                #region ( Type : Enable )
+                case "enable":
+                    {
+                        switch (args.Parameters[1].ToLower())
+                        {
+                            case "kingslime":
+                            case "king slime":
+                            case "king":
+                            case "ks":
+                                {
+                                    if ((bool)Config.BossManager.AllowKingSlime)
+                                    {
+                                        args.Player.SendErrorMessage("King Slime is already Enabled!");
+                                        return;
+                                    }
+
+                                    Config.BossManager.AllowKingSlime = true;
+                                    args.Player.SendInfoMessage("King Slime is now enabled");
+                                    break;
+                                }
+                            case "eyeofcthulhu":
+                            case "eye of cthulhu":
+                            case "eye":
+                            case "eoc":
+                                {
+                                    if ((bool)Config.BossManager.AllowEyeOfCthulhu)
+                                    {
+                                        args.Player.SendErrorMessage("Eye Of Cthulhu is already Enabled!");
+                                        return;
+                                    }
+
+                                    Config.BossManager.AllowEyeOfCthulhu = true;
+                                    args.Player.SendInfoMessage("Eye Of Cthulhu is now enabled");
+                                    break;
+                                }
+                            case "evilboss":
+                            case "evil boss":
+                                {
+                                    if ((bool)Config.BossManager.AllowEaterOfWorlds && (bool)Config.BossManager.AllowBrainOfCthulhu)
+                                    {
+                                        args.Player.SendErrorMessage("Eater Of Worlds & Brain Of Cthulhu is already Enabled!");
+                                        return;
+                                    }
+
+                                    Config.BossManager.AllowEaterOfWorlds = true;
+                                    Config.BossManager.AllowBrainOfCthulhu = true;
+                                    args.Player.SendInfoMessage("Eater Of Worlds & Brain Of Cthulhu is now enabled");
+                                    break;
+                                }
+                            case "eow":
+                            case "eaterofworlds":
+                            case "eater of worlds":
+                            case "eater":
+                                {
+                                    if ((bool)Config.BossManager.AllowEaterOfWorlds)
+                                    {
+                                        args.Player.SendErrorMessage("Eater Of Worlds is already Enabled!");
+                                        return;
+                                    }
+
+                                    Config.BossManager.AllowEaterOfWorlds = true;
+                                    args.Player.SendInfoMessage("Eater Of Worlds is now enabled");
+                                    break;
+                                }
+                            case "boc":
+                            case "brainofcthulhu":
+                            case "brain of cthulhu":
+                            case "brain":
+                                {
+                                    if ((bool)Config.BossManager.AllowBrainOfCthulhu)
+                                    {
+                                        args.Player.SendErrorMessage("Brain Of Cthulhu is already Enabled!");
+                                        return;
+                                    }
+
+                                    Config.BossManager.AllowBrainOfCthulhu = true;
+                                    args.Player.SendInfoMessage("Brain Of Cthulhu is now enabled");
+                                    break;
+                                }
+                            case "skeletron":
+                            case "sans":
+                                {
+                                    if ((bool)Config.BossManager.AllowSkeletron)
+                                    {
+                                        args.Player.SendErrorMessage("Skeletron is already Enabled!");
+                                        return;
+                                    }
+
+                                    Config.BossManager.AllowSkeletron = true;
+                                    args.Player.SendInfoMessage("Skeletron is now enabled");
+                                    break;
+                                }
+                            case "queenbee":
+                            case "queen bee":
+                            case "qb":
+                                {
+                                    if ((bool)Config.BossManager.AllowQueenBee)
+                                    {
+                                        args.Player.SendErrorMessage("Queen Bee is already Enabled!");
+                                        return;
+                                    }
+
+                                    Config.BossManager.AllowQueenBee = true;
+                                    args.Player.SendInfoMessage("Queen Bee is now enabled");
+                                    break;
+                                }
+                            case "deerclops":
+                            case "deer clops":
+                            case "deer":
+                                {
+                                    if ((bool)Config.BossManager.AllowDeerclops)
+                                    {
+                                        args.Player.SendErrorMessage("Deerclops is already Enabled!");
+                                        return;
+                                    }
+
+                                    Config.BossManager.AllowDeerclops = true;
+                                    args.Player.SendInfoMessage("Deerclops is now enabled");
+                                    break;
+                                }
+                            case "wall of flesh":
+                            case "wallofflesh":
+                            case "wof":
+                                {
+                                    if ((bool)Config.BossManager.AllowWallOfFlesh)
+                                    {
+                                        args.Player.SendErrorMessage("Wall Of Flesh is already Enabled!");
+                                        return;
+                                    }
+
+                                    Config.BossManager.AllowWallOfFlesh = true;
+                                    args.Player.SendInfoMessage("Wall Of Flesh is now enabled");
+                                    break;
+                                }
+                            case "queenslime":
+                            case "queen slime":
+                            case "qs":
+                                {
+                                    if ((bool)Config.BossManager.AllowQueenSlime)
+                                    {
+                                        args.Player.SendErrorMessage("Queen Slime is already Enabled!");
+                                        return;
+                                    }
+
+                                    Config.BossManager.AllowQueenSlime = true;
+                                    args.Player.SendInfoMessage("Queen Slime is now enabled");
+                                    break;
+                                }
+                            case "mech1":
+                            case "thedestroyer":
+                            case "the destroyer":
+                            case "destroyer":
+                                {
+                                    if ((bool)Config.BossManager.AllowTheDestroyer)
+                                    {
+                                        args.Player.SendErrorMessage("The Destroyer is already Enabled!");
+                                        return;
+                                    }
+
+                                    Config.BossManager.AllowTheDestroyer = true;
+                                    args.Player.SendInfoMessage("The Destroyer is now enabled");
+                                    break;
+                                }
+                            case "mech2":
+                            case "thetwins":
+                            case "the twins":
+                            case "twins":
+                                {
+                                    if ((bool)Config.BossManager.AllowTheTwins)
+                                    {
+                                        args.Player.SendErrorMessage("The Twins is already Enabled!");
+                                        return;
+                                    }
+
+                                    Config.BossManager.AllowTheTwins = true;
+                                    args.Player.SendInfoMessage("The Twins is now enabled");
+                                    break;
+                                }
+                            case "mech3":
+                            case "skeletronprime":
+                            case "skeletron prime":
+                            case "prime":
+                                {
+                                    if ((bool)Config.BossManager.AllowSkeletronPrime)
+                                    {
+                                        args.Player.SendErrorMessage("Skeletron Prime is already Enabled!");
+                                        return;
+                                    }
+
+                                    Config.BossManager.AllowSkeletronPrime = true;
+                                    args.Player.SendInfoMessage("Skeletron Prime is now enabled");
+                                    break;
+                                }
+                            case "plantera":
+                                {
+                                    if ((bool)Config.BossManager.AllowPlantera)
+                                    {
+                                        args.Player.SendErrorMessage("Plantera is already Enabled!");
+                                        return;
+                                    }
+
+                                    Config.BossManager.AllowPlantera = true;
+                                    args.Player.SendInfoMessage("Plantera is now enabled");
+                                    break;
+                                }
+                            case "golem":
+                                {
+                                    if ((bool)Config.BossManager.AllowGolem)
+                                    {
+                                        args.Player.SendErrorMessage("Golem is already Enabled!");
+                                        return;
+                                    }
+
+                                    Config.BossManager.AllowGolem = true;
+                                    args.Player.SendInfoMessage("Golem is now enabled");
+                                    break;
+                                }
+                            case "duke":
+                            case "fishron":
+                            case "dukefishron":
+                            case "duke fishron":
+                                {
+                                    if ((bool)Config.BossManager.AllowDukeFishron)
+                                    {
+                                        args.Player.SendErrorMessage("Duke Fish is already Enabled!");
+                                        return;
+                                    }
+
+                                    Config.BossManager.AllowDukeFishron = true;
+                                    args.Player.SendInfoMessage("Duke Fish is now enabled");
+                                    break;
+                                }
+                            case "cultist":
+                            case "lunatic":
+                            case "lunaticcultist":
+                            case "lunatic cultist":
+                                {
+                                    if ((bool)Config.BossManager.AllowLunaticCultist)
+                                    {
+                                        args.Player.SendErrorMessage("Lunatic Cultist is already Enabled!");
+                                        return;
+                                    }
+
+                                    Config.BossManager.AllowLunaticCultist = true;
+                                    args.Player.SendInfoMessage("Lunatic Cultist is now enabled");
+                                    break;
+                                }
+
+                            case "empress":
+                            case "eol":
+                            case "empressoflight":
+                            case "empress of light":
+                                {
+                                    if ((bool)Config.BossManager.AllowEmpressOfLight)
+                                    {
+                                        args.Player.SendErrorMessage("Empress Of Light is already Enabled!");
+                                        return;
+                                    }
+
+                                    Config.BossManager.AllowEmpressOfLight = true;
+                                    args.Player.SendInfoMessage("Empress Of Light is now enabled");
+                                    break;
+                                }
+                            case "moonlord":
+                            case "moon lord":
+                            case "ml":
+                                {
+                                    if ((bool)Config.BossManager.AllowMoonLord)
+                                    {
+                                        args.Player.SendErrorMessage("Moon Lord is already Enabled!");
+                                        return;
+                                    }
+
+                                    Config.BossManager.AllowMoonLord = true;
+                                    args.Player.SendInfoMessage("Moon Lord is now enabled");
+                                    break;
+                                }
+                            default:
+                                {
+                                    args.Player.SendErrorMessage("Please specify the boss!");
+                                    return;
+                                }
+                        }
+                        return;
+                    }
+                #endregion
+                #region ( Type : Disabled )
+                case "disable":
+                    {
+                        switch (args.Parameters[1].ToLower())
+                        {
+                            case "kingslime":
+                            case "king slime":
+                            case "king":
+                            case "ks":
+                                {
+                                    if (!(bool)Config.BossManager.AllowKingSlime)
+                                    {
+                                        args.Player.SendErrorMessage("King Slime is already Disabled!");
+                                        return;
+                                    }
+
+                                    Config.BossManager.AllowKingSlime = false;
+                                    args.Player.SendInfoMessage("King Slime is now disabled");
+                                    break;
+                                }
+                            case "eyeofcthulhu":
+                            case "eye of cthulhu":
+                            case "eye":
+                            case "eoc":
+                                {
+                                    if (!(bool)Config.BossManager.AllowEyeOfCthulhu)
+                                    {
+                                        args.Player.SendErrorMessage("Eye Of Cthulhu is already Disabled!");
+                                        return;
+                                    }
+
+                                    Config.BossManager.AllowEyeOfCthulhu = false;
+                                    args.Player.SendInfoMessage("Eye Of Cthulhu is now disabled");
+                                    break;
+                                }
+                            case "evilboss":
+                            case "evil boss":
+                                {
+                                    if (!(bool)Config.BossManager.AllowEaterOfWorlds && !(bool)Config.BossManager.AllowBrainOfCthulhu)
+                                    {
+                                        args.Player.SendErrorMessage("Eater Of Worlds & Brain Of Cthulhu is already Disabled!");
+                                        return;
+                                    }
+
+                                    Config.BossManager.AllowEaterOfWorlds = false;
+                                    Config.BossManager.AllowBrainOfCthulhu = false;
+                                    args.Player.SendInfoMessage("Eater Of Worlds & Brain Of Cthulhu is now disabled");
+                                    break;
+                                }
+                            case "eow":
+                            case "eaterofworlds":
+                            case "eater of worlds":
+                            case "eater":
+                                {
+                                    if (!(bool)Config.BossManager.AllowEaterOfWorlds)
+                                    {
+                                        args.Player.SendErrorMessage("Eater Of Worlds is already Disabled!");
+                                        return;
+                                    }
+
+                                    Config.BossManager.AllowEaterOfWorlds = false;
+                                    args.Player.SendInfoMessage("Eater Of Worlds is now disabled");
+                                    break;
+                                }
+                            case "boc":
+                            case "brainofcthulhu":
+                            case "brain of cthulhu":
+                            case "brain":
+                                {
+                                    if (!(bool)Config.BossManager.AllowBrainOfCthulhu)
+                                    {
+                                        args.Player.SendErrorMessage("Brain Of Cthulhu is already Disabled!");
+                                        return;
+                                    }
+
+                                    Config.BossManager.AllowBrainOfCthulhu = false;
+                                    args.Player.SendInfoMessage("Brain Of Cthulhu is now disabled");
+                                    break;
+                                }
+                            case "skeletron":
+                            case "sans":
+                                {
+                                    if (!(bool)Config.BossManager.AllowSkeletron)
+                                    {
+                                        args.Player.SendErrorMessage("Skeletron is already Disabled!");
+                                        return;
+                                    }
+
+                                    Config.BossManager.AllowSkeletron = false;
+                                    args.Player.SendInfoMessage("Skeletron is now disabled");
+                                    break;
+                                }
+                            case "queenbee":
+                            case "queen bee":
+                            case "qb":
+                                {
+                                    if (!(bool)Config.BossManager.AllowQueenBee)
+                                    {
+                                        args.Player.SendErrorMessage("Queen Bee is already Disabled!");
+                                        return;
+                                    }
+
+                                    Config.BossManager.AllowQueenBee = false;
+                                    args.Player.SendInfoMessage("Queen Bee is now disabled");
+                                    break;
+                                }
+                            case "deerclops":
+                            case "deer clops":
+                            case "deer":
+                                {
+                                    if (!(bool)Config.BossManager.AllowDeerclops)
+                                    {
+                                        args.Player.SendErrorMessage("Deerclops is already Disabled!");
+                                        return;
+                                    }
+
+                                    Config.BossManager.AllowDeerclops = false;
+                                    args.Player.SendInfoMessage("Deerclops is now disabled");
+                                    break;
+                                }
+                            case "wall of flesh":
+                            case "wallofflesh":
+                            case "wof":
+                                {
+                                    if (!(bool)Config.BossManager.AllowWallOfFlesh)
+                                    {
+                                        args.Player.SendErrorMessage("Wall Of Flesh is already Disabled!");
+                                        return;
+                                    }
+
+                                    Config.BossManager.AllowWallOfFlesh = false;
+                                    args.Player.SendInfoMessage("Wall Of Flesh is now disabled");
+                                    break;
+                                }
+                            case "queenslime":
+                            case "queen slime":
+                            case "qs":
+                                {
+                                    if (!(bool)Config.BossManager.AllowQueenSlime)
+                                    {
+                                        args.Player.SendErrorMessage("Queen Slime is already Disabled!");
+                                        return;
+                                    }
+
+                                    Config.BossManager.AllowQueenSlime = false;
+                                    args.Player.SendInfoMessage("Queen Slime is now disabled");
+                                    break;
+                                }
+                            case "mech1":
+                            case "thedestroyer":
+                            case "the destroyer":
+                            case "destroyer":
+                                {
+                                    if (!(bool)Config.BossManager.AllowTheDestroyer)
+                                    {
+                                        args.Player.SendErrorMessage("The Destroyer is already Disabled!");
+                                        return;
+                                    }
+
+                                    Config.BossManager.AllowTheDestroyer = false;
+                                    args.Player.SendInfoMessage("The Destroyer is now disabled");
+                                    break;
+                                }
+                            case "mech2":
+                            case "thetwins":
+                            case "the twins":
+                            case "twins":
+                                {
+                                    if (!(bool)Config.BossManager.AllowTheTwins)
+                                    {
+                                        args.Player.SendErrorMessage("The Twins is already Disabled!");
+                                        return;
+                                    }
+
+                                    Config.BossManager.AllowTheTwins = false;
+                                    args.Player.SendInfoMessage("The Twins is now disabled");
+                                    break;
+                                }
+                            case "mech3":
+                            case "skeletronprime":
+                            case "skeletron prime":
+                            case "prime":
+                                {
+                                    if (!(bool)Config.BossManager.AllowSkeletronPrime)
+                                    {
+                                        args.Player.SendErrorMessage("Skeletron Prime is already Disabled!");
+                                        return;
+                                    }
+
+                                    Config.BossManager.AllowSkeletronPrime = false;
+                                    args.Player.SendInfoMessage("Skeletron Prime is now disabled");
+                                    break;
+                                }
+                            case "plantera":
+                                {
+                                    if (!(bool)Config.BossManager.AllowPlantera)
+                                    {
+                                        args.Player.SendErrorMessage("Plantera is already Disabled!");
+                                        return;
+                                    }
+
+                                    Config.BossManager.AllowPlantera = false;
+                                    args.Player.SendInfoMessage("Plantera is now disabled");
+                                    break;
+                                }
+                            case "golem":
+                                {
+                                    if (!(bool)Config.BossManager.AllowGolem)
+                                    {
+                                        args.Player.SendErrorMessage("Golem is already Disabled!");
+                                        return;
+                                    }
+
+                                    Config.BossManager.AllowGolem = false;
+                                    args.Player.SendInfoMessage("Golem is now disabled");
+                                    break;
+                                }
+                            case "duke":
+                            case "fishron":
+                            case "dukefishron":
+                            case "duke fishron":
+                                {
+                                    if (!(bool)Config.BossManager.AllowDukeFishron)
+                                    {
+                                        args.Player.SendErrorMessage("Duke Fish is already Disabled!");
+                                        return;
+                                    }
+
+                                    Config.BossManager.AllowDukeFishron = false;
+                                    args.Player.SendInfoMessage("Duke Fish is now disable");
+                                    break;
+                                }
+                            case "cultist":
+                            case "lunatic":
+                            case "lunaticcultist":
+                            case "lunatic cultist":
+                                {
+                                    if (!(bool)Config.BossManager.AllowLunaticCultist)
+                                    {
+                                        args.Player.SendErrorMessage("Lunatic Cultist is already Disabled!");
+                                        return;
+                                    }
+
+                                    Config.BossManager.AllowLunaticCultist = false;
+                                    args.Player.SendInfoMessage("Lunatic Cultist is now disabled");
+                                    break;
+                                }
+
+                            case "empress":
+                            case "eol":
+                            case "empressoflight":
+                            case "empress of light":
+                                {
+                                    if (!(bool)Config.BossManager.AllowEmpressOfLight)
+                                    {
+                                        args.Player.SendErrorMessage("Empress Of Light is already Disabled!");
+                                        return;
+                                    }
+
+                                    Config.BossManager.AllowEmpressOfLight = false;
+                                    args.Player.SendInfoMessage("Empress Of Light is now disabled");
+                                    break;
+                                }
+                            case "moonlord":
+                            case "moon lord":
+                            case "ml":
+                                {
+                                    if (!(bool)Config.BossManager.AllowMoonLord)
+                                    {
+                                        args.Player.SendErrorMessage("Moon Lord is already Disabled!");
+                                        return;
+                                    }
+
+                                    Config.BossManager.AllowMoonLord = false;
+                                    args.Player.SendInfoMessage("Moon Lord is now disabled");
+                                    break;
+                                }
+                            default:
+                                {
+                                    args.Player.SendErrorMessage("Please specify the boss!");
+                                    return;
+                                }
+                        }
+                        return;
+                    }
+                #endregion
+                #region ( Type : EnableAll )
+                case "enableall":
+                    {
+                        Config.BossManager.AllowKingSlime = true;
+                        Config.BossManager.AllowEyeOfCthulhu = true;
+                        Config.BossManager.AllowEaterOfWorlds = true;
+                        Config.BossManager.AllowBrainOfCthulhu = true;
+                        Config.BossManager.AllowQueenBee = true;
+                        Config.BossManager.AllowDeerclops = true;
+                        Config.BossManager.AllowSkeletron = true;
+                        Config.BossManager.AllowWallOfFlesh = true;
+                        Config.BossManager.AllowQueenSlime = true;
+                        Config.BossManager.AllowTheTwins = true;
+                        Config.BossManager.AllowTheDestroyer = true;
+                        Config.BossManager.AllowSkeletronPrime = true;
+                        Config.BossManager.AllowDukeFishron = true;
+                        Config.BossManager.AllowPlantera = true;
+                        Config.BossManager.AllowEmpressOfLight = true;
+                        Config.BossManager.AllowGolem = true;
+                        Config.BossManager.AllowLunaticCultist = true;
+                        Config.BossManager.AllowMoonLord = true;
+
+                        args.Player.SendInfoMessage("All Bosses are enabled");
+                        Config.Changeall(Config);
+                        Config.Read();
+                        return;
+                    }
+                #endregion
+                #region ( Type : DisableAll )
+                case "disableall":
+                    {
+                        Config.BossManager.AllowKingSlime = false;
+                        Config.BossManager.AllowEyeOfCthulhu = false;
+                        Config.BossManager.AllowEaterOfWorlds = false;
+                        Config.BossManager.AllowBrainOfCthulhu = false;
+                        Config.BossManager.AllowQueenBee = false;
+                        Config.BossManager.AllowDeerclops = false;
+                        Config.BossManager.AllowSkeletron = false;
+                        Config.BossManager.AllowWallOfFlesh = false;
+                        Config.BossManager.AllowQueenSlime = false;
+                        Config.BossManager.AllowTheTwins = false;
+                        Config.BossManager.AllowTheDestroyer = false;
+                        Config.BossManager.AllowSkeletronPrime = false;
+                        Config.BossManager.AllowDukeFishron = false;
+                        Config.BossManager.AllowPlantera = false;
+                        Config.BossManager.AllowEmpressOfLight = false;
+                        Config.BossManager.AllowGolem = false;
+                        Config.BossManager.AllowLunaticCultist = false;
+                        Config.BossManager.AllowMoonLord = false;
+
+                        args.Player.SendInfoMessage("All Bosses are enabled");
+                        Config.Changeall(Config);
+                        Config.Read();
+                        return;
+                    }
+                #endregion
+                #region ( Type : SetKilled )
+                case "setkilled":
+                case "setkill":
+                    {
+                        if (!args.Player.HasPermission(Config.Permissions.CMD_ManageBoss_SetKilled))
+                        {
+                            args.Player.SendErrorMessage("You do not have permission to set bosses as kill or not!");
+                            return;
+                        }
+                        switch (args.Parameters[1].ToLower())
+                        {
+                            case "kingslime":
+                            case "king slime":
+                            case "king":
+                            case "ks":
+                                {
+                                    NPC.downedSlimeKing = !NPC.downedSlimeKing;
+                                    args.Player.SendInfoMessage($"Set King Slime as {(NPC.downedSlimeKing ? "[c/FF0000:Killed]" : "[c/00FF00:Not Killed]")}!");
+                                    return;
+                                }
+                            case "eyeofcthulhu":
+                            case "eye of cthulhu":
+                            case "eye":
+                            case "eoc":
+                                {
+                                    NPC.downedBoss1 = !NPC.downedBoss1;
+                                    args.Player.SendInfoMessage($"Set Eye of Cthulhu as {(NPC.downedBoss1 ? "[c/FF0000:Killed]" : "[c/00FF00:Not Killed]")}!");
+                                    return;
+                                }
+                            case "evilboss":
+                            case "evil boss":
+                            case "boc":
+                            case "eow":
+                            case "eaterofworlds":
+                            case "eater of worlds":
+                            case "brainofcthulhu":
+                            case "brain of cthulhu":
+                            case "brain":
+                            case "eater":
+                                {
+                                    NPC.downedBoss2 = !NPC.downedBoss2;
+                                    args.Player.SendInfoMessage($"Set {(WorldGen.crimson ? "Brain of Cthulhu" : "Eater of Worlds")} as {(NPC.downedBoss2 ? "[c/FF0000:Killed]" : "[c/00FF00:Not Killed]")}!");
+                                    return;
+                                }
+                            case "skeletron":
+                            case "sans":
+                                {
+                                    NPC.downedBoss3 = !NPC.downedBoss3;
+                                    args.Player.SendInfoMessage($"Set Skeletron as {(NPC.downedBoss3 ? "[c/FF0000:Killed]" : "[c/00FF00:Not Killed]")}!");
+                                    return;
+                                }
+                            case "queenbee":
+                            case "queen bee":
+                            case "qb":
+                                {
+                                    NPC.downedQueenBee = !NPC.downedQueenBee;
+                                    args.Player.SendInfoMessage($"Set Queen Bee as {(NPC.downedQueenBee ? "[c/FF0000:Killed]" : "[c/00FF00:Not Killed]")}!");
+                                    return;
+                                }
+                            case "deerclops":
+                            case "deer clops":
+                            case "deer":
+                                {
+                                    NPC.downedDeerclops = !NPC.downedDeerclops;
+                                    args.Player.SendInfoMessage($"Set Deerclops as {(NPC.downedDeerclops ? "[c/FF0000:Killed]" : "[c/00FF00:Not Killed]")}!");
+                                    return;
+                                }
+                            case "hardmode":
+                            case "wallofflesh":
+                            case "wall of flesh":
+                            case "wof":
+                                {
+                                    Main.hardMode = !Main.hardMode;
+                                    args.Player.SendInfoMessage($"Set Wall of Flesh (Hardmode) as {(Main.hardMode ? "[c/FF0000:Killed]" : "[c/00FF00:Not Killed]")}!");
+                                    args.Player.SendInfoMessage("Note: This is the same as the '/hardmode' command.");
+                                    return;
+                                }
+                            case "queenslime":
+                            case "queen slime":
+                            case "qs":
+                                {
+                                    NPC.downedQueenSlime = !NPC.downedQueenSlime;
+                                    args.Player.SendInfoMessage($"Set Queen Slime as {(NPC.downedQueenSlime ? "[c/FF0000:Killed]" : "[c/00FF00:Not Killed]")}!");
+                                    return;
+                                }
+                            case "mech1":
+                            case "thedestroyer":
+                            case "the destroyer":
+                            case "destroyer":
+                                {
+                                    NPC.downedMechBoss1 = !NPC.downedMechBoss1;
+                                    args.Player.SendInfoMessage($"Set The Destroyer as {(NPC.downedMechBoss1 ? "[c/FF0000:Killed]" : "[c/00FF00:Not Killed]")}!");
+                                    return;
+                                }
+                            case "mech2":
+                            case "thetwins":
+                            case "the twins":
+                            case "twins":
+                                {
+                                    NPC.downedMechBoss2 = !NPC.downedMechBoss2;
+                                    args.Player.SendInfoMessage($"Set The Twins as {(NPC.downedMechBoss2 ? "[c/FF0000:Killed]" : "[c/00FF00:Not Killed]")}!");
+                                    return;
+                                }
+                            case "mech3":
+                            case "skeletronprime":
+                            case "skeletron prime":
+                            case "prime":
+                                {
+                                    NPC.downedMechBoss3 = !NPC.downedMechBoss3;
+                                    args.Player.SendInfoMessage($"Set Skeletron Prime as {(NPC.downedMechBoss3 ? "[c/FF0000:Killed]" : "[c/00FF00:Not Killed]")}!");
+                                    return;
+                                }
+                            case "plantera":
+                                {
+                                    NPC.downedPlantBoss = !NPC.downedPlantBoss;
+                                    args.Player.SendInfoMessage($"Set Plantera as {(NPC.downedPlantBoss ? "[c/FF0000:Killed]" : "[c/00FF00:Not Killed]")}!");
+                                    return;
+                                }
+                            case "golem":
+                                {
+                                    NPC.downedGolemBoss = !NPC.downedGolemBoss;
+                                    args.Player.SendInfoMessage($"Set Golem as {(NPC.downedGolemBoss ? "[c/FF0000:Killed]" : "[c/00FF00:Not Killed]")}!");
+                                    return;
+                                }
+                            case "duke":
+                            case "fishron":
+                            case "dukefishron":
+                            case "duke fishron":
+                                {
+                                    NPC.downedFishron = !NPC.downedFishron;
+                                    args.Player.SendInfoMessage($"Set Duke Fishron as {(NPC.downedFishron ? "[c/FF0000:Killed]" : "[c/00FF00:Not Killed]")}!");
+                                    return;
+                                }
+                            case "cultist":
+                            case "lunatic":
+                            case "lunaticcultist":
+                            case "lunatic cultist":
+                                {
+                                    NPC.downedAncientCultist = !NPC.downedAncientCultist;
+                                    args.Player.SendInfoMessage($"Set Lunatic Cultist as {(NPC.downedAncientCultist ? "[c/FF0000:Killed]" : "[c/00FF00:Not Killed]")}!");
+                                    return;
+                                }
+
+                            case "empress":
+                            case "eol":
+                            case "empressoflight":
+                            case "empress of light":
+                                {
+                                    NPC.downedEmpressOfLight = !NPC.downedEmpressOfLight;
+                                    args.Player.SendInfoMessage($"Set Empress of Light as {(NPC.downedEmpressOfLight ? "[c/FF0000:Killed]" : "[c/00FF00:Not Killed]")}!");
+                                    return;
+                                }
+                            case "moonlord":
+                            case "moon lord":
+                            case "ml":
+                                {
+                                    NPC.downedMoonlord = !NPC.downedMoonlord;
+                                    args.Player.SendInfoMessage($"Set Moonlord as {(NPC.downedMoonlord ? "[c/FF0000:Killed]" : "[c/00FF00:Not Killed]")}!");
+                                    return;
+                                }
+                            default:
+                                {
+                                    args.Player.SendErrorMessage("Please specify which boss to toggle!");
+                                    args.Player.SendInfoMessage("eg. /undoboss king - toggle king slime");
+                                    return;
+                                }
+                        }
+                        return;
+                    }
+                #endregion
+
+                //schedule
+                #region ( Type : EnableSched )
+                case "enableschedule":
+                case "enablesched":
+                    {
+                        DateTime schedule;
+                        if (!DateTime.TryParse(args.Parameters[2], out schedule))
+                        {
+                            args.Player.SendErrorMessage("Invalid DateTime Schedule!");
+                            return;
+                        }
+                        string[] getmonth_str = { 
+                            "Jan",
+                            "feb",
+                            "Mar",
+                            "Apr",
+                            "May",
+                            "Jun",
+                            "Jul",
+                            "Aug",
+                            "Sep",
+                            "Oct",
+                            "Nov",
+                            "Dec"
+                        };
+
+                        string stringsched = 
+                            $"> target: {schedule.Hour}:{schedule.Minute} {getmonth_str[schedule.Month - 1]} {schedule.Day} {schedule.Year}" +
+                            $"\n> server time: {DateTime.UtcNow.Hour}:{DateTime.UtcNow.Minute} {getmonth_str[DateTime.UtcNow.Month - 1]} {DateTime.UtcNow.Day} {DateTime.UtcNow.Year}";
+                        //TShock.Utils.TryParseTime()
+                        switch (args.Parameters[1].ToLower())
+                        {
+                            case "kingslime":
+                            case "king slime":
+                            case "king":
+                            case "ks":
+                                {
+                                    Config.BossManager.ScheduleAllowKingSlime = schedule;
+                                    args.Player.SendInfoMessage("set King Slime Schedule" +
+                                        $"\n{stringsched}");
+                                    break;
+                                }
+                            case "eyeofcthulhu":
+                            case "eye of cthulhu":
+                            case "eye":
+                            case "eoc":
+                                {
+                                    Config.BossManager.ScheduleAllowEyeOfCthulhu = schedule;
+                                    args.Player.SendInfoMessage("set Eye Of Cthulhu Schedule" +
+                                        $"\n{stringsched}");
+                                    break;
+                                }
+                            case "evilboss":
+                            case "evil boss":
+                                {
+                                    Config.BossManager.ScheduleAllowEaterOfWorlds = schedule;
+                                    Config.BossManager.ScheduleAllowBrainOfCthulhu = schedule;
+                                    args.Player.SendInfoMessage("set Eater Of Worlds & Brain Of Cthulhu Schedule" +
+                                        $"\n{stringsched}");
+                                    break;
+                                }
+                            case "eow":
+                            case "eaterofworlds":
+                            case "eater of worlds":
+                            case "eater":
+                                {
+                                    Config.BossManager.ScheduleAllowEaterOfWorlds = schedule;
+                                    args.Player.SendInfoMessage("set Eater Of Worlds Schedule" +
+                                        $"\n{stringsched}");
+                                    break;
+                                }
+                            case "boc":
+                            case "brainofcthulhu":
+                            case "brain of cthulhu":
+                            case "brain":
+                                {
+                                    Config.BossManager.ScheduleAllowBrainOfCthulhu = schedule;
+                                    args.Player.SendInfoMessage("set Brain Of Cthulhu Schedule" +
+                                        $"\n{stringsched}");
+                                    break;
+                                }
+                            case "skeletron":
+                            case "sans":
+                                {
+                                    Config.BossManager.ScheduleAllowSkeletron = schedule;
+                                    args.Player.SendInfoMessage("set Skeletron Schedule" +
+                                        $"\n{stringsched}");
+                                    break;
+                                }
+                            case "queenbee":
+                            case "queen bee":
+                            case "qb":
+                                {
+                                    Config.BossManager.ScheduleAllowQueenBee = schedule;
+                                    args.Player.SendInfoMessage("set Queen Bee Schedule" +
+                                        $"\n{stringsched}");
+                                    break;
+                                }
+                            case "deerclops":
+                            case "deer clops":
+                            case "deer":
+                                {
+                                    Config.BossManager.ScheduleAllowDeerclops = schedule;
+                                    args.Player.SendInfoMessage("set Deerclops Schedule" +
+                                        $"\n{stringsched}");
+                                    break;
+                                }
+                            case "wall of flesh":
+                            case "wallofflesh":
+                            case "wof":
+                                {
+                                    Config.BossManager.ScheduleAllowSkeletron = schedule;
+                                    args.Player.SendInfoMessage("set Wall Of Flesh Schedule" +
+                                        $"\n{stringsched}");
+                                    break;
+                                }
+                            case "queenslime":
+                            case "queen slime":
+                            case "qs":
+                                {
+                                    Config.BossManager.ScheduleAllowQueenSlime = schedule;
+                                    args.Player.SendInfoMessage("set Queen Slime Schedule" +
+                                        $"\n{stringsched}");
+                                    break;
+                                }
+                            case "mech1":
+                            case "thedestroyer":
+                            case "the destroyer":
+                            case "destroyer":
+                                {
+                                    Config.BossManager.ScheduleAllowTheDestroyer = schedule;
+                                    args.Player.SendInfoMessage("set the Destroyer Schedule" +
+                                        $"\n{stringsched}");
+                                    break;
+                                }
+                            case "mech2":
+                            case "thetwins":
+                            case "the twins":
+                            case "twins":
+                                {
+                                    Config.BossManager.ScheduleAllowTheTwins = schedule;
+                                    args.Player.SendInfoMessage("set The Twins Schedule" +
+                                        $"\n{stringsched}");
+                                    break;
+                                }
+                            case "mech3":
+                            case "skeletronprime":
+                            case "skeletron prime":
+                            case "prime":
+                                {
+                                    Config.BossManager.ScheduleAllowSkeletronPrime = schedule;
+                                    args.Player.SendInfoMessage("set Skeletron Prime Schedule" +
+                                        $"\n{stringsched}");
+                                    break;
+                                }
+                            case "plantera":
+                                {
+                                    Config.BossManager.ScheduleAllowPlantera = schedule;
+                                    args.Player.SendInfoMessage("set Plantera Schedule" +
+                                        $"\n{stringsched}");
+                                    break;
+                                }
+                            case "golem":
+                                {
+                                    Config.BossManager.ScheduleAllowGolem = schedule;
+                                    args.Player.SendInfoMessage("set Golem Schedule" +
+                                        $"\n{stringsched}");
+                                    break;
+                                }
+                            case "duke":
+                            case "fishron":
+                            case "dukefishron":
+                            case "duke fishron":
+                                {
+                                    Config.BossManager.ScheduleAllowDukeFishron = schedule;
+                                    args.Player.SendInfoMessage("set Duke Fishron Schedule" +
+                                        $"\n{stringsched}");
+                                    break;
+                                }
+                            case "cultist":
+                            case "lunatic":
+                            case "lunaticcultist":
+                            case "lunatic cultist":
+                                {
+                                    Config.BossManager.ScheduleAllowLunaticCultist = schedule;
+                                    args.Player.SendInfoMessage("set Lunatic Cultist Schedule" +
+                                        $"\n{stringsched}");
+                                    break;
+                                }
+                            case "empress":
+                            case "eol":
+                            case "empressoflight":
+                            case "empress of light":
+                                {
+                                    Config.BossManager.ScheduleAllowEmpressOfLight = schedule;
+                                    args.Player.SendInfoMessage("set Empress Of Light Schedule" +
+                                        $"\n{stringsched}");
+                                    break;
+                                }
+                            case "moonlord":
+                            case "moon lord":
+                            case "ml":
+                                {
+                                    Config.BossManager.ScheduleAllowMoonLord = schedule;
+                                    args.Player.SendInfoMessage("set Moon Lord Schedule" +
+                                        $"\n{stringsched}");
+                                    break;
+                                }
+                            default:
+                                {
+                                    args.Player.SendErrorMessage("Please specify the boss!");
+                                    return;
+                                }
+                        }
+                        Config.Changeall(Config);
+                        Config.Read();
+                        return;
+                    }
+                #endregion
+                #region ( Type : DisableSched )
+                case "disableenableschedule":
+                case "disablesched":
+                    {
+                        switch (args.Parameters[1].ToLower())
+                        {
+                            case "kingslime":
+                            case "king slime":
+                            case "king":
+                            case "ks":
+                                {
+                                    Config.BossManager.ScheduleAllowKingSlime = DateTime.MaxValue;
+                                    args.Player.SendInfoMessage("Cancled King Slime Schedule");
+                                    break;
+                                }
+                            case "eyeofcthulhu":
+                            case "eye of cthulhu":
+                            case "eye":
+                            case "eoc":
+                                {
+                                    Config.BossManager.ScheduleAllowEyeOfCthulhu = DateTime.MaxValue;
+                                    args.Player.SendInfoMessage("Cancled Eye Of Cthulhu Schedule");
+                                    break;
+                                }
+                            case "evilboss":
+                            case "evil boss":
+                                {
+                                    Config.BossManager.ScheduleAllowEaterOfWorlds = DateTime.MaxValue;
+                                    Config.BossManager.ScheduleAllowBrainOfCthulhu = DateTime.MaxValue;
+                                    args.Player.SendInfoMessage("Canceled Eater Of Worlds & Brain Of Cthulhu Schedule");
+                                    break;
+                                }
+                            case "eow":
+                            case "eaterofworlds":
+                            case "eater of worlds":
+                            case "eater":
+                                {
+                                    Config.BossManager.ScheduleAllowEaterOfWorlds = DateTime.MaxValue;
+                                    args.Player.SendInfoMessage("Canceled Eater Of Worlds Schedule");
+                                    break;
+                                }
+                            case "boc":
+                            case "brainofcthulhu":
+                            case "brain of cthulhu":
+                            case "brain":
+                                {
+                                    Config.BossManager.ScheduleAllowBrainOfCthulhu = DateTime.MaxValue;
+                                    args.Player.SendInfoMessage("Canceled Brain Of Cthulhu Schedule");
+                                    break;
+                                }
+                            case "skeletron":
+                            case "sans":
+                                {
+                                    Config.BossManager.ScheduleAllowSkeletron = DateTime.MaxValue;
+                                    args.Player.SendInfoMessage("Canceled Skeletron Schedule");
+                                    break;
+                                }
+                            case "queenbee":
+                            case "queen bee":
+                            case "qb":
+                                {
+                                    Config.BossManager.ScheduleAllowQueenBee = DateTime.MaxValue;
+                                    args.Player.SendInfoMessage("Canceled Queen Bee Schedule");
+                                    break;
+                                }
+                            case "deerclops":
+                            case "deer clops":
+                            case "deer":
+                                {
+                                    Config.BossManager.ScheduleAllowDeerclops = DateTime.MaxValue;
+                                    args.Player.SendInfoMessage("Canceled Deerclops Schedule");
+                                    break;
+                                }
+                            case "wall of flesh":
+                            case "wallofflesh":
+                            case "wof":
+                                {
+                                    Config.BossManager.ScheduleAllowSkeletron = DateTime.MaxValue;
+                                    args.Player.SendInfoMessage("Canceled Wall Of Flesh Schedule");
+                                    break;
+                                }
+                            case "queenslime":
+                            case "queen slime":
+                            case "qs":
+                                {
+                                    Config.BossManager.ScheduleAllowQueenSlime = DateTime.MaxValue;
+                                    args.Player.SendInfoMessage("set Queen Slime Schedule");
+                                    break;
+                                }
+                            case "mech1":
+                            case "thedestroyer":
+                            case "the destroyer":
+                            case "destroyer":
+                                {
+                                    Config.BossManager.ScheduleAllowTheDestroyer = DateTime.MaxValue;
+                                    args.Player.SendInfoMessage("Canceled the Destroyer Schedule");
+                                    break;
+                                }
+                            case "mech2":
+                            case "thetwins":
+                            case "the twins":
+                            case "twins":
+                                {
+                                    Config.BossManager.ScheduleAllowTheTwins = DateTime.MaxValue;
+                                    args.Player.SendInfoMessage("Canceled The Twins Schedule");
+                                    break;
+                                }
+                            case "mech3":
+                            case "skeletronprime":
+                            case "skeletron prime":
+                            case "prime":
+                                {
+                                    Config.BossManager.ScheduleAllowSkeletronPrime = DateTime.MaxValue;
+                                    args.Player.SendInfoMessage("Canceled Skeletron Prime Schedule");
+                                    break;
+                                }
+                            case "plantera":
+                                {
+                                    Config.BossManager.ScheduleAllowPlantera = DateTime.MaxValue;
+                                    args.Player.SendInfoMessage("Canceled Plantera Schedule");
+                                    break;
+                                }
+                            case "golem":
+                                {
+                                    Config.BossManager.ScheduleAllowGolem = DateTime.MaxValue;
+                                    args.Player.SendInfoMessage("Canceled Golem Schedule");
+                                    break;
+                                }
+                            case "duke":
+                            case "fishron":
+                            case "dukefishron":
+                            case "duke fishron":
+                                {
+                                    Config.BossManager.ScheduleAllowDukeFishron = DateTime.MaxValue;
+                                    args.Player.SendInfoMessage("Canceled Duke Fishron Schedule");
+                                    break;
+                                }
+                            case "cultist":
+                            case "lunatic":
+                            case "lunaticcultist":
+                            case "lunatic cultist":
+                                {
+                                    Config.BossManager.ScheduleAllowLunaticCultist = DateTime.MaxValue;
+                                    args.Player.SendInfoMessage("Canceled Lunatic Cultist Schedule");
+                                    break;
+                                }
+                            case "empress":
+                            case "eol":
+                            case "empressoflight":
+                            case "empress of light":
+                                {
+                                    Config.BossManager.ScheduleAllowEmpressOfLight = DateTime.MaxValue;
+                                    args.Player.SendInfoMessage("Canceled Empress Of Light Schedule");
+                                    break;
+                                }
+                            case "moonlord":
+                            case "moon lord":
+                            case "ml":
+                                {
+                                    Config.BossManager.ScheduleAllowMoonLord = DateTime.MaxValue;
+                                    args.Player.SendInfoMessage("Canceled Moon Lord Schedule");
+                                    break;
+                                }
+                            default:
+                                {
+                                    args.Player.SendErrorMessage("Please specify the boss!");
+                                    return;
+                                }
+                        }
+                        Config.Changeall(Config);
+                        Config.Read();
+                        return;
+                    }
+                #endregion
+                #region ( Type : DisableSchedall )
+                case "disableenablescheduleall":
+                case "disableschedall":
+                    {
+
+                        Config.BossManager.ScheduleAllowKingSlime = DateTime.MaxValue;
+                        Config.BossManager.ScheduleAllowEyeOfCthulhu = DateTime.MaxValue;
+                        Config.BossManager.ScheduleAllowEaterOfWorlds = DateTime.MaxValue;
+                        Config.BossManager.ScheduleAllowBrainOfCthulhu = DateTime.MaxValue;
+                        Config.BossManager.ScheduleAllowQueenBee = DateTime.MaxValue;
+                        Config.BossManager.ScheduleAllowSkeletron = DateTime.MaxValue;
+                        Config.BossManager.ScheduleAllowDeerclops = DateTime.MaxValue;
+                        Config.BossManager.ScheduleAllowWallOfFlesh = DateTime.MaxValue;
+                        Config.BossManager.ScheduleAllowQueenSlime = DateTime.MaxValue;
+                        Config.BossManager.ScheduleAllowTheDestroyer = DateTime.MaxValue;
+                        Config.BossManager.ScheduleAllowTheTwins = DateTime.MaxValue;
+                        Config.BossManager.ScheduleAllowSkeletronPrime = DateTime.MaxValue;
+                        Config.BossManager.ScheduleAllowPlantera = DateTime.MaxValue;
+                        Config.BossManager.ScheduleAllowGolem = DateTime.MaxValue;
+                        Config.BossManager.ScheduleAllowDukeFishron = DateTime.MaxValue;
+                        Config.BossManager.ScheduleAllowEmpressOfLight = DateTime.MaxValue;
+                        Config.BossManager.ScheduleAllowLunaticCultist = DateTime.MaxValue;
+                        Config.BossManager.ScheduleAllowMoonLord = DateTime.MaxValue;
+
+                        args.Player.SendInfoMessage("Cancled All Boss Schedule");
+
+                        Config.Changeall(Config);
+                        Config.Read();
+                        return;
+                    }
+                #endregion
+                #region ( Type : DisableSchedall )
+                case "usingschedule":
+                case "usingsched":
+                    {
+
+
+                        switch (args.Parameters[1].ToLower())
+                        {
+                            case "true":
+                            case "yes":
+                                {
+                                    Config.BossManager.UseBossSchedule = true;
+                                    args.Player.SendInfoMessage("Set Using Boss Schedule to true");
+                                    break;
+                                }
+                            case "false":
+                            case "no":
+                                {
+                                    Config.BossManager.UseBossSchedule = false;
+                                    args.Player.SendInfoMessage("Set Using Boss Schedule to false");
+                                    break;
+                                }
+                            default:
+                                {
+                                    if ((bool)Config.BossManager.UseBossSchedule)
+                                    {
+                                        Config.BossManager.UseBossSchedule = false;
+                                        args.Player.SendInfoMessage("Set Using Boss Schedule to false");
+                                        break;
+                                    } else
+                                    {
+                                        Config.BossManager.UseBossSchedule = true;
+                                        args.Player.SendInfoMessage("Set Using Boss Schedule to true");
+                                        break;
+                                    }
+                                }
+                        }
+
+                        Config.Changeall(Config);
+                        Config.Read();
+                        return;
+                    }
+                #endregion
+                #region ( Type : ResetSchedule )
+                case "resetschedule":
+                case "resetsched":
+                    {
+                        DateTime today = DateTime.Parse($"{DateTime.UtcNow.Month}/{DateTime.UtcNow.Day}/{DateTime.UtcNow.Year}");
+                        Config.BossManager.ScheduleAllowKingSlime = today.AddDays((double)Config.BossManager.Default_ScheduleDay_AllowKingSlime);
+                        Config.BossManager.ScheduleAllowEyeOfCthulhu = today.AddDays((double)Config.BossManager.Default_ScheduleDay_AllowEyeOfCthulhu);
+                        Config.BossManager.ScheduleAllowEaterOfWorlds = today.AddDays((double)Config.BossManager.Default_ScheduleDay_AllowEaterOfWorlds);
+                        Config.BossManager.ScheduleAllowBrainOfCthulhu = today.AddDays((double)Config.BossManager.Default_ScheduleDay_AllowBrainOfCthulhu);
+                        Config.BossManager.ScheduleAllowQueenBee = today.AddDays((double)Config.BossManager.Default_ScheduleDay_AllowQueenBee);
+                        Config.BossManager.ScheduleAllowSkeletron = today.AddDays((double)Config.BossManager.Default_ScheduleDay_AllowSkeletron);
+                        Config.BossManager.ScheduleAllowDeerclops = today.AddDays((double)Config.BossManager.Default_ScheduleDay_AllowDeerclops);
+                        Config.BossManager.ScheduleAllowWallOfFlesh = today.AddDays((double)Config.BossManager.Default_ScheduleDay_AllowWallOfFlesh);
+                        Config.BossManager.ScheduleAllowQueenSlime = today.AddDays((double)Config.BossManager.Default_ScheduleDay_AllowQueenSlime);
+                        Config.BossManager.ScheduleAllowTheDestroyer = today.AddDays((double)Config.BossManager.Default_ScheduleDay_AllowTheDestroyer);
+                        Config.BossManager.ScheduleAllowTheTwins = today.AddDays((double)Config.BossManager.Default_ScheduleDay_AllowTheTwins);
+                        Config.BossManager.ScheduleAllowSkeletronPrime = today.AddDays((double)Config.BossManager.Default_ScheduleDay_AllowSkeletronPrime);
+                        Config.BossManager.ScheduleAllowPlantera = today.AddDays((double)Config.BossManager.Default_ScheduleDay_AllowPlantera);
+                        Config.BossManager.ScheduleAllowGolem = today.AddDays((double)Config.BossManager.Default_ScheduleDay_AllowGolem);
+                        Config.BossManager.ScheduleAllowDukeFishron = today.AddDays((double)Config.BossManager.Default_ScheduleDay_AllowDukeFishron);
+                        Config.BossManager.ScheduleAllowEmpressOfLight = today.AddDays((double)Config.BossManager.Default_ScheduleDay_AllowEmpressOfLight);
+                        Config.BossManager.ScheduleAllowLunaticCultist = today.AddDays((double)Config.BossManager.Default_ScheduleDay_AllowLunaticCultist);
+                        Config.BossManager.ScheduleAllowMoonLord = today.AddDays((double)Config.BossManager.Default_ScheduleDay_AllowMoonLord);
+
+                        args.Player.SendInfoMessage("Reset Boss Schedule");
+
+                        Config.Changeall(Config);
+                        Config.Read();
+                        return;
+                    }
+                #endregion
+                default:
+                    {
+                        args.Player.SendErrorMessage("Invalid Type!" +
+                            "\ndo '/manageboss help' for more info");
+                        return;
+                    }
+            }
 
             #endregion
         }
@@ -3449,6 +5269,25 @@ namespace MKLP
             Console.Write("[MKLP]");
             Console.ResetColor();
         }
+
+        public static void SendLog_LatestVersion(string oldversion, string newversion)
+        {
+            SendTitle();
+            Console.ResetColor();
+            Console.ForegroundColor = ConsoleColor.Yellow;
+            Console.Write(" Warning: ");
+            Console.ResetColor();
+
+            Console.ResetColor();
+            Console.ForegroundColor = ConsoleColor.DarkMagenta;
+            Console.WriteLine($"MKLP has updated to v{oldversion} to v{newversion}");
+            Console.ForegroundColor = ConsoleColor.DarkMagenta;
+            Console.WriteLine("> You can download the latest version at");
+            Console.ForegroundColor = ConsoleColor.DarkMagenta;
+            Console.WriteLine($"> https://github.com/Nightklpgaming/TShock-GSKLP-Moderation/releases/tag/{newversion}");
+            Console.ResetColor();
+        }
+
         public static void SendLog_Exception(object? value)
         {
             SendTitle();
