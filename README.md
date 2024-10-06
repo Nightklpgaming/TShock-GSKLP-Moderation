@@ -62,6 +62,8 @@ order to install the plugin donwload `MKLP.dll` in releases after that put that 
 
 **/clearlag** : Deletes low value npc/items and projectile
 
+**/manageboss** : Manage it by enable/disable boss or schedule it
+
 ### Moderator
 
 **/managereport** : View/Delete any reports
