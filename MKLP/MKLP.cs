@@ -47,7 +47,7 @@ namespace MKLP
         public override string Author => "Nightklp";
         public override string Description => "Makes Moderating a bit easy";
         public override string Name => "MKLP";
-        public override Version Version => new Version(1, 0);
+        public override Version Version => new Version(1, 0, 1);
         #endregion
 
         #region [ Variables ]
@@ -110,6 +110,8 @@ namespace MKLP
 
             //=====================Server===================
             //ServerApi.Hooks.GameUpdate.Register(this, OnUpdate);
+
+            ServerApi.Hooks.WorldSave.Register(this, OnWorldSave);
 
             ServerApi.Hooks.GamePostInitialize.Register(this, OnServerStart);
 
@@ -277,6 +279,8 @@ namespace MKLP
                 //=====================Server===================
                 //ServerApi.Hooks.GameUpdate.Deregister(this, OnUpdate);
 
+                ServerApi.Hooks.WorldSave.Register(this, OnWorldSave);
+
                 ServerApi.Hooks.GamePostInitialize.Deregister(this, OnServerStart);
 
                 GeneralHooks.ReloadEvent -= OnReload;
@@ -347,7 +351,12 @@ namespace MKLP
             #region ( Inventory Checking )
             if (args.MsgID == PacketTypes.PlayerSlot)
             {
-                if ((!player.HasPermission("tshock.item") || !player.HasPermission("tshock.item.*")) && !player.HasPermission(Config.Permissions.IgnoreSurvivalCode_1)) ManagePlayer.CheckIllegalItemInventory(player);
+                if (!player.IsLoggedIn) return;
+                if ((!player.HasPermission("tshock.item") || !player.HasPermission("tshock.item.*")))
+                {
+                    ManagePlayer.Check_Survival_Code1(player);
+                    ManagePlayer.Check_Main_Code1(player);
+                }
 
                 if (player.ContainsData("MKLP_PrevInventory"))
                 {
@@ -417,50 +426,6 @@ namespace MKLP
         #endregion
 
         #region { Player }
-        private static void OnPlayerUpdate(object? sender, GetDataHandlers.PlayerUpdateEventArgs args)
-        {
-            #region code
-            /*
-            if (args.Player == null || !args.Player.Active) return;
-
-            if (!args.Player.IsLoggedIn)
-            {
-                return;
-            }
-
-            if (DisabledKey.ContainsKey(Identifier.Name + args.Player.Name) ||
-                DisabledKey.ContainsKey(Identifier.IP + args.Player.IP) ||
-                DisabledKey.ContainsKey(Identifier.UUID + args.Player.UUID))
-            {
-                if (TShockAPI.Utils.Distance(value2: new Vector2((int)args.Player.TPlayer.position.X / 16, (int)args.Player.TPlayer.position.Y / 16), value1: new Vector2(Main.spawnTileX, Main.spawnTileY)) >= 3f)
-                {
-                    args.Player.Teleport(Main.spawnTileX * 16, Main.spawnTileY * 16);
-
-                }
-                args.Player.SetBuff(149, 330, true);
-                return;
-            }
-
-            #region ( Inventory Checking )
-            if ((!args.Player.HasPermission("tshock.item") || !args.Player.HasPermission("tshock.item.*")) && !args.Player.HasPermission(Config.Permissions.IgnoreSurvivalCode_1)) ManagePlayer.CheckIllegalItemInventory(args.Player);
-
-            if (args.Player.ContainsData("MKLP_PrevInventory"))
-            {
-
-                Item[] prevplayer = args.Player.GetData<Item[]>("MKLP_PrevInventory");
-
-                ManagePlayer.CheckPreviousInventory(args.Player, args.Player.TPlayer.inventory, prevplayer);
-
-                args.Player.SetData("MKLP_PrevInventory", args.Player.TPlayer.inventory.Clone());
-            }
-            else
-            {
-                args.Player.SetData("MKLP_PrevInventory", args.Player.TPlayer.inventory.Clone());
-            }
-            #endregion
-            */
-            #endregion
-        }
 
         private void OnPlayerJoin(JoinEventArgs args)
         {
@@ -487,6 +452,14 @@ namespace MKLP
                 {
                     player.Disconnect($"You Can't use {DiscordKLP.S_} in your Name!");
                     return;
+                }
+                foreach (string contains in Config.Main.Ban_NameContains)
+                {
+                    if (player.Name.Contains(contains))
+                    {
+                        player.Disconnect($"You Can't use {contains} in your Name!");
+                        return;
+                    }
                 }
                 if (player.Name.Length < (byte)Config.Main.Minimum_CharacterName)
                 {
@@ -611,7 +584,6 @@ namespace MKLP
             #endregion
         }
 
-
         #endregion
 
         #region { Game }
@@ -638,14 +610,14 @@ namespace MKLP
                     args.Handled = true;
                     return;
                 }
-                if (IllegalTileProgression.ContainsKey(new(Main.tile[tileX, tileY].type, args.Style)) && args.Player.HasPermission(Config.Permissions.IgnoreSurvivalCode_3) && (bool)Config.Main.Using_Survival_Code3)
+                if (IllegalTileProgression.ContainsKey(new(Main.tile[tileX, tileY].type, args.Style)) && !args.Player.HasPermission(Config.Permissions.IgnoreSurvivalCode_3) && (bool)Config.Main.Using_Survival_Code3)
                 {
                     ManagePlayer.DisablePlayer(args.Player, $"{IllegalTileProgression[new(Main.tile[tileX, tileY].type, args.Style)]} Block Place", ServerReason: $"Survival,code,3|{Main.tile[tileX, tileY].type}|{args.Style}|{IllegalTileProgression[new(Main.tile[tileX, tileY].type, args.Style)]}");
                     args.Player.SendTileSquareCentered(tileX, tileY, 4);
                     args.Handled = true;
                     return;
                 }
-                if (IllegalTileProgression.ContainsKey(new(Main.tile[tileX, tileY].type, 0, true)) && args.Player.HasPermission(Config.Permissions.IgnoreSurvivalCode_3) && (bool)Config.Main.Using_Survival_Code3)
+                if (IllegalTileProgression.ContainsKey(new(Main.tile[tileX, tileY].type, 0, true)) && !args.Player.HasPermission(Config.Permissions.IgnoreSurvivalCode_3) && (bool)Config.Main.Using_Survival_Code3)
                 {
                     ManagePlayer.DisablePlayer(args.Player, $"{IllegalTileProgression[new(Main.tile[tileX, tileY].type, 0, true)]} Block Place", ServerReason: $"Survival,code,3|{Main.tile[tileX, tileY].type}|{args.Style}|{IllegalTileProgression[new(Main.tile[tileX, tileY].type, 0, true)]}");
                     args.Player.SendTileSquareCentered(tileX, tileY, 4);
@@ -657,7 +629,7 @@ namespace MKLP
             if (args.Action == GetDataHandlers.EditAction.PlaceWall)
             {
                 if (IllegalWallProgression.ContainsKey(Main.tile[tileX, tileY].wall) &&
-                    args.Player.HasPermission(Config.Permissions.IgnoreSurvivalCode_4) &&
+                    !args.Player.HasPermission(Config.Permissions.IgnoreSurvivalCode_4) &&
                     (bool)Config.Main.Using_Survival_Code4)
                 {
                     ManagePlayer.DisablePlayer(args.Player, $"{IllegalWallProgression[Main.tile[tileX, tileY].wall]} Wall Place", ServerReason: $"Survival,code,4|{Main.tile[tileX, tileY].wall}|{IllegalWallProgression[Main.tile[tileX, tileY].wall]}");
@@ -1008,7 +980,7 @@ namespace MKLP
                 GetDataHandlers.LiquidType.Shimmer => "Shimmer"
             };
 
-            if (TileY >= (int)Main.worldSurface)
+            if ((int)Main.worldSurface >= TileY)
             {
                 // Log liquid placed
                 if (!args.Player.HasPermission(Config.Permissions.IgnoreAntiGrief_protectsurface_placeliquid) && (bool)Config.Main.Using_AntiGrief_Surface_PlaceLiquid)
@@ -1654,6 +1626,11 @@ namespace MKLP
                         case 14:
                         case 15:
                             {
+                                if (!args.Player.TPlayer.ZoneCorrupt)
+                                {
+                                    ManagePlayer.DisablePlayer(args.Player, $"null item boss spawn", ServerReason: $"Main,code,2|{args.Player.SelectedItem.netID}|{getnpc.FullName}");
+                                    return true;
+                                }
                                 if (args.Player.SelectedItem.type != 70)
                                 {
                                     ManagePlayer.DisablePlayer(args.Player, $"null item boss spawn", ServerReason: $"Main,code,2|{args.Player.SelectedItem.netID}|{getnpc.FullName}");
@@ -1664,6 +1641,11 @@ namespace MKLP
                             }
                         case 266: // Brain Of Cthulhu
                             {
+                                if (!args.Player.TPlayer.ZoneCrimson)
+                                {
+                                    ManagePlayer.DisablePlayer(args.Player, $"null item boss spawn", ServerReason: $"Main,code,2|{args.Player.SelectedItem.netID}|{getnpc.FullName}");
+                                    return true;
+                                }
                                 if (args.Player.SelectedItem.type != 1331)
                                 {
                                     ManagePlayer.DisablePlayer(args.Player, $"null item boss spawn", ServerReason: $"Main,code,2|{args.Player.SelectedItem.netID}|{getnpc.FullName}");
@@ -1674,6 +1656,11 @@ namespace MKLP
                             }
                         case 222: // Queen Bee
                             {
+                                if (!args.Player.TPlayer.ZoneJungle)
+                                {
+                                    ManagePlayer.DisablePlayer(args.Player, $"null item boss spawn", ServerReason: $"Main,code,2|{args.Player.SelectedItem.netID}|{getnpc.FullName}");
+                                    return true;
+                                }
                                 if (args.Player.SelectedItem.type != 1133)
                                 {
                                     ManagePlayer.DisablePlayer(args.Player, $"null item boss spawn", ServerReason: $"Main,code,2|{args.Player.SelectedItem.netID}|{getnpc.FullName}");
@@ -1684,6 +1671,12 @@ namespace MKLP
                             }
                         case 668: // Deerclops
                             {
+                                if (!args.Player.TPlayer.ZoneSnow)
+                                {
+                                    ManagePlayer.DisablePlayer(args.Player, $"null item boss spawn", ServerReason: $"Main,code,2|{args.Player.SelectedItem.netID}|{getnpc.FullName}");
+                                    return true;
+                                }
+
                                 if (args.Player.SelectedItem.type != 5120)
                                 {
                                     ManagePlayer.DisablePlayer(args.Player, $"null item boss spawn", ServerReason: $"Main,code,2|{args.Player.SelectedItem.netID}|{getnpc.FullName}");
@@ -1709,6 +1702,11 @@ namespace MKLP
                             }
                         case 657: // Queen Slime
                             {
+                                if (!args.Player.TPlayer.ZoneHallow)
+                                {
+                                    ManagePlayer.DisablePlayer(args.Player, $"null item boss spawn", ServerReason: $"Main,code,2|{args.Player.SelectedItem.netID}|{getnpc.FullName}");
+                                    return true;
+                                }
                                 if (args.Player.SelectedItem.type != 4988)
                                 {
                                     ManagePlayer.DisablePlayer(args.Player, $"null item boss spawn", ServerReason: $"Main,code,2|{args.Player.SelectedItem.netID}|{getnpc.FullName}");
@@ -1777,12 +1775,18 @@ namespace MKLP
                                     ManagePlayer.DisablePlayer(args.Player, $"null item boss spawn", ServerReason: $"Main,code,2|{args.Player.SelectedItem.netID}|{getnpc.FullName}");
                                     return true;
                                 }
+                                /*
                                 if (!args.Player.Inventory.All(i => i.type == 1293) && !args.Player.TPlayer.bank4.item.All(i => i.type == 1293))
                                 {
                                     ManagePlayer.DisablePlayer(args.Player, $"null item boss spawn", ServerReason: $"Main,code,2|{args.Player.SelectedItem.netID}|{getnpc.FullName}");
                                     return true;
                                 }
-
+                                */
+                                if (!IsNextGolemSpawn(args.Player))
+                                {
+                                    ManagePlayer.DisablePlayer(args.Player, $"null item boss spawn", ServerReason: $"Main,code,2|{args.Player.SelectedItem.netID}|{getnpc.FullName}");
+                                    return true;
+                                }
                                 break;
                             }
                         case 370: // Duke Fishron
@@ -1801,21 +1805,33 @@ namespace MKLP
                                     ItemID.ScarabFishingRod,
                                     4325, //chum caster
                                     ItemID.FiberglassFishingPole,
-                                    ItemID.MechanicsRod, 
-                                    ItemID.SittingDucksFishingRod, 
-                                    ItemID.HotlineFishingHook, 
+                                    ItemID.MechanicsRod,
+                                    ItemID.SittingDucksFishingRod,
+                                    ItemID.HotlineFishingHook,
                                     ItemID.GoldenFishingRod
                                 };
+                                if (!args.Player.TPlayer.ZoneBeach)
+                                {
+                                    ManagePlayer.DisablePlayer(args.Player, $"null item boss spawn", ServerReason: $"Main,code,2|{args.Player.SelectedItem.netID}|{getnpc.FullName}");
+                                    return true;
+                                }
+                                if (!fishing_rods.Contains(args.Player.SelectedItem.type))
+                                {
+                                    ManagePlayer.DisablePlayer(args.Player, $"null item boss spawn", ServerReason: $"Main,code,2|{args.Player.SelectedItem.netID}|{getnpc.FullName}");
+                                    return true;
+                                }
+                                /*
                                 if (!args.Player.Inventory.All(i => fishing_rods.Contains(i.type)))
                                 {
                                     ManagePlayer.DisablePlayer(args.Player, $"null item boss spawn", ServerReason: $"Main,code,2|{args.Player.SelectedItem.netID}|{getnpc.FullName}");
                                     return true;
                                 }
-                                if (!args.Player.Inventory.All(i => i.type == 2673))
+                                if (!args.Player.Inventory.All(i => i.type == ItemID.TruffleWorm))
                                 {
                                     ManagePlayer.DisablePlayer(args.Player, $"null item boss spawn", ServerReason: $"Main,code,2|{args.Player.SelectedItem.netID}|{getnpc.FullName}");
                                     return true;
                                 }
+                                */
 
                                 break;
                             }
@@ -1836,6 +1852,45 @@ namespace MKLP
             }
 
             return false;
+            /*
+            bool HasContainsItemID(TSPlayer player, params int[] itemids)
+            {
+                foreach (int itemid in  itemids)
+                {
+                    foreach (Item gettsitem in player.TPlayer.inventory)
+                    {
+                        if (gettsitem.netID == itemid)
+                        {
+                            return true;
+                        }
+                    }
+                }
+                return false;
+            }
+            */
+
+            bool IsNextGolemSpawn(TSPlayer player)
+            {
+
+                int playerX = (int)(player.TileX);
+                int playerY = (int)(player.TileY);
+
+
+                for (int x = playerX - 24; x <= playerX + 24; x++)
+                {
+                    for (int y = playerY - 24; y <= playerY + 24; y++)
+                    {
+                        if (x == playerX && y == playerY)
+                            continue;
+                        if (Main.tile[x, y].type == TileID.LihzahrdAltar)
+                        {
+                            return true;
+                        }
+                    }
+                }
+
+                return false;
+            }
             #endregion
         }
 
@@ -1849,32 +1904,57 @@ namespace MKLP
             args.Player.SendMessage("MKLP config reloaded!", Microsoft.Xna.Framework.Color.Purple);
         }
 
-        #endregion
-
-        #region { Auto Check }
-
-        private void OnServerStart(EventArgs args)
+        private void OnWorldSave(WorldSaveEventArgs args)
         {
-            #region code
-
-            Slow_Checking();
-            
-            #endregion
-        }
-
-        private static int interval_informlatestversion = 3;
-        private async void Slow_Checking()
-        {
-            interval_informlatestversion++;
-
-            check1();
+            checkplayers();
 
             if ((bool)Config.BossManager.UseBossSchedule)
             {
                 check_bosssched();
             }
 
-            if (interval_informlatestversion >= 3)
+            try
+            {
+                InformLatestVersion();
+            }
+            catch { }
+        }
+
+        #endregion
+
+        #region { Auto Check }
+        
+        private void OnServerStart(EventArgs args)
+        {
+            #region code
+
+            IllegalItemProgression = SurvivalManager.GetIllegalItem();
+
+            IllegalProjectileProgression = SurvivalManager.GetIllegalProjectile();
+
+            IllegalTileProgression = SurvivalManager.GetIllegalTile();
+
+            IllegalWallProgression = SurvivalManager.GetIllegalWall();
+
+            //Slow_Checking();
+
+            #endregion
+        }
+
+        /*
+        private static int interval_informlatestversion = 2;
+        private async void Slow_Checking()
+        {
+            interval_informlatestversion++;
+
+            checkplayermute();
+
+            if ((bool)Config.BossManager.UseBossSchedule)
+            {
+                check_bosssched();
+            }
+
+            if (interval_informlatestversion >= 2)
             {
                 try
                 {
@@ -1882,10 +1962,11 @@ namespace MKLP
                 } catch { }
                 interval_informlatestversion = 0;
             }
-            await Task.Delay(60000);
+            await Task.Delay(120000);
             Slow_Checking();
             
         }
+        */
 
         private void check_bosssched()
         {
@@ -2013,11 +2094,16 @@ namespace MKLP
             #endregion
         }
 
-        private void check1()
+        private void checkplayers()
         {
             #region code
             foreach (TSPlayer player in TShock.Players)
             {
+                if (player == null) continue;
+                try
+                {
+                    ManagePlayer.Check_Survival_Code1_2(player);
+                } catch { }
                 try
                 {
                     DBManager.CheckPlayerMute(player, true);
@@ -3088,6 +3174,9 @@ namespace MKLP
             int[] IgnoreNPCIDs = {
                 NPCID.DungeonGuardian,
 
+                NPCID.DD2EterniaCrystal,
+                NPCID.DD2LanePortal,
+
                 NPCID.DD2DarkMageT1,
                 NPCID.DD2DarkMageT3,
                 NPCID.DD2OgreT2,
@@ -3118,13 +3207,7 @@ namespace MKLP
             {
                 if (Main.npc[i].boss) continue;
                 if (Main.npc[i].townNPC) continue;
-                if (Main.npc[i].type == 68 ||
-                    Main.npc[i].type == 551 ||
-                    Main.npc[i].type == 576 ||
-                    Main.npc[i].type == 577 ||
-                    Main.npc[i].type == 564 ||
-                    Main.npc[i].type == 565
-                    ) continue;
+                if (IgnoreNPCIDs.Contains(Main.npc[i].type)) continue;
                 if (Main.npc[i].rarity > 0) continue;
                 if (Main.npc[i].active)
                 {

@@ -26,34 +26,26 @@ namespace MKLP.Modules
     public static class ManagePlayer
     {
 
-        public static void CheckIllegalItemInventory(TSPlayer player)
+        public static void Check_Survival_Code1(TSPlayer player)
         {
             if (!player.IsLoggedIn) return;
-            
+            if (!(bool)MKLP.Config.Main.Using_Survival_Code1) return;
+            if (player.HasPermission(MKLP.Config.Permissions.IgnoreSurvivalCode_1)) return;
+
             Dictionary<int, string> illegalitems = MKLP.IllegalItemProgression;
-
-            int maxvalue = 10;
-
-            if (Main.hardMode) maxvalue = 100;
 
             foreach (Item check in player.Inventory)
             {
-                if (illegalitems.ContainsKey(check.netID) && (bool)MKLP.Config.Main.Using_Survival_Code1)
+                if (illegalitems.ContainsKey(check.netID))
                 {
                     DisablePlayer(player, $"{illegalitems[check.netID]} Item Progression", ServerReason: $"Survival,code,1|{check.netID}|{illegalitems[check.netID]}");
-                    return;
-                }
-                
-                if ((check.value * check.stack) / 5000000 >= maxvalue && check.netID != 74 && !player.HasPermission(MKLP.Config.Permissions.IgnoreMainCode_1) && (bool)MKLP.Config.Main.Using_Main_Code1)
-                {
-                    DisablePlayer(player, $"Abnormal Item [i/s{check.stack}:{check.netID}]", ServerReason: $"Main,code,1|{check.netID}|{check.stack}");
                     return;
                 }
             }
 
             foreach (Item check in player.TPlayer.miscEquips)
             {
-                if (illegalitems.ContainsKey(check.netID) && (bool)MKLP.Config.Main.Using_Survival_Code1)
+                if (illegalitems.ContainsKey(check.netID))
                 {
                     DisablePlayer(player, $"{illegalitems[check.netID]} Item Progression", ServerReason: $"Survival,code,1|{check.netID}|{illegalitems[check.netID]}");
                     return;
@@ -61,7 +53,7 @@ namespace MKLP.Modules
             }
             foreach (Item check in player.TPlayer.miscDyes)
             {
-                if (illegalitems.ContainsKey(check.netID) && (bool)MKLP.Config.Main.Using_Survival_Code1)
+                if (illegalitems.ContainsKey(check.netID))
                 {
                     DisablePlayer(player, $"{illegalitems[check.netID]} Item Progression", ServerReason: $"Survival,code,1|{check.netID}|{illegalitems[check.netID]}");
                     return;
@@ -70,7 +62,7 @@ namespace MKLP.Modules
 
             foreach (Item check in player.TPlayer.armor)
             {
-                if (illegalitems.ContainsKey(check.netID) && (bool)MKLP.Config.Main.Using_Survival_Code1)
+                if (illegalitems.ContainsKey(check.netID))
                 {
                     DisablePlayer(player, $"{illegalitems[check.netID]} Item Progression", ServerReason: $"Survival,code,1|{check.netID}|{illegalitems[check.netID]}");
                     return;
@@ -79,18 +71,27 @@ namespace MKLP.Modules
 
             foreach (Item check in player.TPlayer.dye)
             {
-                if (illegalitems.ContainsKey(check.netID) && (bool)MKLP.Config.Main.Using_Survival_Code1)
+                if (illegalitems.ContainsKey(check.netID))
                 {
                     DisablePlayer(player, $"{illegalitems[check.netID]} Item Progression", ServerReason: $"Survival,code,1|{check.netID}|{illegalitems[check.netID]}");
                     return;
                 }
             }
+        }
+
+        public static void Check_Survival_Code1_2(TSPlayer player)
+        {
+            if (!player.IsLoggedIn) return;
+            if (!(bool)MKLP.Config.Main.Using_Survival_Code1) return;
+            if (player.HasPermission(MKLP.Config.Permissions.IgnoreSurvivalCode_1)) return;
+
+            Dictionary<int, string> illegalitems = MKLP.IllegalItemProgression;
 
             for (int i = 0; i < 3; i++)
             {
                 foreach (Item check in player.TPlayer.Loadouts[i].Armor)
                 {
-                    if (illegalitems.ContainsKey(check.netID) && (bool)MKLP.Config.Main.Using_Survival_Code1)
+                    if (illegalitems.ContainsKey(check.netID))
                     {
                         DisablePlayer(player, $"{illegalitems[check.netID]} Item Progression", ServerReason: $"Survival,code,1|{check.netID}|{illegalitems[check.netID]}");
                         return;
@@ -99,17 +100,16 @@ namespace MKLP.Modules
 
                 foreach (Item check in player.TPlayer.Loadouts[i].Dye)
                 {
-                    if (illegalitems.ContainsKey(check.netID) && (bool)MKLP.Config.Main.Using_Survival_Code1)
+                    if (illegalitems.ContainsKey(check.netID))
                     {
                         DisablePlayer(player, $"{illegalitems[check.netID]} Item Progression", ServerReason: $"Survival,code,1|{check.netID}|{illegalitems[check.netID]}");
                         return;
                     }
                 }
             }
-
             foreach (Item check in player.TPlayer.bank.item)
             {
-                if (illegalitems.ContainsKey(check.netID) && (bool)MKLP.Config.Main.Using_Survival_Code1)
+                if (illegalitems.ContainsKey(check.netID))
                 {
                     DisablePlayer(player, $"{illegalitems[check.netID]} Item Progression", ServerReason: $"Survival,code,1|{check.netID}|{illegalitems[check.netID]}");
                     return;
@@ -117,7 +117,7 @@ namespace MKLP.Modules
             }
             foreach (Item check in player.TPlayer.bank2.item)
             {
-                if (illegalitems.ContainsKey(check.netID) && (bool)MKLP.Config.Main.Using_Survival_Code1)
+                if (illegalitems.ContainsKey(check.netID))
                 {
                     DisablePlayer(player, $"{illegalitems[check.netID]} Item Progression", ServerReason: $"Survival,code,1|{check.netID}|{illegalitems[check.netID]}");
                     return;
@@ -125,7 +125,7 @@ namespace MKLP.Modules
             }
             foreach (Item check in player.TPlayer.bank3.item)
             {
-                if (illegalitems.ContainsKey(check.netID) && (bool)MKLP.Config.Main.Using_Survival_Code1)
+                if (illegalitems.ContainsKey(check.netID))
                 {
                     DisablePlayer(player, $"{illegalitems[check.netID]} Item Progression", ServerReason: $"Survival,code,1|{check.netID}|{illegalitems[check.netID]}");
                     return;
@@ -133,9 +133,30 @@ namespace MKLP.Modules
             }
             foreach (Item check in player.TPlayer.bank4.item)
             {
-                if (illegalitems.ContainsKey(check.netID) && (bool)MKLP.Config.Main.Using_Survival_Code1)
+                if (illegalitems.ContainsKey(check.netID))
                 {
                     DisablePlayer(player, $"{illegalitems[check.netID]} Item Progression", ServerReason: $"Survival,code,1|{check.netID}|{illegalitems[check.netID]}");
+                    return;
+                }
+            }
+
+        }
+
+        public static void Check_Main_Code1(TSPlayer player)
+        {
+            if (!player.IsLoggedIn) return;
+            if (!(bool)MKLP.Config.Main.Using_Main_Code1) return;
+            if (player.HasPermission(MKLP.Config.Permissions.IgnoreMainCode_1)) return;
+
+            int maxvalue = 10;
+
+            if (Main.hardMode) maxvalue = 100;
+
+            foreach (Item check in player.Inventory)
+            {
+                if ((check.value * check.stack) / 5000000 >= maxvalue && check.netID != 74 && !player.HasPermission(MKLP.Config.Permissions.IgnoreMainCode_1))
+                {
+                    DisablePlayer(player, $"Abnormal Item [i/s{check.stack}:{check.netID}]", ServerReason: $"Main,code,1|{check.netID}|{check.stack}");
                     return;
                 }
             }
