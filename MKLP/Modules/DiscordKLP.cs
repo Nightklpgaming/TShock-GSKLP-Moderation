@@ -2920,26 +2920,34 @@ namespace MKLP.Modules
 
         UserAccount GetUserIDAccHasPermission(ulong UserID, string Permission)
         {
-            UserAccount executer = TShock.UserAccounts.GetUserAccountByName(MKLP.LinkAccountManager.GetAccountName(UserID));
+            try
+            {
+                UserAccount executer = TShock.UserAccounts.GetUserAccountByName(MKLP.LinkAccountManager.GetAccountName(UserID));
 
-            if (executer == null)
+                if (executer == null)
+                {
+                    return CheckDiscordServer();
+                }
+
+                var getgroup = TShock.Groups.GetGroupByName(executer.Group);
+
+                if (getgroup == null)
+                {
+                    return CheckDiscordServer();
+                }
+
+                if (!getgroup.HasPermission(Permission))
+                {
+                    return CheckDiscordServer();
+                }
+
+                return executer;
+            } catch
             {
                 return CheckDiscordServer();
             }
+            
 
-            var getgroup = TShock.Groups.GetGroupByName(executer.Group);
-
-            if (getgroup == null)
-            {
-                return CheckDiscordServer();
-            }
-
-            if (!getgroup.HasPermission(Permission))
-            {
-                return CheckDiscordServer();
-            }
-
-            return executer;
 
             UserAccount? CheckDiscordServer()
             {

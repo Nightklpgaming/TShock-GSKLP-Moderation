@@ -451,11 +451,13 @@ namespace MKLP.Modules
             {
                 for (int i = 364; i <= 391; i++)
                 {
+                    if (i == 370) continue;
                     if (!getillegalitems.ContainsKey(i))
                     {
                         getillegalitems.Add(i, "HardMode | Wall of Flesh");
                     }
                 }
+                
                 for (int i = 487; i <= 497; i++)
                 {
                     if (!getillegalitems.ContainsKey(i))
