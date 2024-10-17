@@ -47,7 +47,7 @@ namespace MKLP
         public override string Author => "Nightklp";
         public override string Description => "Makes Moderating a bit easy";
         public override string Name => "MKLP";
-        public override Version Version => new Version(1, 0, 1);
+        public override Version Version => new Version(1, 1);
         #endregion
 
         #region [ Variables ]
@@ -90,6 +90,8 @@ namespace MKLP
             ServerApi.Hooks.ServerLeave.Register(this, OnPlayerLeave);
 
             PlayerHooks.PlayerCommand += OnPlayerCommand;
+
+            PlayerHooks.PlayerChat += OnPlayerChat;
 
             //=====================game=====================
             ServerApi.Hooks.NetGetData.Register(this, OnGetData);
@@ -149,6 +151,24 @@ namespace MKLP
             #endregion
 
             #region { Admin }
+
+            Commands.ChatCommands.Add(new Command(Config.Permissions.CMD_ClearMessage, CMD_ClearMessage, "clearmessage", "messageclear", "purgemessage")
+            {
+                AllowServer = false,
+                HelpText = "Clears the whole message chat"
+            });
+
+            Commands.ChatCommands.Add(new Command(Config.Permissions.CMD_LockDown, CMD_LockDown, "lockdown")
+            {
+                AllowServer = false,
+                HelpText = "Prevent Players from joining the server"
+            });
+
+            Commands.ChatCommands.Add(new Command(Config.Permissions.CMD_LockDownRegister, CMD_LockDownRegister, "lockdownregister", "lockdownreg")
+            {
+                AllowServer = false,
+                HelpText = "Prevent Players to register their account"
+            });
 
             Commands.ChatCommands.Add(new Command(Config.Permissions.CMD_MapPingTP, CMD_MapPingTP, "tpmap", "pingmap", "maptp")
             {
@@ -260,6 +280,8 @@ namespace MKLP
                 ServerApi.Hooks.ServerLeave.Deregister(this, OnPlayerLeave);
 
                 PlayerHooks.PlayerCommand -= OnPlayerCommand;
+
+                PlayerHooks.PlayerChat -= OnPlayerChat;
 
                 //=====================game=====================
                 ServerApi.Hooks.NetGetData.Deregister(this, OnGetData);
@@ -427,10 +449,12 @@ namespace MKLP
 
         #region { Player }
 
+        bool LockDown = false;
+        string LockDownReason = "";
         private void OnPlayerJoin(JoinEventArgs args)
         {
             #region code
-
+            
             IllegalItemProgression = SurvivalManager.GetIllegalItem();
 
             IllegalProjectileProgression = SurvivalManager.GetIllegalProjectile();
@@ -442,6 +466,22 @@ namespace MKLP
             var player = TShock.Players[args.Who];
             if (player != null)
             {
+                #region lockdown
+
+                if (LockDown)
+                {
+                    if (LockDownReason == "")
+                    {
+                        player.Disconnect("You cannot join the server yet!");
+                    } else
+                    {
+                        player.Disconnect("You cannot join the server by the reason of " + LockDownReason);
+                    }
+                    return;
+                }
+
+                #endregion
+
                 #region Prevent
                 if (Config.Main.IllegalNames.Contains(player.Name))
                 {
@@ -538,6 +578,7 @@ namespace MKLP
             #endregion
         }
 
+        bool LockDownRegister = false;
         private void OnPlayerCommand(PlayerCommandEventArgs args)
         {
             #region code
@@ -566,10 +607,19 @@ namespace MKLP
                 }
             }
 
+            if (command.Name == "register" && LockDownRegister)
+            {
+                args.Player.SendErrorMessage("You do not have permission to register at the moment");
+                args.Handled = true;
+                return;
+            }
+
             if (command.Name == "register" ||
                 command.Name == "login" ||
                 command.Name == "password")
+            {
                 return;
+            }
 
             if (Config.Discord.CommandLogChannel == null) return;
             if (command.CanRun(args.Player))
@@ -584,10 +634,144 @@ namespace MKLP
             #endregion
         }
 
+        int NumberOfMutedPlayers = 0;
+        public struct PlayerMessageThreshold
+        {
+            public int Threshold;
+            public DateTime Since;
+
+            public PlayerMessageThreshold(int Threshold, DateTime Since)
+            {
+                this.Threshold = Threshold;
+                this.Since = Since;
+            }
+        }
+        private void OnPlayerChat(PlayerChatEventArgs args)
+        {
+            #region code
+
+            if ((bool)Config.ChatMod.Using_Chat_AutoMod) return;
+
+            foreach (string banned in Config.ChatMod.Ban_MessageContains)
+            {
+                if (args.RawText.Contains(banned))
+                {
+                    args.Player.SendErrorMessage("You can not send that message!");
+                    args.Handled = true;
+                    return;
+                }
+            }
+
+            if (args.RawText.Length >= (int)Config.ChatMod.Maximum__MessageLength_NoSpace && !args.RawText.Contains(" "))
+            {
+                args.Player.SendErrorMessage("You can not send that message!");
+                args.Handled = true;
+                return;
+            }
+
+            if (args.RawText.Length >= (int)Config.ChatMod.Maximum__MessageLength_WithSpace)
+            {
+                args.Player.SendErrorMessage("You can not send that message!");
+                args.Handled = true;
+                return;
+            }
+
+            if (args.RawText.Length >= (int)Config.ChatMod.Maximum_Spammed_MessageLength_NoSpace && !args.RawText.Contains(" "))
+            {
+                if (args.Player.ContainsData("MKLP_Chat_Spam_message1"))
+                {
+                    if ((DateTime.UtcNow - args.Player.GetData<PlayerMessageThreshold>("MKLP_Chat_Spam_message1").Since).TotalMilliseconds < (int)Config.ChatMod.Millisecond_Threshold)
+                    {
+                        if (args.Player.GetData<PlayerMessageThreshold>("MKLP_Chat_Spam_message1").Threshold >= (int)Config.ChatMod.Threshold_Spammed_MessageLength_NoSpace)
+                        {
+                            SendWarning();
+                            return;
+                        }
+
+                        args.Player.SetData("MKLP_Chat_Spam_message1", new PlayerMessageThreshold(args.Player.GetData<PlayerMessageThreshold>("MKLP_Chat_Spam_message1").Threshold + 1, DateTime.UtcNow));
+                        
+                    } else
+                    {
+                        args.Player.SetData("MKLP_Chat_Spam_message1", new PlayerMessageThreshold(0, DateTime.UtcNow));
+                    }
+                } else
+                {
+                    args.Player.SetData("MKLP_Chat_Spam_message1", new PlayerMessageThreshold(1, DateTime.UtcNow));
+                }
+            }
+
+            if (args.RawText.Length >= (int)Config.ChatMod.Maximum_Spammed_MessageLength_WithSpace)
+            {
+                if (args.Player.ContainsData("MKLP_Chat_Spam_message2"))
+                {
+                    if ((DateTime.UtcNow - args.Player.GetData<PlayerMessageThreshold>("MKLP_Chat_Spam_message2").Since).TotalMilliseconds < (int)Config.ChatMod.Millisecond_Threshold)
+                    {
+                        if (args.Player.GetData<PlayerMessageThreshold>("MKLP_Chat_Spam_message2").Threshold >= (int)Config.ChatMod.Threshold_Spammed_MessageLength_WithSpace)
+                        {
+                            SendWarning();
+                            return;
+                        }
+
+                        args.Player.SetData("MKLP_Chat_Spam_message2", new PlayerMessageThreshold(args.Player.GetData<PlayerMessageThreshold>("MKLP_Chat_Spam_message2").Threshold + 1, DateTime.UtcNow));
+
+                    }
+                    else
+                    {
+                        args.Player.SetData("MKLP_Chat_Spam_message2", new PlayerMessageThreshold(0, DateTime.UtcNow));
+                    }
+                }
+                else
+                {
+                    args.Player.SetData("MKLP_Chat_Spam_message2", new PlayerMessageThreshold(1, DateTime.UtcNow));
+                }
+            }
+
+            void SendWarning()
+            {
+                if (args.Player.ContainsData("MKLP_Chat_Warning_message"))
+                {
+                    args.Player.SetData("MKLP_Chat_Warning_message", args.Player.GetData<int>("MKLP_Chat_Warning_message") + 1);
+                } else
+                {
+                    args.Player.SetData("MKLP_Chat_Warning_message", 1);
+                }
+
+                if (args.Player.GetData<int>("MKLP_Chat_Warning_message") >= (int)Config.ChatMod.MutePlayer_AtWarning)
+                {
+                    if ((bool)Config.ChatMod.PermanentDuration)
+                    {
+                        ManagePlayer.OnlineMute(false, args.Player, "Spamming/Flooding Messages", "(Auto Chat Mod)", DateTime.MaxValue);
+                    } else
+                    {
+                        ManagePlayer.OnlineMute(false, args.Player, "Spamming/Flooding Messages", "(Auto Chat Mod)", DateTime.UtcNow.AddSeconds((int)Config.ChatMod.MuteDuration_Seconds));
+                    }
+                    NumberOfMutedPlayers++;
+                    args.Handled = true;
+
+                    if ((bool)Config.ChatMod.EnableLockDown_When_MultipleMutes)
+                    {
+                        if (NumberOfMutedPlayers >= (int)Config.ChatMod.NumberOFPlayersAutoMute_Lockdown)
+                        {
+                            Discordklp.KLPBotSendMessageMainLog("Server On 🔒LockDown🔒 Due to Multiple Player Mutes🔇!");
+                            LockDown = true;
+                            LockDownReason = Config.ChatMod.AutoLockDown_Reason;
+                        }
+                    }
+
+                    return;
+                }
+
+                args.Player.SendWarningMessage("Warning! please do not spam/flood the messages!");
+                args.Handled = true;
+                return;
+            }
+            #endregion
+        }
+
         #endregion
 
         #region { Game }
-        
+
         private void OnTileEdit(object? sender, GetDataHandlers.TileEditEventArgs args)
         {
             #region code
@@ -3133,6 +3317,69 @@ namespace MKLP
 
         #region { Admin }
 
+        private void CMD_ClearMessage(CommandArgs args)
+        {
+            #region code
+
+            for (int i = 0; i < 130; i++)
+            {
+                TSPlayer.All.SendMessage("\n\n\n\n", Color.Black);
+            }
+
+            args.Player.SendSuccessMessage("Message Cleared!");
+            
+            #endregion
+        }
+
+        private void CMD_LockDown(CommandArgs args)
+        {
+            #region code
+            if (!LockDown)
+            {
+                if (args.Parameters.Count == 0)
+                {
+                    LockDown = true;
+                    TShock.Utils.Broadcast("Server is on LockDown!", Color.OrangeRed);
+                    Discordklp.KLPBotSendMessageMainLog($"**🔒{args.Player.Name}🔒** Server is on lockdown!");
+                }
+                else
+                {
+                    LockDown = true;
+                    LockDownReason = string.Join(" ", args.Parameters.ToArray(), 0, args.Parameters.Count);
+                    TShock.Utils.Broadcast("Server is on LockDown by the reason of " + LockDownReason, Color.OrangeRed);
+                    Discordklp.KLPBotSendMessageMainLog($"**🔒{args.Player.Name}🔒** Server is on lockdown! `reason: {LockDownReason}`");
+                }
+            } else
+            {
+                LockDown = false;
+                TShock.Utils.Broadcast("Server is no longer on LockDown!", Color.LightGreen);
+                Discordklp.KLPBotSendMessageMainLog($"**🔓{args.Player.Name}🔓** Server is no longer on lockdown!");
+            }
+            
+
+            #endregion
+        }
+
+        private void CMD_LockDownRegister(CommandArgs args)
+        {
+            #region code
+            if (!LockDownRegister)
+            {
+                LockDownRegister = true;
+                args.Player.SendSuccessMessage("Guest can no longer resgister!");
+                Discordklp.KLPBotSendMessageMainLog($"**🔒{args.Player.Name}🔒** Guest can no longer register!");
+            }
+            else
+            {
+                LockDownRegister = false;
+                args.Player.SendSuccessMessage("Guest can now resgister!");
+                Discordklp.KLPBotSendMessageMainLog($"**🔓{args.Player.Name}🔓** Guest can now register!");
+            }
+
+
+            #endregion
+        }
+
         private void CMD_MapPingTP(CommandArgs args)
         {
             #region code
@@ -4923,78 +5170,62 @@ namespace MKLP
             #region code
             if (args.Parameters.Count == 0)
             {
-                args.Player.SendErrorMessage("Usage: /unban <ticket/account> <args...>");
+                args.Player.SendErrorMessage("Usage: /unban <ticket number>" +
+                    "\nor use '/unban <account name> -account' to unban a account");
                 return;
             }
 
-            switch (args.Parameters[0].ToLower())
+            bool accountunban = args.Parameters.Any(p => p == "-account");
+
+            if (accountunban)
             {
-                case "help":
+                string targetname = string.Join(" ", args.Parameters.ToArray(), 0, args.Parameters.Count);
+                targetname = targetname.Replace(" -account", "");
+                targetname = targetname.Replace("-account", "");
+
+                UserAccount targetaccount = TShock.UserAccounts.GetUserAccountByName(targetname);
+
+                if (targetaccount == null)
+                {
+                    args.Player.SendErrorMessage("Invalid Account");
+                    return;
+                }
+
+                if (ManagePlayer.UnBanAccount(targetaccount, args.Player.Name))
+                {
+                    args.Player.SendSuccessMessage($"Removing Ban Tickets from account: {targetaccount.Name}");
+                    return;
+                }
+                else
+                {
+                    args.Player.SendErrorMessage($"Account: '{targetname}' could not be found...");
+                    return;
+                }
+
+            } else
+            {
+                int ticketnumber = -1;
+
+                if (int.TryParse(args.Parameters[0], out ticketnumber))
+                {
+                    if (ManagePlayer.UnBanTicketNumber(ticketnumber, args.Player.Account.Name))
                     {
-                        args.Player.SendMessage("Usage: /unban <ticket/account> <args...>" +
-                            "\n'ticket <ticket number>' : Removes a specific ban ticket" +
-                            "\n'account <account name>' : Removes all the tickets account has", Color.Gray);
+                        args.Player.SendSuccessMessage("Removed Ban Ticket Number: " + ticketnumber);
                         return;
                     }
-                case "ticket":
+                    else
                     {
-                        if (args.Parameters.Count == 1)
-                        {
-                            args.Player.SendErrorMessage("Usage: /unban <ticket> <ticket number>");
-                        }
-
-                        int ticketnumber = -1;
-
-                        if (int.TryParse(args.Parameters[1], out ticketnumber))
-                        {
-                            if (ManagePlayer.UnBanTicketNumber(ticketnumber, args.Player.Account.Name))
-                            {
-                                args.Player.SendSuccessMessage("Removed Ban Ticket Number: " + ticketnumber);
-                                return;
-                            }
-                            else
-                            {
-                                args.Player.SendErrorMessage("Invalid Ticket number!");
-                                return;
-                            }
-                        }
-                        else
-                        {
-                            args.Player.SendErrorMessage("Invalid Ticket number!");
-                            return;
-                        }
-                    }
-                case "account":
-                    {
-                        if (args.Parameters.Count == 1)
-                        {
-                            args.Player.SendErrorMessage("Usage: /unban <account> <account name>");
-                        }
-
-                        UserAccount targetaccount = TShock.UserAccounts.GetUserAccountByName(args.Parameters[1]);
-
-                        if (targetaccount == null)
-                        {
-                            args.Player.SendErrorMessage("Invalid Account");
-                            return;
-                        }
-
-                        if (ManagePlayer.UnBanAccount(targetaccount, args.Player.Account.Name))
-                        {
-                            args.Player.SendSuccessMessage($"Removing Ban Tickets from account: {targetaccount.Name}");
-                            return;
-                        } else
-                        {
-                            args.Player.SendErrorMessage($"Account: '{args.Parameters[1]}' could not be found...");
-                            return;
-                        }
-                    }
-                default:
-                    {
-                        args.Player.SendErrorMessage("Invalid Type");
+                        args.Player.SendErrorMessage("Invalid Ticket number!");
                         return;
                     }
+                }
+                else
+                {
+                    args.Player.SendErrorMessage("Invalid Ticket number!");
+                    return;
+                }
             }
+
             #endregion
         }
 

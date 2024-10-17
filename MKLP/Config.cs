@@ -14,6 +14,7 @@ namespace MKLP
     {
         public CONFIG_HELPTEXT Guide;
         public CONFIG_MAIN Main;
+        public CONFIG_CHATMODERATION ChatMod;
         public CONFIG_PROGRESSION Progression;
         public CONFIG_PERMISSIONS Permissions;
         public CONFIG_DISCORD Discord;
@@ -39,6 +40,9 @@ namespace MKLP
 
             if (args.Main == null) args.Main = new();
             args.Main.FixNull();
+
+            if (args.ChatMod == null) args.ChatMod = new();
+            args.ChatMod.FixNull();
 
             if (args.Progression == null) args.Progression = new();
             args.Progression.FixNull();
@@ -81,6 +85,7 @@ namespace MKLP
             {
                 Guide = new(),
                 Main = new(),
+                ChatMod = new(),
                 Progression = new(),
                 Permissions = new(),
                 Discord = new(),
@@ -345,6 +350,68 @@ namespace MKLP
         }
     }
 
+    public class CONFIG_CHATMODERATION
+    {
+        public bool? Using_Chat_AutoMod = true;
+
+        public string[] Ban_MessageContains = { "nigga", "卍" };
+
+        public int? Maximum_Spammed_MessageLength_NoSpace = 10;
+        public int? Maximum_Spammed_MessageLength_WithSpace = 25;
+        public int? Threshold_Spammed_MessageLength_NoSpace = 4;
+        public int? Threshold_Spammed_MessageLength_WithSpace = 6;
+
+        public int? Millisecond_Threshold = 5000;
+
+        public int? MutePlayer_AtWarning = 4;
+
+        public int? MuteDuration_Seconds = 600;
+        public bool? PermanentDuration = false;
+
+        public bool? SendLog_SpamWarning = true;
+
+        public int? Maximum__MessageLength_NoSpace = 30;
+        public int? Maximum__MessageLength_WithSpace = 200;
+
+        public bool? EnableLockDown_When_MultipleMutes = false;
+        public int? NumberOFPlayersAutoMute_Lockdown = 5;
+        public string AutoLockDown_Reason = "Multiple Player Mute's occur";
+        public CONFIG_CHATMODERATION() { }
+
+        public void FixNull()
+        {
+            CONFIG_CHATMODERATION getdefault = new();
+
+
+            if (Using_Chat_AutoMod == null) Using_Chat_AutoMod = getdefault.Using_Chat_AutoMod;
+
+            if (Ban_MessageContains == null) Ban_MessageContains = getdefault.Ban_MessageContains;
+
+            if (Maximum_Spammed_MessageLength_NoSpace == null) Maximum_Spammed_MessageLength_NoSpace = getdefault.Maximum_Spammed_MessageLength_NoSpace;
+            if (Maximum_Spammed_MessageLength_WithSpace == null) Maximum_Spammed_MessageLength_WithSpace = getdefault.Maximum_Spammed_MessageLength_WithSpace;
+            if (Threshold_Spammed_MessageLength_NoSpace == null) Threshold_Spammed_MessageLength_NoSpace = getdefault.Threshold_Spammed_MessageLength_NoSpace;
+            if (Threshold_Spammed_MessageLength_WithSpace == null) Threshold_Spammed_MessageLength_WithSpace = getdefault.Threshold_Spammed_MessageLength_WithSpace;
+
+            if (Millisecond_Threshold == null) Millisecond_Threshold = getdefault.Millisecond_Threshold;
+
+            if (MutePlayer_AtWarning == null) MutePlayer_AtWarning = getdefault.MutePlayer_AtWarning;
+
+            if (MuteDuration_Seconds == null) MuteDuration_Seconds = getdefault.MuteDuration_Seconds;
+            if (PermanentDuration == null) PermanentDuration = getdefault.PermanentDuration;
+
+            if (SendLog_SpamWarning == null) SendLog_SpamWarning = getdefault.SendLog_SpamWarning;
+
+            if (Maximum__MessageLength_NoSpace == null) Maximum__MessageLength_NoSpace = getdefault.Maximum__MessageLength_NoSpace;
+            if (Maximum__MessageLength_WithSpace == null) Maximum__MessageLength_WithSpace = getdefault.Maximum__MessageLength_WithSpace;
+
+            if (EnableLockDown_When_MultipleMutes == null) EnableLockDown_When_MultipleMutes = getdefault.EnableLockDown_When_MultipleMutes;
+            if (NumberOFPlayersAutoMute_Lockdown == null) NumberOFPlayersAutoMute_Lockdown = getdefault.NumberOFPlayersAutoMute_Lockdown;
+            if (AutoLockDown_Reason == null) AutoLockDown_Reason = getdefault.AutoLockDown_Reason;
+
+            return;
+        }
+    }
+
     public class CONFIG_PROGRESSION
     {
         public bool? AllowVanityCloth = true;
@@ -403,6 +470,9 @@ namespace MKLP
         public string Staff = "MKLP.staff";
 
         //admin
+        public string CMD_ClearMessage = "MKLP.message.clear";
+        public string CMD_LockDown = "MKLP.lockdown.join";
+        public string CMD_LockDownRegister = "MKLP.lockdown.register";
         public string CMD_MapPingTP = "MKLP.mapping.tp";
         public string CMD_ClearLag = "MKLP.clearlag";
         public string CMD_ManageBoss = "MKLP.ManageBoss";
@@ -421,6 +491,10 @@ namespace MKLP
 
         //inspect
         public string CMD_InventoryView = "MKLP.staff.Inventory.view";
+
+
+        //immunity
+        public string Ignore_ChatMod_Punishment = "MKLP.bypass.chatmod";
 
         public string IgnoreAntiGrief_protectsurface_break = "MKLP.antigrief.protect.surface.break";
         public string IgnoreAntiGrief_protectsurface_explosive = "MKLP.antigrief.protect.surface.explosive";
@@ -456,6 +530,8 @@ namespace MKLP
 
             if (Staff == null) Staff = getdefault.Staff;
 
+            if (CMD_ClearMessage == null) CMD_ClearMessage = getdefault.CMD_ClearMessage;
+            if (CMD_LockDown == null) CMD_LockDown = getdefault.CMD_LockDown;
             if (CMD_MapPingTP == null) CMD_MapPingTP = getdefault.CMD_MapPingTP;
             if (CMD_ClearLag == null) CMD_ClearLag = getdefault.CMD_ClearLag;
             if (CMD_ManageBoss == null) CMD_ManageBoss = getdefault.CMD_ManageBoss;
@@ -471,6 +547,8 @@ namespace MKLP
             if (CMD_UnMute == null) CMD_UnMute = getdefault.CMD_UnMute;
             if (CMD_OfflineUnMute == null) CMD_OfflineUnMute = getdefault.CMD_OfflineUnMute;
             if (CMD_InventoryView == null) CMD_InventoryView = getdefault.CMD_InventoryView;
+
+            if (Ignore_ChatMod_Punishment == null) Ignore_ChatMod_Punishment = getdefault.Ignore_ChatMod_Punishment;
 
             if (IgnoreAntiGrief_protectsurface_break == null) IgnoreAntiGrief_protectsurface_break = getdefault.IgnoreAntiGrief_protectsurface_break;
             if (IgnoreAntiGrief_protectsurface_explosive == null) IgnoreAntiGrief_protectsurface_explosive = getdefault.IgnoreAntiGrief_protectsurface_explosive;

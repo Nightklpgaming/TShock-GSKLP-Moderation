@@ -2951,11 +2951,11 @@ namespace MKLP.Modules
 
             UserAccount? CheckDiscordServer()
             {
-                if ((ulong)MKLP.Config.Discord.MainGuildID != null)
+                if ((ulong)MKLP.Config.Discord.MainGuildID == null)
                 {
                     return null;
                 }
-                if ((ulong)MKLP.Config.Discord.MainGuildID != 0)
+                if ((ulong)MKLP.Config.Discord.MainGuildID == 0)
                 {
                     return null;
                 }

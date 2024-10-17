@@ -738,6 +738,9 @@ namespace MKLP.Modules
                 {
                     MKLP.SendStaffMessage($"[MKLP] [c/09c100:{Player.Name}] was muted by [c/09c100:{Executer}] {(Reason == "" ? "" : $"for {Reason}")}", Microsoft.Xna.Framework.Color.DarkOliveGreen);
                 }
+
+                Player.SendMessage($"you have been muted for {Reason}" +
+                    $"\nDuration: {GetDuration(Duration)}", Microsoft.Xna.Framework.Color.DarkOliveGreen);
             }
 
             return MuteSuccess;
