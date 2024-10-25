@@ -5586,6 +5586,41 @@ namespace MKLP
                 return;
             }
 
+            if (args.Parameters[0].ToLower() == "list")
+            {
+                string PickColorForBan(Ban ban)
+                {
+                    double hoursRemaining = (ban.ExpirationDateTime - DateTime.UtcNow).TotalHours;
+                    double hoursTotal = (ban.ExpirationDateTime - ban.BanDateTime).TotalHours;
+                    double percentRemaining = TShock.Utils.Clamp(hoursRemaining / hoursTotal, 100, 0);
+
+                    int red = TShock.Utils.Clamp((int)(255 * 2.0f * percentRemaining), 255, 0);
+                    int green = TShock.Utils.Clamp((int)(255 * (2.0f * (1 - percentRemaining))), 255, 0);
+
+                    return $"{red:X2}{green:X2}{0:X2}";
+                }
+
+                if (!PaginationTools.TryParsePageNumber(args.Parameters, 1, args.Player, out int pageNumber))
+                {
+                    args.Player.SendMessage($"Invalid Ban page", Color.White);
+                    return;
+                }
+
+                var bans = from bban in TShock.Bans.Bans
+                           where bban.Value.ExpirationDateTime > DateTime.UtcNow
+                           orderby bban.Value.ExpirationDateTime ascending
+                           select $"[{bban.Key.Color(TShockAPI.Utils.GreenHighlight)}] {bban.Value.Identifier.Color(PickColorForBan(bban.Value))}";
+
+                PaginationTools.SendPage(args.Player, pageNumber, bans.ToList(),
+                    new PaginationTools.Settings
+                    {
+                        HeaderFormat = "Bans ({{0}}/{{1}}):",
+                        FooterFormat = "Type " + Commands.Specifier + "ban list {{0}} for more.",
+                        NothingToDisplayString = "There are currently no active bans."
+                    });
+                return;
+            }
+
             int targetid;
             if (!int.TryParse(args.Parameters[0], out targetid))
             {
