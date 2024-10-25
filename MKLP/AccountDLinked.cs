@@ -12,6 +12,7 @@ namespace MKLP
 {
     public class AccountDLinked
     {
+        private Config Config = Config.Read();
         private IDbConnection _db;
 
         private string TableName;
@@ -25,46 +26,51 @@ namespace MKLP
 
         public AccountDLinked()
         {
-            if (!(bool)MKLP.Config.DataBase.UsingDB) return;
+            if (!(bool)Config.DataBase.UsingDB) return;
 
-            if ((bool)MKLP.Config.DataBase.UsingGSKLP)
+            if ((bool)Config.DataBase.UsingMKLPDatabase)
             {
-                _db = new SqliteConnection(("Data Source=" + Path.Combine(TShock.SavePath, "MAINKLP.sqlite")));
-                Custom_Get_AccountName_From_UserID = "SELECT * FROM Accounts WHERE Discord = @0";
-                Custom_Get_UserID_From_AccountName = "SELECT * FROM Accounts WHERE Name = @0";
-                TableName = "Accounts";
+                _db = new SqliteConnection(("Data Source=" + Path.Combine(TShock.SavePath, "MKLP.sqlite")));
+                Custom_Get_AccountName_From_UserID = "SELECT * FROM AccountDLinking WHERE UserID = @0";
+                Custom_Get_UserID_From_AccountName = "SELECT * FROM AccountDLinking WHERE Name = @0";
+                TableName = "AccountDLinking";
                 Get_AccountName_DB = "Name";
-                Get_UserID_DB = "Discord";
+                Get_UserID_DB = "UserID";
                 UsingCustom = true;
                 return;
             } else
             {
-                if (MKLP.Config.DataBase.UseTShockFilePath == null)
+                if (Config.DataBase.UseTShockFilePath == null)
                 {
-                    _db = new SqliteConnection(("Data Source=" + Path.Combine(TShock.SavePath, MKLP.Config.DataBase.File)));
-                } else if (!(bool)MKLP.Config.DataBase.UseTShockFilePath)
+                    _db = new SqliteConnection(("Data Source=" + Path.Combine(TShock.SavePath, Config.DataBase.File)));
+                } else if ((bool)Config.DataBase.UseTShockFilePath)
                 {
-                    _db = new SqliteConnection(("Data Source=" + Path.Combine(TShock.SavePath, MKLP.Config.DataBase.File)));
+                    _db = new SqliteConnection(("Data Source=" + Path.Combine(TShock.SavePath, Config.DataBase.File)));
                 } else
                 {
-                    _db = new SqliteConnection(("Data Source=" + Path.Combine(MKLP.Config.DataBase.Path, MKLP.Config.DataBase.File)));
+                    _db = new SqliteConnection(("Data Source=" + Path.Combine(Config.DataBase.Path, Config.DataBase.File)));
                 }
 
-                TableName = MKLP.Config.DataBase.TableName;
-                Get_AccountName_DB = MKLP.Config.DataBase.Get_AccountName_DB;
-                Get_UserID_DB = MKLP.Config.DataBase.Get_UserID_DB;
+                TableName = Config.DataBase.TableName;
+                Get_AccountName_DB = Config.DataBase.Get_AccountName_DB;
+                Get_UserID_DB = Config.DataBase.Get_UserID_DB;
 
-                Custom_Get_AccountName_From_UserID = MKLP.Config.DataBase.Custom_Get_AccountName_From_UserID;
-                Custom_Get_UserID_From_AccountName = MKLP.Config.DataBase.Custom_Get_UserID_From_AccountName;
+                Custom_Get_AccountName_From_UserID = Config.DataBase.Custom_Get_AccountName_From_UserID;
+                Custom_Get_UserID_From_AccountName = Config.DataBase.Custom_Get_UserID_From_AccountName;
 
-                UsingCustom = (bool)MKLP.Config.DataBase.UsingCustom;
+                UsingCustom = (bool)Config.DataBase.UsingCustom;
                 return;
             }
         }
 
+        public void ReloadConfig()
+        {
+            Config = Config.Read();
+        }
+
         public string GetAccountName(ulong UserID)
         {
-            if (!(bool)MKLP.Config.DataBase.UsingDB) throw new NullReferenceException();
+            if (!(bool)Config.DataBase.UsingDB) throw new NullReferenceException();
 
             if (UsingCustom)
             {
@@ -91,7 +97,7 @@ namespace MKLP
 
         public ulong GetUserID(string AccountName)
         {
-            if (!(bool)MKLP.Config.DataBase.UsingDB) throw new NullReferenceException();
+            if (!(bool)Config.DataBase.UsingDB) throw new NullReferenceException();
 
             if (UsingCustom)
             {

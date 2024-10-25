@@ -2111,6 +2111,8 @@ namespace MKLP.Modules
 
             bool allowmusicbox = (bool)MKLP.Config.Progression.AllowMusicBox;
 
+            //530
+
             #region | unobtainable |
 
             MKLP_Tile[] unobtainableids = { new(5, 0, true), new(10, 11), new(21, 52), new(21, 53), new(26, 0, true), new(28, 0, true),
@@ -2126,6 +2128,7 @@ namespace MKLP.Modules
                 }
             }
 
+            /*
             MKLP_Tile[] cannotplace = { new(21, 3), new(21, 23), new(21, 24), new(21, 25), new(21, 26), new(21, 27), new(21, 36),
                 new(21, 38), new(21, 40), new(80, 0, true), new(165, 0, true), new(185, 0, true), new(186, 0, true), new(187, 0, true),
                 new(227, 6), new(227, 12), new(227, 13), new(227, 14), new(231, 0), new(233, 0, true), new(236, 0, true),
@@ -2139,7 +2142,7 @@ namespace MKLP.Modules
                     getillegaltile.Add(add, "Unplacable");
                 }
             }
-
+            */
             #endregion
 
             #region ( Banners )

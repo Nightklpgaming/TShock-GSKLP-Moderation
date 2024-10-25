@@ -39,8 +39,52 @@ namespace MKLP
                 new SqlColumn("Reason", MySqlDbType.Text),
                 new SqlColumn("Expiration", MySqlDbType.DateTime)));
 
+            sqlCreator.EnsureTableStructure(new SqlTable("AccountDLinking",
+                new SqlColumn("Name", MySqlDbType.VarChar) { Primary = true, Unique = true },
+                new SqlColumn("UserID", MySqlDbType.VarChar)));
+
         }
 
+        #region [ AccountDLinked ]
+
+        public Dictionary<string, string> AccountDLinkingList()
+        {
+            using var reader = _db.QueryReader("SELECT * FROM AccountDLinking");
+
+            Dictionary<string, string> result = new();
+
+            while (reader.Read())
+            {
+                result.Add(reader.Get<string>("Name"), reader.Get<string>("UserID"));
+            }
+            return result;
+            throw new NullReferenceException();
+        }
+
+        public bool AddAccountDLinkingUserID(string AccountName, string UserID)
+        {
+            return _db.Query("INSERT INTO AccountDLinking (" +
+                "Name, " +
+                "UserID) " +
+                "VALUES (@0, @1)",
+                AccountName,
+                UserID
+                ) != 0;
+        }
+
+        public bool ChangeAccountDLinkingUserID(string AccountName, string UserID)
+        {
+            return _db.Query("UPDATE AccountDLinking SET UserID = @0 WHERE Name = @1", UserID, AccountName) != 0;
+        }
+
+        public bool DeleteAccountDLinkingUserID(string AccountName)
+        {
+            return _db.Query("DELETE FROM AccountDLinking WHERE Name = @0", AccountName) != 0;
+        }
+
+        #endregion
+
+        #region [ Reports ]
         public List<MKLP_Report> GetReportList(int maxreport = 10, string from = "", string target = "")
         {
             using var reader = _db.QueryReader("SELECT * FROM Reports ORDER BY ID DESC");
@@ -169,6 +213,10 @@ namespace MKLP
         {
             return _db.Query("DELETE FROM Reports WHERE ID = @0", ID) != 0;
         }
+
+        #endregion
+
+        #region [ Mutes ]
 
         public IEnumerable<Mute> GetMute(string Identifier)
         {
@@ -320,6 +368,9 @@ namespace MKLP
             return player.mute;
 
         }
+
+        #endregion
+
     }
 
     public class Mute

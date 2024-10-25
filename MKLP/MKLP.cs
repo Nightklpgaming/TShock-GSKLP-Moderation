@@ -47,7 +47,7 @@ namespace MKLP
         public override string Author => "Nightklp";
         public override string Description => "Makes Moderating a bit easy";
         public override string Name => "MKLP";
-        public override Version Version => new Version(1, 1);
+        public override Version Version => new Version(1, 2);
         #endregion
 
         #region [ Variables ]
@@ -83,7 +83,9 @@ namespace MKLP
         public override void Initialize()
         {
             //=====================Player===================
-            //GetDataHandlers.PlayerUpdate += OnPlayerUpdate;
+            GetDataHandlers.PlayerUpdate += OnPlayerUpdate;
+
+            ServerApi.Hooks.ServerConnect.Register(this, OnServerConnect);
 
             ServerApi.Hooks.ServerJoin.Register(this, OnPlayerJoin);
 
@@ -95,8 +97,16 @@ namespace MKLP
 
             //=====================game=====================
             ServerApi.Hooks.NetGetData.Register(this, OnGetData);
-
+            
             GetDataHandlers.TileEdit += OnTileEdit;
+
+            GetDataHandlers.PlaceObject += OnPlaceObject;
+
+            GetDataHandlers.PaintTile += OnPaintTile;
+
+            GetDataHandlers.PaintWall += OnPaintWall;
+
+            GetDataHandlers.MassWireOperation += OnMassWireOperation;
 
             GetDataHandlers.LiquidSet += HandleLiquidInteraction;
 
@@ -113,6 +123,8 @@ namespace MKLP
             //=====================Server===================
             //ServerApi.Hooks.GameUpdate.Register(this, OnUpdate);
 
+            ServerApi.Hooks.ServerBroadcast.Register(this, OnServerBroadcast);
+
             ServerApi.Hooks.WorldSave.Register(this, OnWorldSave);
 
             ServerApi.Hooks.GamePostInitialize.Register(this, OnServerStart);
@@ -122,12 +134,12 @@ namespace MKLP
             #region [ Commands Initialize ]
 
             #region { default }
-            /*
+            
             Commands.ChatCommands.Add(new Command(Config.Permissions.Default_CMD_Ping, CMD_ping, "ping")
             {
-                HelpText = "Ping"
+                HelpText = "Get Players Latency"
             });
-            */
+            
             Commands.ChatCommands.Add(new Command(Config.Permissions.Default_CMD_Progression, CMD_BE, "progression", "prog")
             {
                 HelpText = "displays defeated bosses and events"
@@ -138,6 +150,13 @@ namespace MKLP
                 HelpText = "Report any suspicious activity by doing /report <message>",
                 AllowServer = false
             });
+
+            if ((bool)Config.Main.Replace_Who_TShockCommand)
+            {
+                Command VarMCMD_Who = new(MCMD_Playing, "playing", "online", "who") { HelpText = "Shows the currently connected players." };
+                Commands.ChatCommands.RemoveAll(cmd => cmd.Names.Exists(alias => VarMCMD_Who.Names.Contains(alias)));
+                Commands.ChatCommands.Add(VarMCMD_Who);
+            }
 
             #endregion
 
@@ -161,19 +180,19 @@ namespace MKLP
             Commands.ChatCommands.Add(new Command(Config.Permissions.CMD_LockDown, CMD_LockDown, "lockdown")
             {
                 AllowServer = false,
-                HelpText = "Prevent Players from joining the server"
+                HelpText = "Prevents Players from joining the server"
             });
 
             Commands.ChatCommands.Add(new Command(Config.Permissions.CMD_LockDownRegister, CMD_LockDownRegister, "lockdownregister", "lockdownreg")
             {
                 AllowServer = false,
-                HelpText = "Prevent Players to register their account"
+                HelpText = "Prevents Players to register their account"
             });
 
             Commands.ChatCommands.Add(new Command(Config.Permissions.CMD_MapPingTP, CMD_MapPingTP, "tpmap", "pingmap", "maptp")
             {
                 AllowServer = false,
-                HelpText = "Able to TP anywhere using map ping"
+                HelpText = "Allows you to teleporter anywhere using map ping"
             });
 
             Commands.ChatCommands.Add(new Command(Config.Permissions.CMD_ClearLag, CMD_ClearLag, "clearlag")
@@ -184,6 +203,11 @@ namespace MKLP
             Commands.ChatCommands.Add(new Command(Config.Permissions.CMD_ManageBoss, CMD_ManageBoss, "manageboss", "mboss")
             {
                 HelpText = "Manage it by enable/disable boss or schedule it"
+            });
+
+            Commands.ChatCommands.Add(new Command(Config.Permissions.CMD_Vanish, CMD_Vanish, "vanish", "ghost")
+            {
+                HelpText = "allows you to become completely invisible to players."
             });
 
             #endregion
@@ -252,6 +276,20 @@ namespace MKLP
                 HelpText = "View's inventory of a player"
             });
 
+            Commands.ChatCommands.Add(new Command("", CMD_Spy, "spy")
+            {
+                HelpText = "allows you to stalk a player"
+            });
+
+            #endregion
+
+            #region [ Manager ]
+
+            Commands.ChatCommands.Add(new Command(Config.Permissions.CMD_MKLPDiscord, CMD_MKLPDiscord, "mklpdiscord")
+            {
+                HelpText = "Manage Linked Account Players"
+            });
+
             #endregion
 
             #endregion
@@ -261,7 +299,7 @@ namespace MKLP
                 Discordklp.Initialize();
             } else
             {
-                MKLP_Console.SendLog_Message_DiscordBot("Discord bot token has not been set!", " {Setup}");
+                MKLP_Console.SendLog_Message_DiscordBot("Discord bot token has not been set!", " {Setup} ");
             }
         }
 
@@ -273,7 +311,9 @@ namespace MKLP
             if (disposing)
             {
                 //=====================Player===================
-                //GetDataHandlers.PlayerUpdate -= OnPlayerUpdate;
+                GetDataHandlers.PlayerUpdate -= OnPlayerUpdate;
+
+                ServerApi.Hooks.ServerConnect.Deregister(this, OnServerConnect);
 
                 ServerApi.Hooks.ServerJoin.Deregister(this, OnPlayerJoin);
 
@@ -288,7 +328,15 @@ namespace MKLP
 
                 GetDataHandlers.TileEdit -= OnTileEdit;
 
-                GetDataHandlers.LiquidSet += HandleLiquidInteraction;
+                GetDataHandlers.PlaceObject += OnPlaceObject;
+
+                GetDataHandlers.PaintTile += OnPaintTile;
+
+                GetDataHandlers.PaintWall += OnPaintWall;
+
+                GetDataHandlers.MassWireOperation += OnMassWireOperation;
+
+                GetDataHandlers.LiquidSet -= HandleLiquidInteraction;
 
                 GetDataHandlers.NewProjectile -= OnNewProjectile;
 
@@ -301,7 +349,9 @@ namespace MKLP
                 //=====================Server===================
                 //ServerApi.Hooks.GameUpdate.Deregister(this, OnUpdate);
 
-                ServerApi.Hooks.WorldSave.Register(this, OnWorldSave);
+                ServerApi.Hooks.ServerBroadcast.Deregister(this, OnServerBroadcast);
+
+                ServerApi.Hooks.WorldSave.Deregister(this, OnWorldSave);
 
                 ServerApi.Hooks.GamePostInitialize.Deregister(this, OnServerStart);
 
@@ -345,6 +395,15 @@ namespace MKLP
 
             var player = TShock.Players[args.Msg.whoAmI];
 
+            if (args.MsgID == PacketTypes.ItemOwner)
+            {
+                if (player.ContainsData("MKLP_StartGetLatency"))
+                {
+                    player.SetData("MKLP_GetLatency", (DateTime.UtcNow - player.GetData<DateTime>("MKLP_StartGetLatency")).TotalMilliseconds);
+                    player.RemoveData("MKLP_StartGetLatency");
+                }
+            }
+
             if (player.ContainsData("MKLP_IsDisabled"))
             {
                 if (!player.GetData<bool>("MKLP_IsDisabled"))
@@ -358,7 +417,7 @@ namespace MKLP
                     args.MsgID == PacketTypes.ItemOwner ||
                     args.MsgID == PacketTypes.ClientSyncedInventory)
                     return;
-
+                
                 if (TShockAPI.Utils.Distance(value2: new Vector2((int)player.TPlayer.position.X / 16, (int)player.TPlayer.position.Y / 16), value1: new Vector2(Main.spawnTileX, Main.spawnTileY)) >= 3f)
                 {
                     player.Teleport(Main.spawnTileX * 16, Main.spawnTileY * 16);
@@ -369,6 +428,68 @@ namespace MKLP
                 args.Handled = true;
                 return;
             }
+            
+            #region [ Vanish ]
+
+            if (args.MsgID == PacketTypes.PlayerActive)
+            {
+                if (player.ContainsData("MKLP_Vanish"))
+                {
+                    if (player.GetData<bool>("MKLP_Vanish"))
+                    {
+                        foreach (TSPlayer gplayer in TShock.Players)
+                        {
+                            if (gplayer == null) continue;
+                            if (gplayer == player) continue;
+                            gplayer.SendData(PacketTypes.PlayerActive, null, gplayer.Index, false.GetHashCode());
+                        }
+                    }
+                }
+            }
+
+            if (args.MsgID == PacketTypes.PlayerDeathV2)
+            {
+                try
+                {
+                    exe1();
+                    async void exe1()
+                    {
+                        await exe2();
+
+                        async Task exe2()
+                        {
+                            if (!player.ContainsData("MKLP_Vanish")) return;
+
+                            if (!player.GetData<bool>("MKLP_Vanish")) return;
+
+                            while (player.Dead) { }
+                            while (player.TPlayer.dead) { }
+                            while (!player.Active) { }
+                            while (!player.TPlayer.active) { }
+
+                            if ((bool)Config.Main.Use_VanishCMD_TPlayer_Active_Var)
+                            {
+                                player.TPlayer.active = false;
+                            }
+
+                            for (int i = 0; i < 10; i++)
+                            {
+                                foreach (TSPlayer gplayer in TShock.Players)
+                                {
+                                    if (gplayer == null) continue;
+                                    if (gplayer == player) continue;
+
+                                    gplayer.SendData(PacketTypes.PlayerActive, null, player.Index, false.GetHashCode());
+                                }
+                                await Task.Delay(1000);
+                            }
+
+                        }
+                    }
+                } catch { }
+            }
+
+            #endregion
 
             #region ( Inventory Checking )
             if (args.MsgID == PacketTypes.PlayerSlot)
@@ -451,6 +572,70 @@ namespace MKLP
 
         bool LockDown = false;
         string LockDownReason = "";
+
+        DateTime checklatency_interval = DateTime.UtcNow.AddSeconds(5);
+        private void OnPlayerUpdate(object? sender, GetDataHandlers.PlayerUpdateEventArgs args)
+        {
+            #region code
+
+            if (checklatency_interval < DateTime.UtcNow)
+            {
+                checklatency_interval.AddSeconds(5);
+                foreach (TSPlayer player in TShock.Players)
+                {
+                    if (player == null) continue;
+                    player.SetData("MKLP_StartGetLatency", DateTime.UtcNow);
+                    NetMessage.SendData((int)PacketTypes.ItemOwner, player.Index, -1, null, 0, player.Index);
+                }
+            }
+
+            foreach (TSPlayer player in TShock.Players)
+            {
+                if (player == null) continue;
+                if (player.ContainsData("MKLP_TargetSpy"))
+                {
+                    if (player.GetData<TSPlayer>("MKLP_TargetSpy") == args.Player)
+                    {
+                        player.TPlayer.position = args.Player.TPlayer.position;
+                        player.SendData(PacketTypes.PlayerUpdate, "", player.Index);
+
+                        player.SetBuff(BuffID.Invisibility, 15 * 60);
+                        player.SetBuff(BuffID.ObsidianSkin, 20 * 60);
+                        player.SetBuff(BuffID.Webbed, 10 * 60);
+
+                    }
+                }
+            }
+
+            #endregion
+        }
+
+        private async void OnServerConnect(ConnectEventArgs args)
+        {
+            #region code
+            await Task.Run(async () =>
+            {
+                var player = TShock.Players[args.Who];
+
+                while (Netplay.Clients[args.Who].State != 10 && args.Handled == false) { }
+                
+                foreach (TSPlayer gplayer in TShock.Players)
+                {
+                    if (gplayer == null) continue;
+                    if (gplayer == player) continue;
+                    if (gplayer.ContainsData("MKLP_Vanish"))
+                    {
+                        if (gplayer.GetData<bool>("MKLP_Vanish"))
+                        {
+                            player.SendData(PacketTypes.PlayerActive, null, gplayer.Index, false.GetHashCode());
+                        }
+                    }
+                }
+
+            });
+            #endregion
+        }
+
         private void OnPlayerJoin(JoinEventArgs args)
         {
             #region code
@@ -539,6 +724,19 @@ namespace MKLP
                 {
                     player.SendErrorMessage("You're still muted!");
                 }
+
+                foreach (TSPlayer gplayer in TShock.Players)
+                {
+                    if (gplayer == null) continue;
+                    if (gplayer == player) continue;
+                    if (gplayer.ContainsData("MKLP_Vanish"))
+                    {
+                        if (gplayer.GetData<bool>("MKLP_Vanish"))
+                        {
+                            player.SendData(PacketTypes.PlayerActive, null, gplayer.Index, false.GetHashCode());
+                        }
+                    }
+                }
             }
 
             bool HasSymbols(string Name)
@@ -574,6 +772,27 @@ namespace MKLP
         private void OnPlayerLeave(LeaveEventArgs args)
         {
             #region code
+            var godPower = Terraria.GameContent.Creative.CreativePowerManager.Instance.GetPower<Terraria.GameContent.Creative.CreativePowers.GodmodePower>();
+
+            foreach (TSPlayer player in TShock.Players)
+            {
+                if (player == null) continue;
+                if (player.ContainsData("MKLP_TargetSpy"))
+                {
+                    if (player.GetData<TSPlayer>("MKLP_TargetSpy") == TShock.Players[args.Who])
+                    {
+                        player.Teleport(Main.spawnTileX * 16, Main.spawnTileY * 16);
+
+                        godPower.SetEnabledState(player.Index, false);
+
+                        TogglePlayerVanish(player, false);
+
+                        player.RemoveData("MKLP_TargetSpy");
+
+                        player.SendInfoMessage($"You're no longer spying on someone");
+                    }
+                }
+            }
 
             #endregion
         }
@@ -584,10 +803,31 @@ namespace MKLP
             #region code
             if (args.Handled || args.Player == null)
                 return;
-            if (!args.Player.RealPlayer)
-                return;
 
             Command command = args.CommandList.FirstOrDefault();
+
+            if (!args.Player.RealPlayer)
+            {
+                if (command.Name == "register" ||
+                command.Name == "login" ||
+                command.Name == "password")
+                {
+                    return;
+                }
+
+                if (Config.Discord.CommandLogChannel == null) return;
+                if (command.CanRun(args.Player))
+                {
+                    Discordklp.KLPBotSendMessageLog((ulong)Config.Discord.CommandLogChannel, $"(Not in a Server) Named **{args.Player.Account.Name}** ✅Executed" +
+                        $" `/{command.Name}{((string.Join(" ", args.Parameters.ToArray(), 0, args.Parameters.Count) == "") ? "" : " ")}{string.Join(" ", args.Parameters.ToArray(), 0, args.Parameters.Count)}`");
+                }
+                else
+                {
+                    Discordklp.KLPBotSendMessageLog((ulong)Config.Discord.CommandLogChannel, $"(Not in a Server) Named **{args.Player.Account.Name}** ⛔Tried" +
+                        $" `/{command.Name}{((string.Join(" ", args.Parameters.ToArray(), 0, args.Parameters.Count) == "") ? "" : " ")}{string.Join(" ", args.Parameters.ToArray(), 0, args.Parameters.Count)}`");
+                }
+                return;
+            }
 
             if (command == null)
                 return;
@@ -654,14 +894,13 @@ namespace MKLP
 
             foreach (string banned in Config.ChatMod.Ban_MessageContains)
             {
-                if (args.RawText.Contains(banned))
+                if (args.RawText.ToLower().Contains(banned.ToLower()))
                 {
                     args.Player.SendErrorMessage("You can not send that message!");
                     args.Handled = true;
                     return;
                 }
             }
-
             if (args.RawText.Length >= (int)Config.ChatMod.Maximum__MessageLength_NoSpace && !args.RawText.Contains(" "))
             {
                 args.Player.SendErrorMessage("You can not send that message!");
@@ -778,22 +1017,49 @@ namespace MKLP
             int tileX = args.X;
             int tileY = args.Y;
 
-
             if (KillThreshold()) return;
             if (PlaceThreshold()) return;
-            if (PaintThreshold()) return;
 
-            
-            if (args.Action == GetDataHandlers.EditAction.PlaceTile ||
-                args.Action == GetDataHandlers.EditAction.ReplaceTile)
+            #region [ Breakable Tiles ]
+
+            ushort[] breakableTiles =
             {
-                if ((bool)Config.Main.Prevent_Place_BastStatueNearDoor && PossibleTransmutationGlitch())
-                {
-                    args.Player.SendErrorMessage("You cannot place 'Bast_Statue/Door' near each other!");
-                    args.Player.SendTileSquareCentered(tileX, tileY, 4);
-                    args.Handled = true;
-                    return;
-                }
+                //vines
+                TileID.Plants,
+                TileID.Plants2,
+                TileID.AshPlants,
+                TileID.CorruptPlants,
+                TileID.CrimsonPlants,
+                TileID.HallowedPlants,
+                TileID.HallowedPlants2,
+                TileID.JunglePlants,
+                TileID.JunglePlants2,
+                TileID.MushroomPlants,
+                TileID.OasisPlants,
+
+                //vines
+                TileID.VineFlowers,
+                TileID.Vines,
+                TileID.AshVines,
+                TileID.CorruptVines,
+                TileID.CrimsonVines,
+                TileID.HallowedVines,
+                TileID.JungleVines,
+                TileID.MushroomVines,
+
+                //pots
+                
+
+                //misc
+                TileID.Cobweb,
+                TileID.Pigronata,
+
+            };
+
+            #endregion
+
+            if (args.Action == GetDataHandlers.EditAction.PlaceTile || args.Action == GetDataHandlers.EditAction.ReplaceTile)
+            {
                 if (IllegalTileProgression.ContainsKey(new(Main.tile[tileX, tileY].type, args.Style)) && !args.Player.HasPermission(Config.Permissions.IgnoreSurvivalCode_3) && (bool)Config.Main.Using_Survival_Code3)
                 {
                     ManagePlayer.DisablePlayer(args.Player, $"{IllegalTileProgression[new(Main.tile[tileX, tileY].type, args.Style)]} Block Place", ServerReason: $"Survival,code,3|{Main.tile[tileX, tileY].type}|{args.Style}|{IllegalTileProgression[new(Main.tile[tileX, tileY].type, args.Style)]}");
@@ -829,30 +1095,8 @@ namespace MKLP
             {
                 if (tileY < (int)Main.worldSurface)
                 {
-                    ushort[] whitelist =
-                    {
-                        TileID.Plants,
-                        TileID.Plants2,
-                        TileID.AshPlants,
-                        TileID.CorruptPlants,
-                        TileID.CrimsonPlants,
-                        TileID.Pots,
-                        TileID.Vines,
-                        TileID.CorruptVines,
-                        TileID.CrimsonVines,
-                        TileID.HallowedVines,
-                        TileID.JungleVines,
-                        TileID.CorruptPlants,
-                        TileID.CrimsonPlants,
-                        TileID.HallowedPlants,
-                        TileID.HallowedPlants2,
-                        TileID.JunglePlants,
-                        TileID.JunglePlants2,
-
-                        TileID.Trees
-                    };
                     if (args.Action == GetDataHandlers.EditAction.KillTile &&
-                        whitelist.Contains(Main.tile[tileX, tileY].type)) return;
+                        breakableTiles.Contains(Main.tile[tileX, tileY].type)) return;
 
 
                     if (!args.Player.HasPermission(Config.Permissions.IgnoreAntiGrief_protectsurface_break) && (bool)Config.Main.Using_AntiGrief_Surface_Break)
@@ -864,6 +1108,7 @@ namespace MKLP
                     }
                 }
 
+                
             }
 
             if (args.Action == GetDataHandlers.EditAction.PlaceTile ||
@@ -873,16 +1118,6 @@ namespace MKLP
             {
                 if (tileY < (int)Main.worldSurface)
                 {
-                    ushort[] whitelist =
-                    {
-                        TileID.WorkBenches,
-                        TileID.Furnaces,
-                        TileID.Anvils
-                    };
-                    if (args.Action == GetDataHandlers.EditAction.PlaceTile &&
-                        whitelist.Contains(Main.tile[tileX, tileY].type)) return;
-                    
-
                     if (!args.Player.HasPermission(Config.Permissions.IgnoreAntiGrief_protectsurface_place) && (bool)Config.Main.Using_AntiGrief_Surface_Place)
                     {
                         args.Player.SendErrorMessage(Config.Main.Message_AntiGrief_Surface_Place);
@@ -890,6 +1125,53 @@ namespace MKLP
                         args.Handled = true;
                         return;
                     }
+                }
+
+                ushort[] infectionb =
+                {
+                    TileID.CorruptGrass,
+                    TileID.CrimsonGrass,
+                    TileID.HallowedGrass,
+                    TileID.CorruptJungleGrass,
+                    TileID.CrimsonJungleGrass,
+
+                    TileID.CorruptPlants,
+                    TileID.CrimsonPlants,
+                    TileID.HallowedPlants,
+                    TileID.HallowedPlants2,
+
+                    TileID.CorruptVines,
+                    TileID.CrimsonVines,
+                    TileID.HallowedVines,
+
+                    TileID.CorruptThorns,
+                    TileID.CrimsonThorns,
+
+                    TileID.Ebonstone,
+                    TileID.Crimstone,
+                    TileID.Pearlstone,
+
+                    TileID.Ebonsand,
+                    TileID.Crimsand,
+                    TileID.Pearlsand,
+                    TileID.CorruptHardenedSand,
+                    TileID.CrimsonHardenedSand,
+                    TileID.HallowHardenedSand,
+                    TileID.CorruptSandstone,
+                    TileID.CrimsonSandstone,
+                    TileID.HallowSandstone,
+
+                    TileID.CorruptIce,
+                    TileID.FleshIce,
+                    TileID.HallowedIce
+                };
+
+                if (infectionb.Contains(Main.tile[tileX, tileY].type) && !args.Player.HasPermission(Config.Permissions.IgnoreAntiGrief_infection) && (bool)Config.Main.Using_AntiGrief_Infection)
+                {
+                    args.Player.SendErrorMessage(Config.Main.Message_AntiGrief_Infection);
+                    args.Player.SendTileSquareCentered(tileX, tileY, 4);
+                    args.Handled = true;
+                    return;
                 }
             }
 
@@ -920,7 +1202,7 @@ namespace MKLP
                 }
             }
 
-            if (args.Action == GetDataHandlers.EditAction.KillActuator ||
+            if ((args.Action == GetDataHandlers.EditAction.KillActuator ||
                     args.Action == GetDataHandlers.EditAction.PlaceActuator ||
                     args.Action == GetDataHandlers.EditAction.KillWire ||
                     args.Action == GetDataHandlers.EditAction.PlaceWire ||
@@ -929,11 +1211,12 @@ namespace MKLP
                     args.Action == GetDataHandlers.EditAction.KillWire3 ||
                     args.Action == GetDataHandlers.EditAction.PlaceWire3 ||
                     args.Action == GetDataHandlers.EditAction.KillWire4 ||
-                    args.Action == GetDataHandlers.EditAction.PlaceWire4 &&
-                    ( tileY <= Main.worldSurface ) && (bool)Config.Main.ReceivedWarning_WirePlaceUnderground
+                    args.Action == GetDataHandlers.EditAction.PlaceWire4 ) &&
+                    tileY >= (int)Main.worldSurface &&
+                    (bool)Config.Main.ReceivedWarning_WirePlaceUnderground
                     )
             {
-                Discordklp.KLPBotSendMessageMainLog($"Player **{args.Player.Name}** Used wire below surface `{tileX}, {tileY}`");
+                Discordklp.KLPBotSendMessageMainLog($"Player **{args.Player.Name}** Used Wire/Actuator below surface `{tileX}, {tileY}`");
                 
             }
 
@@ -1052,6 +1335,169 @@ namespace MKLP
 
                 return false;
             }
+            #endregion
+
+            #endregion
+        }
+
+        private void OnPlaceObject(object? sender, GetDataHandlers.PlaceObjectEventArgs args)
+        {
+            #region code
+
+            int tileX = args.X;
+            int tileY = args.Y;
+
+            ushort Type = (ushort)args.Type;
+
+            if (PlaceThreshold()) return;
+
+            ushort[] SetupBastTile =
+            {
+                Terraria.ID.TileID.OpenDoor,
+                Terraria.ID.TileID.ClosedDoor,
+                Terraria.ID.TileID.TrapdoorOpen,
+                Terraria.ID.TileID.TrapdoorClosed,
+                Terraria.ID.TileID.Campfire
+            };
+
+            if ((bool)Config.Main.Prevent_Place_BastStatueNearDoor && SetupBastTile.Contains(Type))
+            {
+                if (PossibleTransmutationGlitch1())
+                {
+                    args.Player.SendErrorMessage("You cannot place 'Bast_Statue & Door/Campfire' near each other!");
+                    args.Player.SendTileSquareCentered(tileX, tileY, 10);
+                    args.Handled = true;
+                    return;
+                }
+            }
+            if ((bool)Config.Main.Prevent_Place_BastStatueNearDoor && Type == Terraria.ID.TileID.CatBast)
+            {
+                if (PossibleTransmutationGlitch2())
+                {
+                    args.Player.SendErrorMessage("You cannot place 'Bast_Statue & Door/Campfire' near each other!");
+                    args.Player.SendTileSquareCentered(tileX, tileY, 10);
+                    args.Handled = true;
+                    return;
+                }
+            }
+
+            if (IllegalTileProgression.ContainsKey(new(Main.tile[tileX, tileY].type, args.Style)) && !args.Player.HasPermission(Config.Permissions.IgnoreSurvivalCode_3) && (bool)Config.Main.Using_Survival_Code3)
+            {
+                ManagePlayer.DisablePlayer(args.Player, $"{IllegalTileProgression[new(Main.tile[tileX, tileY].type, args.Style)]} Block Place", ServerReason: $"Survival,code,3|{Main.tile[tileX, tileY].type}|{args.Style}|{IllegalTileProgression[new(Main.tile[tileX, tileY].type, args.Style)]}");
+                args.Player.SendTileSquareCentered(tileX, tileY, 4);
+                args.Handled = true;
+                return;
+            }
+            if (IllegalTileProgression.ContainsKey(new(Main.tile[tileX, tileY].type, 0, true)) && !args.Player.HasPermission(Config.Permissions.IgnoreSurvivalCode_3) && (bool)Config.Main.Using_Survival_Code3)
+            {
+                ManagePlayer.DisablePlayer(args.Player, $"{IllegalTileProgression[new(Main.tile[tileX, tileY].type, 0, true)]} Block Place", ServerReason: $"Survival,code,3|{Main.tile[tileX, tileY].type}|{args.Style}|{IllegalTileProgression[new(Main.tile[tileX, tileY].type, 0, true)]}");
+                args.Player.SendTileSquareCentered(tileX, tileY, 4);
+                args.Handled = true;
+                return;
+            }
+
+            #region ( door near at bast statue )
+
+            bool PossibleTransmutationGlitch1()
+            {
+                for (int x = tileX - 8; x <= tileX + 8; x++)
+                {
+                    for (int y = tileY - 8; y <= tileY + 8; y++)
+                    {
+                        if (x == tileX && y == tileY)
+                            continue;
+                        if (Main.tile[x, y].type == Terraria.ID.TileID.CatBast) return true;
+                    }
+                }
+                return false;
+            }
+
+            bool PossibleTransmutationGlitch2()
+            {
+                for (int x = tileX - 8; x <= tileX + 8; x++)
+                {
+                    for (int y = tileY - 8; y <= tileY + 8; y++)
+                    {
+                        if (x == tileX && y == tileY)
+                            continue;
+                        if (SetupBastTile.Contains(Main.tile[x, y].type))
+                        {
+                            return true;
+                        }
+                    }
+                }
+                return false;
+            }
+
+            #endregion
+
+            #region ( Threshold )
+            
+            bool PlaceThreshold()
+            {
+                if (!(bool)Config.Main.Using_Default_Code2) return false;
+                if (args.Player.HasPermission(Config.Permissions.IgnoreDefaultCode_2)) return false;
+
+                int max = (int)Config.Main.default_code2_maxdefault;
+
+
+                int[] boost =
+                {
+                    ItemID.HandOfCreation,
+                    ItemID.ArchitectGizmoPack,
+                    ItemID.BrickLayer,
+                    ItemID.PortableCementMixer
+                };
+                foreach (Item check in args.Player.TPlayer.armor)
+                {
+                    if (boost.Contains(check.netID))
+                    {
+                        max = (int)Config.Main.default_code2_maxboost;
+                        break;
+                    }
+                }
+
+                int[] bomb =
+                {
+                    ItemID.DirtBomb,
+                    ItemID.DirtStickyBomb
+                };
+                foreach (Item check in args.Player.Inventory)
+                {
+                    if (bomb.Contains(check.netID))
+                    {
+                        max = (int)Config.Main.default_code2_maxbomb;
+                        break;
+                    }
+                }
+
+
+                if (args.Player.TilePlaceThreshold >= max)
+                {
+                    ManagePlayer.DisablePlayer(args.Player, $"Placing blocks too fast", ServerReason: $"Default,code,2|{args.Player.SelectedItem.netID}");
+                    args.Player.SendTileSquareCentered(tileX, tileY, 4);
+                    args.Handled = true;
+                    return true;
+                }
+
+                return false;
+            }
+
+            #endregion
+
+            #endregion
+        }
+
+        private void OnPaintTile(object? sender, GetDataHandlers.PaintTileEventArgs args)
+        {
+            #region code
+
+            int tileX = args.X;
+            int tileY = args.Y;
+
+            if (PaintThreshold()) return;
+
+            #region ( Threshold )
 
             bool PaintThreshold()
             {
@@ -1087,61 +1533,86 @@ namespace MKLP
                 return false;
             }
 
-            
-
             #endregion
 
-            #region ( door near at bast statue )
+            #endregion
+        }
 
-            bool PossibleTransmutationGlitch()
+        private void OnPaintWall(object? sender, GetDataHandlers.PaintWallEventArgs args)
+        {
+            #region code
+
+            int tileX = args.X;
+            int tileY = args.Y;
+
+            if (PaintThreshold()) return;
+
+            #region ( Threshold )
+
+            bool PaintThreshold()
             {
-                if (Main.tile[tileX, tileY].type == TileID.OpenDoor ||
-                    Main.tile[tileX, tileY].type == TileID.ClosedDoor  ||
-                    Main.tile[tileX, tileY].type == TileID.TrapdoorOpen ||
-                    Main.tile[tileX, tileY].type == TileID.TrapdoorClosed)
+                if (!(bool)Config.Main.Using_Default_Code3) return false;
+                if (args.Player.HasPermission(Config.Permissions.IgnoreDefaultCode_3)) return false;
+
+                int max = (int)Config.Main.default_code3_maxdefault;
+
+                int[] boost =
                 {
-                    for (int x = tileX - 8; x <= tileX + 8; x++)
-                    {
-                        for (int y = tileY - 8; y <= tileY + 8; y++)
-                        {
-                            if (x == tileX && y == tileY)
-                                continue;
-                            if (Main.tile[x, y].type == TileID.CatBast) return true;
-                        }
-                    }
-                } else if (Main.tile[tileX, tileY].type == TileID.CatBast)
+                    ItemID.HandOfCreation,
+                    ItemID.ArchitectGizmoPack,
+                    ItemID.BrickLayer,
+                    ItemID.PortableCementMixer
+                };
+                foreach (Item check in args.Player.TPlayer.armor)
                 {
-                    for (int x = tileX - 8; x <= tileX + 8; x++)
+                    if (boost.Contains(check.netID))
                     {
-                        for (int y = tileY - 8; y <= tileY + 8; y++)
-                        {
-                            if (x == tileX && y == tileY)
-                                continue;
-                            if (Main.tile[x, y].type == TileID.OpenDoor ||
-                                Main.tile[x, y].type == TileID.ClosedDoor ||
-                                Main.tile[x, y].type == TileID.TrapdoorOpen ||
-                                Main.tile[x, y].type == TileID.TrapdoorClosed)
-                            {
-                                return true;
-                            }
-                        }
+                        max = (int)Config.Main.default_code3_maxboost;
+                        break;
                     }
                 }
-                
+
+                if (args.Player.PaintThreshold >= max)
+                {
+                    ManagePlayer.DisablePlayer(args.Player, $"Painting too fast", ServerReason: $"Default,code,3|{args.Player.SelectedItem.netID}");
+                    args.Player.SendTileSquareCentered(tileX, tileY, 4);
+                    args.Handled = true;
+                    return true;
+                }
 
                 return false;
             }
 
             #endregion
 
-            #region [ Breakable Tiles ]
-
-            ushort[] breakableTiles =
-            {
-                TileID.Grass,
-            };
-
             #endregion
+        }
+
+        public void OnMassWireOperation(object? sender, GetDataHandlers.MassWireOperationEventArgs args)
+        {
+            #region code
+
+            if (!NPC.downedBoss3)
+            {
+                if ((
+                    !args.Player.HasPermission(Config.Permissions.Ignore_IllegalWireProgression) &&
+                    !args.Player.HasPermission("tshock.item") &&
+                    !args.Player.HasPermission("tshock.item.*")
+                    ) && (bool)Config.Main.Prevent_IllegalWire_Progression
+                    )
+                {
+                    Discordklp.KLPBotSendMessage_Warning($"Player **{args.Player.Name}** was Able to use Wire/Actuator on pre skeletron! `start: {args.StartX}, {args.StartY} end: {args.EndX}, {args.EndY}`", args.Player.Account.Name, "Illegal Wire/Actuator Progression");
+                    args.Player.SendErrorMessage("This is Illegal on this progression!");
+                    args.Handled = true;
+                    return;
+                }
+            }
+
+            if ((args.StartY >= (int)Main.worldSurface || args.EndY >= (int)Main.worldSurface) && (bool)Config.Main.ReceivedWarning_WirePlaceUnderground)
+            {
+                Discordklp.KLPBotSendMessageMainLog($"Player **{args.Player.Name}** Used mass Wire/Actuator below surface `start: {args.StartX}, {args.StartY} end: {args.EndX}, {args.EndY}`");
+
+            }
 
             #endregion
         }
@@ -1263,56 +1734,102 @@ namespace MKLP
                 args.Handled = true;
                 return;
             }
-            
-
-            short[] explosives =
+            short[] InfectionProj =
             {
-                //reg bomb
-                ProjectileID.Bomb,
-                ProjectileID.StickyBomb,
-                ProjectileID.BouncyBomb,
+                ProjectileID.ViciousPowder,
+                ProjectileID.VilePowder,
 
-                //reg dynamite
-                ProjectileID.Dynamite,
-                ProjectileID.StickyDynamite,
-                ProjectileID.BouncyDynamite,
+                ProjectileID.CrimsonSpray,
+                ProjectileID.CorruptSpray,
+                ProjectileID.HallowSpray,
 
-                //others
-                ProjectileID.BombFish,
-                ProjectileID.LavaBomb,
-                ProjectileID.WetBomb,
-                ProjectileID.HoneyBomb,
-
-                //rocket
-                ProjectileID.RocketII,
-                ProjectileID.RocketSnowmanII,
-                ProjectileID.RocketIV,
-                ProjectileID.RocketSnowmanIV,
-
-                ProjectileID.ClusterFragmentsII,
-                ProjectileID.ClusterGrenadeII,
-                ProjectileID.ClusterMineII,
-                ProjectileID.ClusterRocketII,
-                ProjectileID.ClusterSnowmanFragmentsII,
-                ProjectileID.ClusterSnowmanRocketII,
-                ProjectileID.MiniNukeGrenadeII,
-                ProjectileID.MiniNukeMineII,
-                ProjectileID.MiniNukeRocketII,
-                ProjectileID.MiniNukeSnowmanRocketII,
-                ProjectileID.LavaGrenade,
-                ProjectileID.LavaMine,
-                ProjectileID.LavaRocket,
-                ProjectileID.LavaSnowmanRocket,
-
-                //celebratiomk
-                ProjectileID.Celeb2RocketExplosive,
-                ProjectileID.Celeb2RocketExplosiveLarge,
-                ProjectileID.Celeb2RocketLarge
+                ProjectileID.BloodWater,
+                ProjectileID.UnholyWater,
+                ProjectileID.HolyWater
             };
 
-            if (explosives.Contains(type))
+            if (InfectionProj.Contains(type))
             {
-                if (args.Player.TileY >= (int)Main.worldSurface) return;
+                if (!args.Player.HasPermission(Config.Permissions.IgnoreAntiGrief_infection) && (bool)Config.Main.Using_AntiGrief_Infection)
+                {
+                    args.Player.SendErrorMessage(Config.Main.Message_AntiGrief_Infection);
+                    args.Player.RemoveProjectile(ident, owner);
+                    args.Handled = true;
+                    return;
+                }
+            }
+            
+            short[] SprayProj =
+            {
+                ProjectileID.CorruptSpray,
+                ProjectileID.CrimsonSpray,
+                ProjectileID.DirtSpray,
+                ProjectileID.HallowSpray,
+                ProjectileID.MushroomSpray,
+                ProjectileID.PureSpray,
+                ProjectileID.SandSpray,
+                ProjectileID.SnowSpray
+            };
+
+            if (SprayProj.Contains(type))
+            {
+                if (!args.Player.HasPermission(Config.Permissions.IgnoreAntiGrief_spray) && (bool)Config.Main.Using_AntiGrief_Spray)
+                {
+                    args.Player.SendErrorMessage(Config.Main.Message_AntiGrief_Spray);
+                    args.Player.RemoveProjectile(ident, owner);
+                    args.Handled = true;
+                    return;
+                }
+            }
+            
+            if (args.Player.TileY >= (int)Main.worldSurface)
+            {
+                short[] explosives =
+                {
+                    //reg bomb
+                    ProjectileID.Bomb,
+                    ProjectileID.StickyBomb,
+                    ProjectileID.BouncyBomb,
+
+                    //reg dynamite
+                    ProjectileID.Dynamite,
+                    ProjectileID.StickyDynamite,
+                    ProjectileID.BouncyDynamite,
+
+                    //others
+                    ProjectileID.BombFish,
+                    ProjectileID.LavaBomb,
+                    ProjectileID.WetBomb,
+                    ProjectileID.HoneyBomb,
+
+                    //rocket
+                    ProjectileID.RocketII,
+                    ProjectileID.RocketSnowmanII,
+                    ProjectileID.RocketIV,
+                    ProjectileID.RocketSnowmanIV,
+
+                    ProjectileID.ClusterFragmentsII,
+                    ProjectileID.ClusterGrenadeII,
+                    ProjectileID.ClusterMineII,
+                    ProjectileID.ClusterRocketII,
+                    ProjectileID.ClusterSnowmanFragmentsII,
+                    ProjectileID.ClusterSnowmanRocketII,
+                    ProjectileID.MiniNukeGrenadeII,
+                    ProjectileID.MiniNukeMineII,
+                    ProjectileID.MiniNukeRocketII,
+                    ProjectileID.MiniNukeSnowmanRocketII,
+                    ProjectileID.LavaGrenade,
+                    ProjectileID.LavaMine,
+                    ProjectileID.LavaRocket,
+                    ProjectileID.LavaSnowmanRocket,
+
+                    //celebratiomk
+                    ProjectileID.Celeb2RocketExplosive,
+                    ProjectileID.Celeb2RocketExplosiveLarge,
+                    ProjectileID.Celeb2RocketLarge
+                };
+
+                if (!explosives.Contains(type)) return;
 
                 if (!args.Player.HasPermission(Config.Permissions.IgnoreAntiGrief_protectsurface_explosive) && (bool)Config.Main.Using_AntiGrief_Surface_Explosive)
                 {
@@ -2082,9 +2599,46 @@ namespace MKLP
 
         #region { Server }
 
-        private void OnReload(ReloadEventArgs args)
+        private void OnServerBroadcast(ServerBroadcastEventArgs args)
+        {
+            #region code
+            var literalText = Terraria.Localization.Language.GetText(args.Message._text).Value;
+
+            if (args.Message._substitutions?.Length > 0)
+                literalText = string.Format(literalText, args.Message._substitutions);
+
+            
+            if (
+                literalText.EndsWith(" has joined.") ||
+                literalText.EndsWith(" has left.")
+                )
+            {
+                foreach (TSPlayer player in TShock.Players)
+                {
+                    if (player == null) continue;
+                    foreach (TSPlayer gplayer in TShock.Players)
+                    {
+                        if (gplayer == null) continue;
+                        if (gplayer == player) continue;
+                        if (gplayer.ContainsData("MKLP_Vanish"))
+                        {
+                            if (gplayer.GetData<bool>("MKLP_Vanish"))
+                            {
+                                player.SendData(PacketTypes.PlayerActive, null, gplayer.Index, false.GetHashCode());
+                            }
+                        }
+                    }
+                }
+            }
+            
+
+            #endregion
+        }
+
+            private void OnReload(ReloadEventArgs args)
         {
             Config = Config.Read();
+            LinkAccountManager.ReloadConfig();
             args.Player.SendMessage("MKLP config reloaded!", Microsoft.Xna.Framework.Color.Purple);
         }
 
@@ -2311,14 +2865,15 @@ namespace MKLP
             #region code
             string result = "";
 
-            /*
-            foreach (var PlayerPing in PlayersLatency)
+            
+            foreach (TSPlayer player in TShock.Players)
             {
-                result += $"{PlayerPing.Key} {PlayerPing.Value}ms\n";
+                if (player == null) continue;
+                result += $"{player.Name} : {player.GetData<double>("MKLP_GetLatency")}ms\n";
             }
-            */
+            
 
-            if (result == "") result = "No Players Online...";
+            if (result == "") result = "No Latency has been check...";
 
             args.Player.SendMessage("List Of Players Latency:\n\n" +
                 result, Color.Yellow);
@@ -2328,6 +2883,9 @@ namespace MKLP
 
         private void CMD_BE(CommandArgs args)
         {
+            #region code
+
+
             #region { stringdefeatedbosses }
             /*
             string GetListDefeatedBoss()
@@ -3000,6 +3558,8 @@ namespace MKLP
                 $"List Of Bosses:" +
                 $"\n{GetListDefeatedBoss2()}",
                 Color.Gray);
+
+            #endregion
         }
 
         private static Dictionary<string, DateTime> ReportCD = new();
@@ -3008,9 +3568,9 @@ namespace MKLP
             #region code
             if (args.Parameters.Count == 0)
             {
-                args.Player.SendErrorMessage("Usage: /report <message>" +
-                    "\nor you can use '/report <player> <message>'" +
-                    $"\nexample: /report {args.Player.Name} is cheating");
+                args.Player.SendErrorMessage($"Usage: {Commands.Specifier}report <message>" +
+                    $"\nor you can use '{Commands.Specifier}report <player> <message>'" +
+                    $"\nexample: {Commands.Specifier}report {args.Player.Name} is cheating");
                 return;
             }
 
@@ -3144,8 +3704,8 @@ namespace MKLP
             #region code
             if (args.Parameters.Count == 0)
             {
-                args.Player.SendErrorMessage($"Usage: {TShock.Config.Settings.CommandSpecifier}staffchat <message>" +
-                    $"\nshortcuts: {TShock.Config.Settings.CommandSpecifier}staff, {TShock.Config.Settings.CommandSpecifier}#");
+                args.Player.SendErrorMessage($"Usage: {Commands.Specifier}staffchat <message>" +
+                    $"\nshortcuts: {Commands.Specifier}staff, {Commands.Specifier}#");
                 return;
             }
 
@@ -3490,8 +4050,8 @@ namespace MKLP
 
             if (args.Parameters.Count == 0)
             {
-                args.Player.SendErrorMessage("Proper usage: /manageboss <type> <args...>" +
-                    "\ndo '/manageboss help' for more details");
+                args.Player.SendErrorMessage($"Proper usage: {Commands.Specifier}manageboss <type> <args...>" +
+                    $"\ndo '{Commands.Specifier}manageboss help' for more details");
                 return;
             }
 
@@ -3500,14 +4060,14 @@ namespace MKLP
                 #region [ Help Text ]
                 case "help":
                     {
-                        args.Player.SendMessage("Proper Usage: [c/31ff77:/manageboss <type> <args...>]" +
-                            "\n[c/ffd531:== Available Types ==]" +
+                        args.Player.SendMessage($"Proper Usage: [c/31ff77:{Commands.Specifier}manageboss <type> <args...>]" +
+                            "\n[c/ffd531:== Available Sub-Command ==]" +
                             "\n'enable <boss name>' : Enable a boss" +
                             "\n[c/b6b6b6:'disable <boss name>' : Disable a boss to prevent it from spawning]" +
                             "\n'enableall' : Enables all bosses" +
                             "\n[c/b6b6b6:'disableall' : Disables all bosses]" +
                             $"{(args.Player.HasPermission(Config.Permissions.CMD_ManageBoss_SetKilled) ? "'setkilled <boss name>' : set boss killed or not\n" : "")}\n" +
-                            "\n[c/96b85f:== Boss Schedule Types ==]" +
+                            "\n[c/96b85f:== Boss Schedule Sub-Command ==]" +
                             "\n'enablesched <boss name> <MM/DD/YY>' : Enable a boss in specific time" +
                             "\n[c/b6b6b6:'disablesched <boss name> : cancel a specific boss schedule]" +
                             "\n'disableschedall' : cancel all boss schedule" +
@@ -4820,10 +5380,43 @@ namespace MKLP
                 #endregion
                 default:
                     {
-                        args.Player.SendErrorMessage("Invalid Type!" +
-                            "\ndo '/manageboss help' for more info");
+                        args.Player.SendErrorMessage("Invalid Sub-Command!" +
+                            $"\ndo '{Commands.Specifier}manageboss help' for more info");
                         return;
                     }
+            }
+
+            #endregion
+        }
+
+        private void CMD_Vanish(CommandArgs args)
+        {
+            #region code
+            //args.TPlayer.active = !args.TPlayer.active;
+
+            if (args.Player.ContainsData("MKLP_Vanish"))
+            {
+                if (!args.Player.GetData<bool>("MKLP_Vanish"))
+                {
+                    TogglePlayerVanish(args.Player, true);
+
+                    TShock.Utils.Broadcast($"{args.Player.Name} has left.", Color.Yellow);
+                    args.Player.SendSuccessMessage("You're on Vanish");
+                }
+                else
+                {
+                    TogglePlayerVanish(args.Player, false);
+
+                    TShock.Utils.Broadcast($"{args.Player.Name} has joined.", Color.Yellow);
+                    args.Player.SendSuccessMessage("You're no longer on Vanish");
+                }
+            }
+            else
+            {
+                TogglePlayerVanish(args.Player, true);
+
+                TShock.Utils.Broadcast($"{args.Player.Name} has left.", Color.Yellow);
+                args.Player.SendSuccessMessage("You're on Vanish");
             }
 
             #endregion
@@ -4838,13 +5431,13 @@ namespace MKLP
             #region code
             if (args.Parameters.Count == 0)
             {
-                args.Player.SendErrorMessage("Proper Usage: /managereport <info/delete>");
+                args.Player.SendErrorMessage($"Proper Usage: {Commands.Specifier}managereport <info/delete>");
                 args.Player.SendMessage(
-                    "Info: get report info by id" +
-                    "\n'/report info fromlist <accountname>' : get this user list of his reports" +
-                    "\n'/report info targetlist <targetname>' : get list of report from this player" +
+                    $"'{Commands.Specifier}report info <id>': get report info by id" +
+                    $"\n'{Commands.Specifier}report info fromlist <accountname>' : get this user list of his reports" +
+                    $"\n'{Commands.Specifier}report info targetlist <targetname>' : get list of report from this player" +
                     "\n" +
-                    "\ndelete: delete any reports by id", Color.WhiteSmoke);
+                    $"\n'{Commands.Specifier}report delete <id>': delete any reports by id", Color.WhiteSmoke);
                 return;
             }
 
@@ -4889,7 +5482,7 @@ namespace MKLP
                                     {
                                         if (args.Parameters.Count == 2)
                                         {
-                                            args.Player.SendErrorMessage("Proper Usage: /managereport info fromlist <accountname>");
+                                            args.Player.SendErrorMessage($"Proper Usage: {Commands.Specifier}managereport info fromlist <accountname>");
                                             return;
                                         }
 
@@ -4917,7 +5510,7 @@ namespace MKLP
                                     {
                                         if (args.Parameters.Count == 2)
                                         {
-                                            args.Player.SendErrorMessage("Proper Usage: /managereport info target <accountname>");
+                                            args.Player.SendErrorMessage($"Proper Usage: {Commands.Specifier}managereport info target <accountname>");
                                             return;
                                         }
 
@@ -4953,7 +5546,7 @@ namespace MKLP
                     {
                         if (args.Parameters.Count == 1)
                         {
-                            args.Player.SendErrorMessage("Proper Usage: /managereport delete <reportID>");
+                            args.Player.SendErrorMessage($"Proper Usage: {Commands.Specifier}managereport delete <reportID>");
                             return;
                         }
 
@@ -4976,13 +5569,8 @@ namespace MKLP
                     }
                 default:
                     {
-                        args.Player.SendSuccessMessage($"Invalid Type");
-                        args.Player.SendMessage(
-                            "Info: get report info by id" +
-                            "\n'/report info fromlist <accountname>' : get this user list of his reports" +
-                            "\n'/report info targetlist <accountname>' : get list of report from this player" +
-                            "\n" +
-                            "\ndelete: delete any reports by id", Color.WhiteSmoke);
+                        args.Player.SendSuccessMessage($"Invalid Sub-Command");
+                        args.Player.SendMessage($"Do '{Commands.Specifier}report help' for more info", Color.WhiteSmoke);
                         return;
                     }
             }
@@ -4994,7 +5582,7 @@ namespace MKLP
             #region code
             if (args.Parameters.Count == 0)
             {
-                args.Player.SendErrorMessage("Usage: /baninfo <ticketban>");
+                args.Player.SendErrorMessage($"Usage: {Commands.Specifier}baninfo <ticketban>");
                 return;
             }
 
@@ -5038,8 +5626,8 @@ namespace MKLP
 
             if (args.Parameters.Count == 0)
             {
-                args.Player.SendErrorMessage($"Usage: /{((bool)Config.Main.Replace_Ban_TShockCommand ? "ban" : "qban")} <player> <reason> <duration> <args...>");
-                args.Player.SendMessage($"[c/8fbfd4:Example:] [c/a5d063:/{((bool)Config.Main.Replace_Ban_TShockCommand ? "ban" : "qban")} {args.Player.Name} \"cheating\" \"1d 1m\" -offline]" +
+                args.Player.SendErrorMessage($"Usage: {Commands.Specifier}{((bool)Config.Main.Replace_Ban_TShockCommand ? "ban" : "qban")} <player> <reason> <duration> <args...>");
+                args.Player.SendMessage($"[c/8fbfd4:Example:] [c/a5d063:{Commands.Specifier}{((bool)Config.Main.Replace_Ban_TShockCommand ? "ban" : "qban")} {args.Player.Name} \"cheating\" \"1d 1m\" -offline]" +
                     $"\n[c/8fbfd4:duration:] 1d = 1day (d,h,m,s = day,hour,minute,second)" +
                     $"\n[c/8fbfd4:args:] ( -alt = bans only name ) ( -offline = only used when banning a offline player )",
                     Color.Gray);
@@ -5170,8 +5758,8 @@ namespace MKLP
             #region code
             if (args.Parameters.Count == 0)
             {
-                args.Player.SendErrorMessage("Usage: /unban <ticket number>" +
-                    "\nor use '/unban <account name> -account' to unban a account");
+                args.Player.SendErrorMessage($"Usage: {Commands.Specifier}unban <ticket number>" +
+                    $"\nor use '{Commands.Specifier}unban <account name> -account' to unban a account");
                 return;
             }
 
@@ -5235,8 +5823,8 @@ namespace MKLP
 
             if (args.Parameters.Count == 0)
             {
-                args.Player.SendErrorMessage($"Proper Usage: /{((bool)Config.Main.Replace_Mute_TShockCommand ? "mute" : "qmute")} <player> <duration> <reason>" +
-                    (args.Player.HasPermission(Config.Permissions.CMD_OfflineUnMute) ? $"\nMuting Offline Player: /{((bool)Config.Main.Replace_Mute_TShockCommand ? "mute" : "qmute")} <accountname> <duration> <reason> -offline" : ""));
+                args.Player.SendErrorMessage($"Proper Usage: {Commands.Specifier}{((bool)Config.Main.Replace_Mute_TShockCommand ? "mute" : "qmute")} <player> <duration> <reason>" +
+                    (args.Player.HasPermission(Config.Permissions.CMD_OfflineUnMute) ? $"\nMuting Offline Player: {Commands.Specifier}{((bool)Config.Main.Replace_Mute_TShockCommand ? "mute" : "qmute")} <accountname> <duration> <reason> -offline" : ""));
                 return;
             }
 
@@ -5374,8 +5962,8 @@ namespace MKLP
 
             if (args.Parameters.Count == 0)
             {
-                args.Player.SendErrorMessage("Proper Usage: /unmute <player>" +
-                    (args.Player.HasPermission(Config.Permissions.CMD_OfflineUnMute) ? "\nUnmuting Offline Player: /unmute <accountname> -offline" : ""));
+                args.Player.SendErrorMessage($"Proper Usage: {Commands.Specifier}unmute <player>" +
+                    (args.Player.HasPermission(Config.Permissions.CMD_OfflineUnMute) ? $"\nUnmuting Offline Player: {Commands.Specifier}unmute <accountname> -offline" : ""));
                 return;
             }
 
@@ -5484,7 +6072,7 @@ namespace MKLP
             #region code
             if (args.Parameters.Count == 0)
             {
-                args.Player.SendErrorMessage("Proper Usage: /disable <player> <reason>");
+                args.Player.SendErrorMessage($"Proper Usage: {Commands.Specifier}disable <player> <reason>");
                 return;
             }
 
@@ -5526,7 +6114,7 @@ namespace MKLP
             #region code
             if (args.Parameters.Count == 0)
             {
-                args.Player.SendErrorMessage("Proper Usage: /enable <player>");
+                args.Player.SendErrorMessage($"Proper Usage: {Commands.Specifier}enable <player>");
                 return;
             }
 
@@ -5560,6 +6148,372 @@ namespace MKLP
 
         #endregion
 
+        #region { Inspect }
+
+        private void CMD_Spy(CommandArgs args)
+        {
+            #region code
+            var godPower = Terraria.GameContent.Creative.CreativePowerManager.Instance.GetPower<Terraria.GameContent.Creative.CreativePowers.GodmodePower>();
+
+            if (args.Parameters.Count == 0)
+            {
+                if (args.Player.ContainsData("MKLP_TargetSpy"))
+                {
+                    TogglePlayerVanish(args.Player, false);
+
+                    args.Player.Teleport(Main.spawnTileX * 16, Main.spawnTileY * 16);
+
+                    godPower.SetEnabledState(args.Player.Index, false);
+
+                    args.Player.RemoveData("MKLP_TargetSpy");
+
+                    args.Player.SendInfoMessage($"You're no longer spying on someone");
+                    return;
+                }
+                args.Player.SendErrorMessage($"Usage: {Commands.Specifier}spy <player>");
+                return;
+            }
+
+            var players = TSPlayer.FindByNameOrID(args.Parameters[0]);
+
+            if (players.Count > 1)
+            {
+                args.Player.SendMultipleMatchError(players.Select(p => p.Name));
+                return;
+            }
+
+            if (players.Count < 1)
+            {
+                args.Player.SendErrorMessage("Could not find the target specified. Check that you have the correct spelling.");
+                return;
+            }
+
+            TSPlayer player = players[0];
+
+            TogglePlayerVanish(args.Player, true);
+
+            args.Player.Teleport(Main.spawnTileX * 16, Main.spawnTileY * 16);
+
+            godPower.SetEnabledState(player.Index, true);
+
+            args.Player.SetData("MKLP_TargetSpy", player);
+
+            args.Player.SendInfoMessage($"Spying {player.Name}");
+            return;
+
+            #endregion
+        }
+
+        #endregion
+
+        #region { Manager }
+
+        private void CMD_MKLPDiscord(CommandArgs args)
+        {
+            #region code
+
+            if (!(bool)Config.DataBase.UsingMKLPDatabase || !(bool)Config.DataBase.UsingDB)
+            {
+                args.Player.SendErrorMessage("You cannot use this command" +
+                    "\nas if 'UsingDB' and 'UsingMKLPDatabase' in Config file is set to false...");
+                return;
+            }
+
+            if (args.Parameters.Count == 0)
+            {
+                args.Player.SendErrorMessage($"Usage: {Commands.Specifier}mklpdiscord <type> <args...>" +
+                    $"\nDo '{Commands.Specifier}mklpdiscord help' for more details");
+                return;
+            }
+
+            switch (args.Parameters[0].ToLower())
+            {
+                #region [ helptext ]
+                case "help":
+                    {
+                        args.Player.SendMessage(
+                            $"Proper Usage: {Commands.Specifier}mklpdiscord <sub-command> <args...>" +
+                            $"\n\n[ Sub Commands ]" +
+                            $"\n[c/4089ff:'list <page>' :] list of accountlinked users" +
+                            $"\n" +
+                            $"\n[c/4089ff:'set <player> <userid>' :] sets or adds a accountlink user" +
+                            $"\n" +
+                            $"\n[c/4089ff:'remove <player>' :] removes a accountlink user"
+                            , Color.WhiteSmoke);
+                        return;
+                    }
+                #endregion
+                case "list":
+                    #region ( Type: List )
+                    {
+                        try
+                        {
+
+                            Dictionary<string, string> DLinkList = DBManager.AccountDLinkingList();
+
+                            decimal maxpage = Math.Ceiling((decimal)DLinkList.Count() / 10);
+
+                            if (maxpage == 0)
+                            {
+                                args.Player.SendInfoMessage("No Link Accounts Assigned...");
+                                return;
+                            }
+
+                            if (args.Parameters.Count == 2)
+                            {
+                                args.Player.SendInfoMessage($"Linked Accounts 1/{maxpage}" +
+                                    $"\n{valuepage()}");
+                                return;
+                            }
+                            else
+                            {
+                                try
+                                {
+                                    int page = int.Parse(args.Parameters[2]);
+                                    args.Player.SendInfoMessage($"Linked Accounts {page}/{maxpage}" +
+                                        $"\n{valuepage(page)}");
+                                    return;
+                                }
+                                catch (Exception)
+                                {
+                                    args.Player.SendInfoMessage($"Linked Accounts 1/{maxpage}" +
+                                        $"\n{valuepage()}");
+                                    return;
+                                }
+                            }
+
+                            string valuepage(int page = 1)
+                            {
+                                string result = "";
+                                if (page <= 0) page = 1;
+
+                                int i = 0;
+                                int Index = (page - 1) * 6;
+                                int max = Index + 6;
+                                if (max > DLinkList.Count()) max = DLinkList.Count();
+                                foreach (var Tvalue in DLinkList)
+                                {
+                                    i++;
+                                    if (i < Index || i > max) continue;
+                                    result += $"\n[ {Tvalue.Key} ]" +
+                                        $"\nUserID: {Tvalue.Value}\n";
+                                }
+
+                                if (result == "") result = "Empty...";
+
+                                return result;
+                            }
+
+                        } catch { }
+                        
+                        return;
+                    }
+                    #endregion
+                case "set":
+                    #region ( Type: Set )
+                    {
+                        if (args.Parameters.Count < 3)
+                        {
+                            args.Player.SendErrorMessage($"Usage: {Commands.Specifier}mklpdiscord set <player> <userid>");
+                            return;
+                        }
+
+                        string targetname = "";
+
+                        var getplayers = TSPlayer.FindByNameOrID(args.Parameters[1]);
+                        if (getplayers.Count > 1)
+                        {
+                            args.Player.SendMultipleMatchError(getplayers.Select(p => p.Name));
+                            return;
+                        }
+                        if (getplayers.Count < 1)
+                        {
+                            UserAccount getuseraccount = TShock.UserAccounts.GetUserAccountByName(args.Parameters[1]);
+                            if (getuseraccount == null)
+                            {
+                                args.Player.SendErrorMessage("Invalid Player User");
+                                return;
+                            }
+                            targetname = getuseraccount.Name;
+                        }
+                        if (getplayers.Count == 0)
+                        {
+                            targetname = getplayers[0].Name;
+                        }
+                        if (targetname == "")
+                        {
+                            args.Player.SendErrorMessage("Invalid Player User");
+                            return;
+                        }
+
+                        ulong useridtarget = 0;
+
+                        if (!ulong.TryParse(args.Parameters[2], out useridtarget))
+                        {
+                            args.Player.SendErrorMessage("Invalid UserID");
+                            return;
+                        }
+
+                        if (DBManager.ChangeAccountDLinkingUserID(targetname, useridtarget.ToString()))
+                        {
+                            args.Player.SendSuccessMessage($"Change {targetname} UserID to {useridtarget}");
+                            return;
+                        } else
+                        {
+                            if (DBManager.AddAccountDLinkingUserID(targetname, useridtarget.ToString()))
+                            {
+                                args.Player.SendSuccessMessage($"Added new linked account {targetname} UserID: {useridtarget}");
+                                return;
+                            } else
+                            {
+                                args.Player.SendSuccessMessage($"Unable to add new link account");
+                                return;
+                            }
+                        }
+                    }
+                    #endregion
+                case "remove":
+                    #region ( Type: Removed )
+                    {
+                        if (args.Parameters.Count == 1)
+                        {
+                            args.Player.SendErrorMessage($"Usage: {Commands.Specifier}mklpdiscord remove <player>");
+                            return;
+                        }
+
+                        string targetname = "";
+
+                        var getplayers = TSPlayer.FindByNameOrID(args.Parameters[1]);
+                        if (getplayers.Count > 1)
+                        {
+                            args.Player.SendMultipleMatchError(getplayers.Select(p => p.Name));
+                            return;
+                        }
+                        if (getplayers.Count < 1)
+                        {
+                            UserAccount getuseraccount = TShock.UserAccounts.GetUserAccountByName(args.Parameters[1]);
+                            if (getuseraccount == null)
+                            {
+                                args.Player.SendErrorMessage("Invalid Player User");
+                                return;
+                            }
+                            targetname = getuseraccount.Name;
+                        }
+                        if (getplayers.Count == 0)
+                        {
+                            targetname = getplayers[0].Name;
+                        }
+                        if (targetname == "")
+                        {
+                            args.Player.SendErrorMessage("Invalid Player User");
+                            return;
+                        }
+
+                        if (DBManager.DeleteAccountDLinkingUserID(targetname))
+                        {
+                            args.Player.SendSuccessMessage($"Removed {targetname} accountlink");
+                        } else
+                        {
+                            args.Player.SendErrorMessage($"Unable to remove {targetname} accountlink" +
+                                $"\nplease check '{Commands.Specifier}mklpdiscord list' if that name exist");
+                        }
+
+                        return;
+                    }
+                    #endregion
+                default:
+                    {
+                        args.Player.SendErrorMessage("Invalid Sub-Command" +
+                            $"\nDo '{Commands.Specifier}mklpdiscord help' for more info");
+                        return;
+                    }
+            }
+
+            #endregion
+        }
+
+        #endregion
+
+        #endregion
+
+        #region [ Modified Commands ]
+
+        private void MCMD_Playing(CommandArgs args)
+        {
+            bool invalidUsage = (args.Parameters.Count > 2);
+
+            bool displayIdsRequested = false;
+            int pageNumber = 1;
+            if (!invalidUsage)
+            {
+                foreach (string parameter in args.Parameters)
+                {
+                    if (parameter.Equals("-i", StringComparison.InvariantCultureIgnoreCase))
+                    {
+                        displayIdsRequested = true;
+                        continue;
+                    }
+
+                    if (!int.TryParse(parameter, out pageNumber))
+                    {
+                        invalidUsage = true;
+                        break;
+                    }
+                }
+            }
+            if (invalidUsage)
+            {
+                args.Player.SendMessage($"List Online Players Syntax", Color.White);
+                args.Player.SendMessage($"{"playing".Color(TShockAPI.Utils.BoldHighlight)} {"[-i]".Color(TShockAPI.Utils.RedHighlight)} {"[page]".Color(TShockAPI.Utils.GreenHighlight)}", Color.White);
+                args.Player.SendMessage($"Command aliases: {"playing".Color(TShockAPI.Utils.GreenHighlight)}, {"online".Color(TShockAPI.Utils.GreenHighlight)}, {"who".Color(TShockAPI.Utils.GreenHighlight)}", Color.White);
+                args.Player.SendMessage($"Example usage: {"who".Color(TShockAPI.Utils.BoldHighlight)} {"-i".Color(TShockAPI.Utils.RedHighlight)}", Color.White);
+                return;
+            }
+            
+            if (displayIdsRequested && !args.Player.HasPermission(Permissions.seeids))
+            {
+                args.Player.SendErrorMessage("You do not have permission to see player IDs.");
+                return;
+            }
+
+            if (TShock.Utils.GetActivePlayerCount() == 0)
+            {
+                args.Player.SendMessage("There are currently no players online.", Color.White);
+                return;
+            }
+            args.Player.SendMessage($"Online Players ({TShock.Utils.GetActivePlayerCount().Color(TShockAPI.Utils.GreenHighlight)}/{TShock.Config.Settings.MaxSlots})", Color.White);
+
+            var players = new List<string>();
+
+            foreach (TSPlayer ply in TShock.Players)
+            {
+                if (ply != null && ply.Active)
+                {
+                    if (ply.ContainsData("MKLP_Vanish"))
+                    {
+                        if (ply.GetData<bool>("MKLP_Vanish")) continue;
+                    }
+
+                    if (displayIdsRequested)
+                        if (ply.Account != null)
+                            players.Add($"{ply.Name} (Index: {ply.Index}, Account ID: {ply.Account.ID})");
+                        else
+                            players.Add($"{ply.Name} (Index: {ply.Index})");
+                    else
+                        players.Add(ply.Name);
+                }
+            }
+
+            PaginationTools.SendPage(
+                args.Player, pageNumber, PaginationTools.BuildLinesFromTerms(players),
+                new PaginationTools.Settings
+                {
+                    IncludeHeader = false,
+                    FooterFormat = $"Type {Commands.Specifier}who {(displayIdsRequested ? "-i" : string.Empty)} for more."
+                }
+            );
+        }
+
         #endregion
 
         #region [ Function ]
@@ -5574,6 +6528,66 @@ namespace MKLP
             }
         }
         
+        public static void TogglePlayerVanish(TSPlayer executer, bool vanish)
+        {
+            #region code
+
+            if (vanish)
+            {
+                if ((bool)Config.Main.Use_VanishCMD_TPlayer_Active_Var)
+                {
+                    executer.TPlayer.active = false;
+                }
+                executer.SetData("MKLP_Vanish", true);
+
+                foreach (TSPlayer player in TShock.Players)
+                {
+                    if (player == null) continue;
+                    if (player == executer) continue;
+                    player.SendData(PacketTypes.PlayerActive, null, executer.Index, false.GetHashCode());
+                }
+            } else
+            {
+                if ((bool)Config.Main.Use_VanishCMD_TPlayer_Active_Var)
+                {
+                    executer.TPlayer.active = true;
+                }
+                executer.SetData("MKLP_Vanish", false);
+
+                foreach (TSPlayer player in TShock.Players)
+                {
+                    if (player == null) continue;
+                    if (player == executer) continue;
+                    player.SendData(PacketTypes.PlayerActive, null, executer.Index, true.GetHashCode());
+
+                    for (int k = 0; k < NetItem.MaxInventory - (NetItem.SafeSlots + NetItem.PiggySlots + NetItem.ForgeSlots); k++)
+                    {
+                        try
+                        {
+                            executer.SendData(PacketTypes.PlayerSlot, null, executer.Index, (float)k);
+                        }
+                        catch (Exception e) { MKLP_Console.SendLog_Exception(e); }
+                    }
+
+                    player.SendData(PacketTypes.PlayerInfo, null, executer.Index);
+                    player.SendData(PacketTypes.PlayerUpdate, null, executer.Index);
+                    player.SendData(PacketTypes.PlayerMana, null, executer.Index);
+                    player.SendData(PacketTypes.PlayerHp, null, executer.Index);
+                    player.SendData(PacketTypes.PlayerBuff, null, executer.Index);
+
+                    var trashSlot = NetItem.InventorySlots + NetItem.ArmorSlots + NetItem.DyeSlots + NetItem.MiscEquipSlots + NetItem.MiscDyeSlots + NetItem.PiggySlots + NetItem.SafeSlots;
+
+                    for (int k = 0; k < NetItem.MaxInventory - (NetItem.SafeSlots + NetItem.PiggySlots); k++)
+                    {
+                        player.SendData(PacketTypes.PlayerSlot, null, executer.Index, (float)k);
+                    }
+                    player.SendData(PacketTypes.PlayerSlot, null, executer.Index, (float)trashSlot);
+                }
+            }
+
+            #endregion
+        }
+
         #endregion
     }
 

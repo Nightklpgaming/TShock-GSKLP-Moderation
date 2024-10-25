@@ -21,9 +21,9 @@ namespace MKLP.Modules
 
             InvLog_index++;
 
-            if (InventoryLogs.Count >= 70)
+            if (InventoryLogs.Count >= (int)MKLP.Config.Main.Save_InvLog_Max)
             {
-                InventoryLogs.RemoveRange(0, 40);
+                InventoryLogs.RemoveRange(0, (int)MKLP.Config.Main.Remove_InvLog_IfMax);
             }
             //OutOfMemoryException
 
@@ -43,20 +43,21 @@ namespace MKLP.Modules
             TSPlayer Player = args.Player;
             if (args.Parameters.Count != 1 && args.Parameters.Count != 2)
             {
-                Player.SendErrorMessage("Invalid syntax. Proper syntax: /inventoryview <player> <type>\nDo [ /inventoryview help ] for more info");
+                Player.SendErrorMessage($"Invalid syntax. Proper syntax: {Commands.Specifier}inventoryview <player> <type>" +
+                    $"\nDo [ {Commands.Specifier}inventoryview help ] for more info");
                 return;
             }
 
             if (args.Parameters.Count == 0)
             {
-                args.Player.SendErrorMessage("Specify a Player!\nDo [ /inventoryview help ] for more info");
+                args.Player.SendErrorMessage($"Specify a Player!\nDo [ {Commands.Specifier}inventoryview help ] for more info");
                 return;
             }
 
             //help text
             string helptext = "[i:3619] [c/00f412:Inventory Viewer Info] [i:3619]" +
                     "\nYou can view player contents using this command\n" +
-                    $"Example: /inventoryview [c/abff96:{Player.Name}] [c/96ffdc:inv] (View inventory contents)\n" +
+                    $"Example: {Commands.Specifier}inventoryview [c/abff96:{Player.Name}] [c/96ffdc:inv] (View inventory contents)\n" +
                     "[c/a4ff4e:[List of Types][c/a4ff4e:]]\n" +
                     "[c/ffffff:'inventory/inv'] [c/71b45a:'equipment/equip'] [c/f268ff:'piggy/pig'] [c/6f6f6f:'safe'] [c/e3fa00:'defenderforge/forge'] [c/c600fa:'voidvault/vault'] [c/fa2b00:'all']" +
                     "\n------------------------------" +
@@ -71,7 +72,7 @@ namespace MKLP.Modules
 
             if (args.Parameters.Count == 1)
             {
-                args.Player.SendErrorMessage("Specify a type!\nDo [ /inventoryview help ] for more info");
+                args.Player.SendErrorMessage($"Specify a type!\nDo [ {Commands.Specifier}inventoryview help ] for more info");
                 return;
             }
 
@@ -152,7 +153,7 @@ namespace MKLP.Modules
                     }
                 default:
                     {
-                        Player.SendErrorMessage("Invalid type!\nDo [ /inventoryview help ] for more info");
+                        Player.SendErrorMessage($"Invalid type!\nDo [ {Commands.Specifier}inventoryview help ] for more info");
                         return;
                     }
 

@@ -198,6 +198,13 @@ namespace MKLP
 
         public bool? Replace_Ban_TShockCommand = false;
         public bool? Replace_Mute_TShockCommand = false;
+        public bool? Replace_Who_TShockCommand = true;
+
+        public bool? Using_AntiGrief_Infection = false;
+        public string Message_AntiGrief_Infection = "You Cannot Use those infection blocks!";
+
+        public bool? Using_AntiGrief_Spray = false;
+        public string Message_AntiGrief_Spray = "You Cannot Use clentaminator!";
 
         public bool? Using_AntiGrief_Surface_Break = false;
         public bool? Using_AntiGrief_Surface_Explosive = false;
@@ -256,7 +263,14 @@ namespace MKLP
         public int? default_code6_addmax_spectrehood = 15;
 
         public int? Ignore_Value_ClearLag = 12000;
+
+        public bool? Use_VanishCMD_TPlayer_Active_Var = false;
+
+        
+
         public bool? Save_Inventory_Log = false;
+        public int? Save_InvLog_Max = 70;
+        public int? Remove_InvLog_IfMax = 40;
 
         public CONFIG_MAIN() { }
 
@@ -287,6 +301,10 @@ namespace MKLP
 
             if (Replace_Ban_TShockCommand == null) Replace_Ban_TShockCommand = getdefault.Replace_Ban_TShockCommand;
             if (Replace_Mute_TShockCommand == null) Replace_Mute_TShockCommand = getdefault.Replace_Mute_TShockCommand;
+            if (Replace_Who_TShockCommand == null) Replace_Who_TShockCommand = getdefault.Replace_Who_TShockCommand;
+
+            if (Using_AntiGrief_Infection == null) Using_AntiGrief_Infection = getdefault.Using_AntiGrief_Infection;
+            if (Message_AntiGrief_Infection == null) Message_AntiGrief_Infection = getdefault.Message_AntiGrief_Infection;
 
             if (Using_AntiGrief_Surface_Break == null) Using_AntiGrief_Surface_Break = getdefault.Using_AntiGrief_Surface_Break;
             if (Using_AntiGrief_Surface_Explosive == null) Using_AntiGrief_Surface_Explosive = getdefault.Using_AntiGrief_Surface_Explosive;
@@ -344,9 +362,13 @@ namespace MKLP
             if (default_code6_maxPlant == null) default_code6_maxPlant = getdefault.default_code6_maxPlant;
             if (default_code6_addmax_spectrehood == null) default_code6_addmax_spectrehood = getdefault.default_code6_addmax_spectrehood;
 
-            if (Save_Inventory_Log == null) Save_Inventory_Log = getdefault.Save_Inventory_Log;
-
             if (Ignore_Value_ClearLag == null) Ignore_Value_ClearLag = getdefault.Ignore_Value_ClearLag;
+
+            if (Use_VanishCMD_TPlayer_Active_Var == null) Use_VanishCMD_TPlayer_Active_Var = getdefault.Use_VanishCMD_TPlayer_Active_Var;
+
+            if (Save_Inventory_Log == null) Save_Inventory_Log = getdefault.Save_Inventory_Log;
+            if (Save_InvLog_Max == null) Save_InvLog_Max = getdefault.Save_InvLog_Max;
+            if (Remove_InvLog_IfMax == null) Remove_InvLog_IfMax = getdefault.Remove_InvLog_IfMax;
         }
     }
 
@@ -475,8 +497,9 @@ namespace MKLP
         public string CMD_LockDownRegister = "MKLP.lockdown.register";
         public string CMD_MapPingTP = "MKLP.mapping.tp";
         public string CMD_ClearLag = "MKLP.clearlag";
-        public string CMD_ManageBoss = "MKLP.ManageBoss";
-        public string CMD_ManageBoss_SetKilled = "MKLP.ManageBoss.SetKilled";
+        public string CMD_ManageBoss = "MKLP.manageBoss";
+        public string CMD_ManageBoss_SetKilled = "MKLP.manageBoss.setkilled";
+        public string CMD_Vanish = "MKLP.vanish";
 
         //moderator
         public string CMD_ManageReport = "MKLP.moderator.report";
@@ -491,10 +514,17 @@ namespace MKLP
 
         //inspect
         public string CMD_InventoryView = "MKLP.staff.Inventory.view";
+        public string CMD_Spy = "MKLP.spy";
+
+        //manager
+        public string CMD_MKLPDiscord = "MKLP.manager.discordlink";
 
 
         //immunity
         public string Ignore_ChatMod_Punishment = "MKLP.bypass.chatmod";
+
+        public string IgnoreAntiGrief_infection = "MKLP.antigrief.protect.infection";
+        public string IgnoreAntiGrief_spray = "MKLP.antigrief.protect.spray";
 
         public string IgnoreAntiGrief_protectsurface_break = "MKLP.antigrief.protect.surface.break";
         public string IgnoreAntiGrief_protectsurface_explosive = "MKLP.antigrief.protect.surface.explosive";
@@ -536,6 +566,7 @@ namespace MKLP
             if (CMD_ClearLag == null) CMD_ClearLag = getdefault.CMD_ClearLag;
             if (CMD_ManageBoss == null) CMD_ManageBoss = getdefault.CMD_ManageBoss;
             if (CMD_ManageBoss_SetKilled == null) CMD_ManageBoss_SetKilled = getdefault.CMD_ManageBoss_SetKilled;
+            if (CMD_Vanish == null) CMD_Vanish = getdefault.CMD_Vanish;
 
             if (CMD_ManageReport == null) CMD_ManageReport = getdefault.CMD_ManageReport;
             if (CMD_Ban == null) CMD_Ban = getdefault.CMD_Ban;
@@ -546,9 +577,16 @@ namespace MKLP
             if (CMD_OfflineMute == null) CMD_OfflineMute = getdefault.CMD_OfflineMute;
             if (CMD_UnMute == null) CMD_UnMute = getdefault.CMD_UnMute;
             if (CMD_OfflineUnMute == null) CMD_OfflineUnMute = getdefault.CMD_OfflineUnMute;
+
             if (CMD_InventoryView == null) CMD_InventoryView = getdefault.CMD_InventoryView;
+            if (CMD_Spy == null) CMD_Spy = getdefault.CMD_Spy;
+
+            if (CMD_MKLPDiscord == null) CMD_MKLPDiscord = getdefault.CMD_MKLPDiscord;
 
             if (Ignore_ChatMod_Punishment == null) Ignore_ChatMod_Punishment = getdefault.Ignore_ChatMod_Punishment;
+
+            if (IgnoreAntiGrief_infection == null) IgnoreAntiGrief_infection = getdefault.IgnoreAntiGrief_infection;
+            if (IgnoreAntiGrief_spray == null) IgnoreAntiGrief_spray = getdefault.IgnoreAntiGrief_spray;
 
             if (IgnoreAntiGrief_protectsurface_break == null) IgnoreAntiGrief_protectsurface_break = getdefault.IgnoreAntiGrief_protectsurface_break;
             if (IgnoreAntiGrief_protectsurface_explosive == null) IgnoreAntiGrief_protectsurface_explosive = getdefault.IgnoreAntiGrief_protectsurface_explosive;
@@ -733,9 +771,9 @@ namespace MKLP
 
     public class CONFIG_DATABASE
     {
-        public bool? UsingDB = false;
+        public bool? UsingDB = true;
 
-        public bool? UsingGSKLP = false;
+        public bool? UsingMKLPDatabase = true;
 
         public bool? UseTShockFilePath = true;
         public string Path = "file1/file2/";
@@ -758,7 +796,7 @@ namespace MKLP
 
             if (UsingDB == null) UsingDB = getdefault.UsingDB;
 
-            if (UsingGSKLP == null) UsingGSKLP = getdefault.UsingGSKLP;
+            if (UsingMKLPDatabase == null) UsingMKLPDatabase = getdefault.UsingMKLPDatabase;
 
             if (UseTShockFilePath == null) UseTShockFilePath = getdefault.UseTShockFilePath;
             if (Path == null) Path = getdefault.Path;

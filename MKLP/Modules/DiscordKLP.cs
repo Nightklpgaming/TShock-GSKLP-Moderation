@@ -1119,13 +1119,13 @@ namespace MKLP.Modules
 
                                         if (Main.eclipse) result += "- Solar Eclipse \n";
 
-                                        if (Main.invasionType == 1) result += $"- Goblin Army [ {Main.invasionProgress} ]\n";
+                                        if (Main.invasionType == 1) result += $"- Goblin Army [ %{Main.invasionProgress} ]\n";
 
-                                        if (Main.invasionType == 2) result += $"- Frost Legion [ {Main.invasionProgress} ]\n";
+                                        if (Main.invasionType == 2) result += $"- Frost Legion [ %{Main.invasionProgress} ]\n";
 
-                                        if (Main.invasionType == 3) result += $"- Pirate Invasion [ {Main.invasionProgress} ]\n";
+                                        if (Main.invasionType == 3) result += $"- Pirate Invasion [ %{Main.invasionProgress} ]\n";
 
-                                        if (Main.invasionType == 4) result += $"- Martians [ {Main.invasionProgress} ]\n";
+                                        if (Main.invasionType == 4) result += $"- Martians [ %{Main.invasionProgress} ]\n";
 
                                         if (Main.pumpkinMoon) result += $"- Pumkin Moon [ wave {NPC.waveNumber} ]\n";
 
@@ -1135,33 +1135,35 @@ namespace MKLP.Modules
 
                                         Dictionary<int, string> bosses = new();
 
-                                        bosses.Add(50, "<:Map_Icon_King_Slime:1165984927897104446> King Slime"); // King Slime
-                                        bosses.Add(4, "<:Map_Icon_Eye_of_Cthulhu:1165985128401621052> Eye of Cthulhu"); // Eye of Cthulu
+                                        bosses.Add(50, "- King Slime"); // King Slime
+                                        bosses.Add(4, "- Eye of Cthulhu"); // Eye of Cthulu
 
-                                        bosses.Add(13, "<:Map_Icon_Eater_of_Worlds:1165985133631909988> Eater of Worlds"); // Eater of Worlds
-                                        bosses.Add(266, "<:Map_Icon_Brain_of_Cthulhu:1165985138526666762> Brain of Cthulhu"); // Brain of Cthulu
+                                        bosses.Add(13, "- Eater of Worlds"); // Eater of Worlds
+                                        bosses.Add(266, "- Brain of Cthulhu"); // Brain of Cthulu
 
-                                        bosses.Add(222, "<:Map_Icon_Queen_Bee:1165985143782129724> Queen Bee"); // Queen Bee
-                                        bosses.Add(35, "<:Map_Icon_Skeletron:1165985148966277161> Skeletron"); // Skeletron
-                                        bosses.Add(668, "<:Map_Icon_Deerclops:1165985154305642567> Deerclops"); // Deerclops
-                                        bosses.Add(113, "<:Map_Icon_Wall_of_Flesh:1165986077773934644> Wall of Flesh"); // Wall of Flesh
-                                        bosses.Add(657, "<:Map_Icon_Queen_Slime:1165986595233611806> Queen Slime"); // Queen Slime
+                                        bosses.Add(222, "- Queen Bee"); // Queen Bee
+                                        bosses.Add(35, "- Skeletron"); // Skeletron
+                                        bosses.Add(668, "- Deerclops"); // Deerclops
+                                        bosses.Add(113, "- Wall of Flesh"); // Wall of Flesh
+                                        bosses.Add(657, "- Queen Slime"); // Queen Slime
 
-                                        bosses.Add(125, "<:Map_Icon_The_Twins:1165988378093826189> The Twins"); // Retinazer
-                                        bosses.Add(134, "<:Map_Icon_The_Destroyer:1165988781602639924> The Destroyer"); // The Destroyer
-                                        bosses.Add(127, "<:Map_Icon_Skeletron_Prime:1165989247946330132> Skeletron Prime"); // Skeletron Prime
+                                        bosses.Add(125, "- Retinazer"); // Retinazer
+                                        bosses.Add(126, "- Spazmatism"); // Spazmatism
+                                        bosses.Add(134, "- The Destroyer"); // The Destroyer
+                                        bosses.Add(127, "- Skeletron Prime"); // Skeletron Prime
 
-                                        bosses.Add(262, "<:Map_Icon_Plantera_first_form:1165989761794719835> Plantera"); // Plantera
-                                        bosses.Add(245, "<:Map_Icon_Golem:1165990216260141067> Golem"); // Golem
+                                        bosses.Add(262, "- Plantera"); // Plantera
+                                        bosses.Add(245, "- Golem"); // Golem
 
-                                        bosses.Add(636, "<:Map_Icon_Empress_of_Light:1165991234624569375> Empress of Light"); // Empress Of Light
+                                        bosses.Add(636, "- Empress of Light"); // Empress Of Light
 
-                                        bosses.Add(370, "<:Map_Icon_Duke_Fishron:1165990697346801775> Duke Fishron"); // Duke Fishron
-                                        bosses.Add(439, "<:Map_Icon_Lunatic_Cultist:1165991639915974656> Lunatic Cultist");// Lunatic Cultist
-                                        bosses.Add(396, "<:Map_Icon_Moon_Lord:1165991724812861471> Moon Lord"); // Moon Lord
+                                        bosses.Add(370, "- Duke Fishron"); // Duke Fishron
+                                        bosses.Add(439, "- Lunatic Cultist");// Lunatic Cultist
+                                        bosses.Add(396, "- Moon Lord"); // Moon Lord
 
                                         foreach (var npc in Main.npc)
                                         {
+                                            if (!npc.active) continue;
                                             if (bosses.ContainsKey(npc.netID))
                                             {
                                                 result += $"- {bosses[npc.netID]} [ {npc.life}/{npc.lifeMax}:heart: ]\n";
@@ -2467,13 +2469,13 @@ namespace MKLP.Modules
 
                                 if (Main.eclipse) result += "- Solar Eclipse \n";
 
-                                if (Main.invasionType == 1) result += $"- Goblin Army [ {Main.invasionProgress} ]\n";
+                                if (Main.invasionType == 1) result += $"- Goblin Army [ %{Main.invasionProgress} ]\n";
 
-                                if (Main.invasionType == 2) result += $"- Frost Legion [ {Main.invasionProgress} ]\n";
+                                if (Main.invasionType == 2) result += $"- Frost Legion [ %{Main.invasionProgress} ]\n";
 
-                                if (Main.invasionType == 3) result += $"- Pirate Invasion [ {Main.invasionProgress} ]\n";
+                                if (Main.invasionType == 3) result += $"- Pirate Invasion [ %{Main.invasionProgress} ]\n";
 
-                                if (Main.invasionType == 4) result += $"- Martians [ {Main.invasionProgress} ]\n";
+                                if (Main.invasionType == 4) result += $"- Martians [ %{Main.invasionProgress} ]\n";
 
                                 if (Main.pumpkinMoon) result += $"- Pumkin Moon [ wave {NPC.waveNumber} ]\n";
 
@@ -2483,33 +2485,35 @@ namespace MKLP.Modules
 
                                 Dictionary<int, string> bosses = new();
 
-                                bosses.Add(50, "<:Map_Icon_King_Slime:1165984927897104446> King Slime"); // King Slime
-                                bosses.Add(4, "<:Map_Icon_Eye_of_Cthulhu:1165985128401621052> Eye of Cthulhu"); // Eye of Cthulu
+                                bosses.Add(50, "- King Slime"); // King Slime
+                                bosses.Add(4, "- Eye of Cthulhu"); // Eye of Cthulu
 
-                                bosses.Add(13, "<:Map_Icon_Eater_of_Worlds:1165985133631909988> Eater of Worlds"); // Eater of Worlds
-                                bosses.Add(266, "<:Map_Icon_Brain_of_Cthulhu:1165985138526666762> Brain of Cthulhu"); // Brain of Cthulu
+                                bosses.Add(13, "- Eater of Worlds"); // Eater of Worlds
+                                bosses.Add(266, "- Brain of Cthulhu"); // Brain of Cthulu
 
-                                bosses.Add(222, "<:Map_Icon_Queen_Bee:1165985143782129724> Queen Bee"); // Queen Bee
-                                bosses.Add(35, "<:Map_Icon_Skeletron:1165985148966277161> Skeletron"); // Skeletron
-                                bosses.Add(668, "<:Map_Icon_Deerclops:1165985154305642567> Deerclops"); // Deerclops
-                                bosses.Add(113, "<:Map_Icon_Wall_of_Flesh:1165986077773934644> Wall of Flesh"); // Wall of Flesh
-                                bosses.Add(657, "<:Map_Icon_Queen_Slime:1165986595233611806> Queen Slime"); // Queen Slime
+                                bosses.Add(222, "- Queen Bee"); // Queen Bee
+                                bosses.Add(35, "- Skeletron"); // Skeletron
+                                bosses.Add(668, "- Deerclops"); // Deerclops
+                                bosses.Add(113, "- Wall of Flesh"); // Wall of Flesh
+                                bosses.Add(657, "- Queen Slime"); // Queen Slime
 
-                                bosses.Add(125, "<:Map_Icon_The_Twins:1165988378093826189> The Twins"); // Retinazer
-                                bosses.Add(134, "<:Map_Icon_The_Destroyer:1165988781602639924> The Destroyer"); // The Destroyer
-                                bosses.Add(127, "<:Map_Icon_Skeletron_Prime:1165989247946330132> Skeletron Prime"); // Skeletron Prime
+                                bosses.Add(125, "- Retinazer"); // Retinazer
+                                bosses.Add(126, "- Spazmatism"); // Spazmatism
+                                bosses.Add(134, "- The Destroyer"); // The Destroyer
+                                bosses.Add(127, "- Skeletron Prime"); // Skeletron Prime
 
-                                bosses.Add(262, "<:Map_Icon_Plantera_first_form:1165989761794719835> Plantera"); // Plantera
-                                bosses.Add(245, "<:Map_Icon_Golem:1165990216260141067> Golem"); // Golem
+                                bosses.Add(262, "- Plantera"); // Plantera
+                                bosses.Add(245, "- Golem"); // Golem
 
-                                bosses.Add(636, "<:Map_Icon_Empress_of_Light:1165991234624569375> Empress of Light"); // Empress Of Light
+                                bosses.Add(636, "- Empress of Light"); // Empress Of Light
 
-                                bosses.Add(370, "<:Map_Icon_Duke_Fishron:1165990697346801775> Duke Fishron"); // Duke Fishron
-                                bosses.Add(439, "<:Map_Icon_Lunatic_Cultist:1165991639915974656> Lunatic Cultist");// Lunatic Cultist
-                                bosses.Add(396, "<:Map_Icon_Moon_Lord:1165991724812861471> Moon Lord"); // Moon Lord
+                                bosses.Add(370, "- Duke Fishron"); // Duke Fishron
+                                bosses.Add(439, "- Lunatic Cultist");// Lunatic Cultist
+                                bosses.Add(396, "- Moon Lord"); // Moon Lord
 
                                 foreach (var npc in Main.npc)
                                 {
+                                    if (!npc.active) continue;
                                     if (bosses.ContainsKey(npc.netID))
                                     {
                                         result += $"- {bosses[npc.netID]} [ {npc.life}/{npc.lifeMax}:heart: ]\n";
@@ -2860,6 +2864,9 @@ namespace MKLP.Modules
                     .WithButton("Dismiss [ Report ]", "MKLP_DismissMsg_Report1_".Replace('_', S_) + ID, ButtonStyle.Secondary)
                     .WithButton("Check Player", "MKLP_SendMsg_PlayerModView_Main_".Replace('_', S_) + target, emote: new Emoji("\U0001F4B3"))
                     .WithButton("Ban", $"MKLP_InGame_PlayerAction_Ban_".Replace('_', S_) + target, ButtonStyle.Danger, emote: new Emoji("\U0001F528"), row: 1);
+
+                    playerlist = playerlist.Replace($"{DiscordKLP.S_}", ", ");
+                    playerlist = playerlist.TrimEnd(',');
 
                     await ((SocketTextChannel)targetchannel).SendMessageAsync(TitleLog + $"New report from **{reporter}** {TimestampTag.FormatFromDateTime(Since, TimestampTagStyles.Relative)}" +
                         $"\n> **ID:** `{ID}`" +

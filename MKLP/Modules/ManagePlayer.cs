@@ -1,5 +1,6 @@
 ﻿//Microsoft
 using Discord;
+using Discord.Rest;
 using IL.Terraria.Graphics;
 using Microsoft.Data.Sqlite;
 using Microsoft.Xna.Framework;
@@ -244,7 +245,7 @@ namespace MKLP.Modules
 
                         }
                     }
-                    
+
                 }
 
             }
@@ -282,7 +283,7 @@ namespace MKLP.Modules
                     player.SendData(PacketTypes.ChestOpen, "", -1);
                 }
 
-                
+
 
                 if (ServerReason != "")
                 {
@@ -326,7 +327,7 @@ namespace MKLP.Modules
 
                                 break;
                             }
-                            #endregion
+                        #endregion
                         case "Default":
                             #region ( Type: Default )
                             {
@@ -353,7 +354,7 @@ namespace MKLP.Modules
                                                 "Placing blocks too fast");
                                             break;
                                         }
-                                        #endregion
+                                    #endregion
                                     case 3:
                                         #region ( code 3 )
                                         {
@@ -386,7 +387,7 @@ namespace MKLP.Modules
                                                 "Spawning projectile too fast at onces");
                                             break;
                                         }
-                                        #endregion
+                                    #endregion
                                     case 6:
                                         #region ( code 6 )
                                         {
@@ -403,7 +404,7 @@ namespace MKLP.Modules
 
                                 break;
                             }
-                            #endregion
+                        #endregion
                         case "Survival":
                             #region ( Type: Survival )
                             {
@@ -420,7 +421,7 @@ namespace MKLP.Modules
                                                 "Illegal item progression");
                                             break;
                                         }
-                                        #endregion
+                                    #endregion
                                     case 2:
                                         #region ( code 2 )
                                         {
@@ -437,7 +438,7 @@ namespace MKLP.Modules
                                         {
 
                                             MKLP.Discordklp.KLPBotSendMessage_Disabled(
-                                                $"Player **{player.Name}** Disabled for illegal Tile progression `tild id: {ServerReason.Split("|")[1]}` **{ServerReason.Split("|")[2]}**",
+                                                $"Player **{player.Name}** Disabled for illegal Tile progression `tild id: {ServerReason.Split("|")[1]} style id: {ServerReason.Split("|")[2]}` **{ServerReason.Split("|")[3]}**",
                                                 player.Account.Name,
                                                 "Illegal tile progression");
                                             break;
@@ -472,7 +473,7 @@ namespace MKLP.Modules
                 {
                     MKLP.SendStaffMessage($"{player.Name} was disabled for: {Reason}", Microsoft.Xna.Framework.Color.DarkRed);
                 }
-                
+
 
                 return true;
             }
@@ -482,8 +483,8 @@ namespace MKLP.Modules
 
         public static bool UnDisablePlayer(TSPlayer player, string executername = "Unknown")
         {
-            if (!MKLP.DisabledKey.ContainsKey(Identifier.Name + player.Name) ||
-                !MKLP.DisabledKey.ContainsKey(Identifier.IP + player.IP) ||
+            if (!MKLP.DisabledKey.ContainsKey(Identifier.Name + player.Name) &&
+                !MKLP.DisabledKey.ContainsKey(Identifier.IP + player.IP) &&
                 !MKLP.DisabledKey.ContainsKey(Identifier.UUID + player.UUID))
             {
 
@@ -546,6 +547,10 @@ namespace MKLP.Modules
             }
             if (UUID) Tickets += $"- {TShock.Bans.InsertBan(Identifier.UUID + Player.UUID, Reason, Executer, DateTime.UtcNow, Duration).Ban.TicketNumber} : UUID\n";
 
+            if (MKLP.DisabledKey.ContainsKey(Identifier.Name + Player.Name)) { MKLP.DisabledKey.Remove(Identifier.Name + Player.Name); }
+            if (MKLP.DisabledKey.ContainsKey(Identifier.IP + Player.IP)) { MKLP.DisabledKey.Remove(Identifier.IP + Player.IP); }
+            if (MKLP.DisabledKey.ContainsKey(Identifier.UUID + Player.UUID)) { MKLP.DisabledKey.Remove(Identifier.UUID + Player.UUID); }
+
             MKLP.Discordklp.KLPBotSendMessageMainLog($"**{Executer}** 🔨Banned **{Player.Name}** for `{Reason}`" +
                 $"\n### Ban Tickets Numbers:\n" +
                 Tickets +
@@ -601,12 +606,18 @@ namespace MKLP.Modules
 
             Tickets += $"- {TShock.Bans.InsertBan(Identifier.Name + Account.Name, Reason, Executer, DateTime.UtcNow, Duration).Ban.TicketNumber} : PlayerName\n";
             Tickets += $"- {TShock.Bans.InsertBan(Identifier.Account + Account.Name, Reason, Executer, DateTime.UtcNow, Duration).Ban.TicketNumber} : Account\n";
+
+            string[] GetIPs = GetIPListAccount(Account.KnownIps);
             if (IP)
             {
-                string[] GetIPs = GetIPListAccount(Account.KnownIps);
                 Tickets += $"- {TShock.Bans.InsertBan(Identifier.IP + GetIPs[GetIPs.Count() - 1], Reason, Executer, DateTime.UtcNow, Duration).Ban.TicketNumber} : IP\n";
             }
             if (UUID) Tickets += $"- {TShock.Bans.InsertBan(Identifier.UUID + Account.UUID, Reason, Executer, DateTime.UtcNow, Duration).Ban.TicketNumber} : UUID\n";
+
+            if (MKLP.DisabledKey.ContainsKey(Identifier.Name + Account.Name)) { MKLP.DisabledKey.Remove(Identifier.Name + Account.Name); }
+            if (MKLP.DisabledKey.ContainsKey(Identifier.IP + GetIPs[GetIPs.Count() - 1])) { MKLP.DisabledKey.Remove(Identifier.IP + GetIPs[GetIPs.Count() - 1]); }
+            if (MKLP.DisabledKey.ContainsKey(Identifier.UUID + Account.UUID)) { MKLP.DisabledKey.Remove(Identifier.UUID + Account.UUID); }
+
 
             MKLP.SendStaffMessage($"[MKLP] Account [c/008ecf:{Account.Name}] was banned by [c/008ecf:{Executer}]", Microsoft.Xna.Framework.Color.DarkCyan);
 
@@ -643,7 +654,8 @@ namespace MKLP.Modules
 
         public static bool UnBanAccount(UserAccount Account, string Executer)
         {
-            var getban = TShock.Bans.RetrieveBansByIdentifier(Identifier.Account + Account.Name);
+            var getban_Name = TShock.Bans.RetrieveBansByIdentifier(Identifier.Name + Account.Name);
+            var getban_Account = TShock.Bans.RetrieveBansByIdentifier(Identifier.Account + Account.Name);
 
             bool unbanned = false;
 
@@ -651,7 +663,10 @@ namespace MKLP.Modules
 
             string[] getIPs = GetIPListAccount(Account.KnownIps);
 
-            foreach (Ban ban in getban)
+            var getban_IP = TShock.Bans.RetrieveBansByIdentifier(Identifier.IP + getIPs[getIPs.Count() - 1]);
+            var getban_UUID = TShock.Bans.RetrieveBansByIdentifier(Identifier.UUID + Account.UUID);
+
+            foreach (Ban ban in getban_Name)
             {
                 if (ban.Identifier == Identifier.Name + Account.Name)
                 {
@@ -661,6 +676,9 @@ namespace MKLP.Modules
                         unbanned = true;
                     }
                 }
+            }
+            foreach (Ban ban in getban_Account)
+            {
                 if (ban.Identifier == Identifier.Account + Account.Name)
                 {
                     if (TShock.Bans.RemoveBan(ban.TicketNumber, true))
@@ -669,6 +687,9 @@ namespace MKLP.Modules
                         unbanned = true;
                     }
                 }
+            }
+            foreach (Ban ban in getban_IP)
+            {
                 if (ban.Identifier == Identifier.IP + getIPs[getIPs.Count() - 1])
                 {
                     if (TShock.Bans.RemoveBan(ban.TicketNumber, true))
@@ -677,6 +698,9 @@ namespace MKLP.Modules
                         unbanned = true;
                     }
                 }
+            }
+            foreach (Ban ban in getban_UUID)
+            {
                 if (ban.Identifier == Identifier.UUID + Account.UUID)
                 {
                     if (TShock.Bans.RemoveBan(ban.TicketNumber, true))
