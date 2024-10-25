@@ -93,7 +93,7 @@ order to install the plugin donwload `MKLP.dll` in releases after that put that 
 ### Inspect
 **/inventoryview** : "View's inventory of a player
 
+**/spy** : spy a player
+
 ### Manage
 **/mklpdiscord** : manage account link players which can be used when `UsingDB` and `UsingMKLPDatabase` is true on config
-
-**/spy** : spy a player
