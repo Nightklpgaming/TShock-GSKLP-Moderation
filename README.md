@@ -50,6 +50,8 @@ order to install the plugin donwload `MKLP.dll` in releases after that put that 
 # Commands
 
 ### Default
+**/ping** : Display's players latency
+
 **/progression** : Displays defeated boss
 
 **/report** : Report any suspicious activity
@@ -58,11 +60,19 @@ order to install the plugin donwload `MKLP.dll` in releases after that put that 
 **/staffchat** : sends your message who has **Staff** permission
 
 ### Admin
+**/clearmessage** : Clears the whole message chat
+
+**/lockdown** : Prevents Players from joining the server
+
+**lockdownregister** : Prevents Players to register their account
+
 **/tpmap** : toggle tp map ping
 
 **/clearlag** : Deletes low value npc/items and projectile
 
 **/manageboss** : Manage it by enable/disable boss or schedule it
+
+**/vanish** : allows you to become completely invisible to players.
 
 ### Moderator
 
@@ -82,3 +92,8 @@ order to install the plugin donwload `MKLP.dll` in releases after that put that 
 
 ### Inspect
 **/inventoryview** : "View's inventory of a player
+
+### Manage
+**/mklpdiscord** : manage account link players which can be used when `UsingDB` and `UsingMKLPDatabase` is true on config
+
+**/spy** : spy a player
