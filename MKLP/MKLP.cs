@@ -47,7 +47,7 @@ namespace MKLP
         public override string Author => "Nightklp";
         public override string Description => "Makes Moderating a bit easy";
         public override string Name => "MKLP";
-        public override Version Version => new Version(1, 2);
+        public override Version Version => new Version(1, 2, 0, 1);
         #endregion
 
         #region [ Variables ]
@@ -84,8 +84,6 @@ namespace MKLP
         {
             //=====================Player===================
             GetDataHandlers.PlayerUpdate += OnPlayerUpdate;
-
-            ServerApi.Hooks.ServerConnect.Register(this, OnServerConnect);
 
             ServerApi.Hooks.ServerJoin.Register(this, OnPlayerJoin);
 
@@ -312,8 +310,6 @@ namespace MKLP
             {
                 //=====================Player===================
                 GetDataHandlers.PlayerUpdate -= OnPlayerUpdate;
-
-                ServerApi.Hooks.ServerConnect.Deregister(this, OnServerConnect);
 
                 ServerApi.Hooks.ServerJoin.Deregister(this, OnPlayerJoin);
 
@@ -607,32 +603,6 @@ namespace MKLP
                 }
             }
 
-            #endregion
-        }
-
-        private async void OnServerConnect(ConnectEventArgs args)
-        {
-            #region code
-            await Task.Run(async () =>
-            {
-                var player = TShock.Players[args.Who];
-
-                while (Netplay.Clients[args.Who].State != 10 && args.Handled == false) { }
-                
-                foreach (TSPlayer gplayer in TShock.Players)
-                {
-                    if (gplayer == null) continue;
-                    if (gplayer == player) continue;
-                    if (gplayer.ContainsData("MKLP_Vanish"))
-                    {
-                        if (gplayer.GetData<bool>("MKLP_Vanish"))
-                        {
-                            player.SendData(PacketTypes.PlayerActive, null, gplayer.Index, false.GetHashCode());
-                        }
-                    }
-                }
-
-            });
             #endregion
         }
 
