@@ -8,6 +8,7 @@ using MKLP.Modules;
 using NuGet.Protocol;
 using NuGet.Protocol.Plugins;
 using Org.BouncyCastle.Asn1.X509;
+using Steamworks;
 using System;
 
 
@@ -29,6 +30,7 @@ using System.Threading.Channels;
 //Terraria
 using Terraria;
 using Terraria.ID;
+using Terraria.Localization;
 using TerrariaApi.Server;
 //TShock
 using TShockAPI;
@@ -47,7 +49,7 @@ namespace MKLP
         public override string Author => "Nightklp";
         public override string Description => "Makes Moderating a bit easy";
         public override string Name => "MKLP";
-        public override Version Version => new Version(1, 2, 0, 1);
+        public override System.Version Version => new System.Version(1, 3);
         #endregion
 
         #region [ Variables ]
@@ -85,6 +87,8 @@ namespace MKLP
             //=====================Player===================
             GetDataHandlers.PlayerUpdate += OnPlayerUpdate;
 
+            //GetDataHandlers.player
+
             ServerApi.Hooks.ServerJoin.Register(this, OnPlayerJoin);
 
             ServerApi.Hooks.ServerLeave.Register(this, OnPlayerLeave);
@@ -92,10 +96,12 @@ namespace MKLP
             PlayerHooks.PlayerCommand += OnPlayerCommand;
 
             PlayerHooks.PlayerChat += OnPlayerChat;
-
+            
             //=====================game=====================
             ServerApi.Hooks.NetGetData.Register(this, OnGetData);
-            
+
+            ServerApi.Hooks.GameUpdate.Register(this, OnGameUpdate);
+
             GetDataHandlers.TileEdit += OnTileEdit;
 
             GetDataHandlers.PlaceObject += OnPlaceObject;
@@ -111,6 +117,8 @@ namespace MKLP
             GetDataHandlers.NewProjectile += OnNewProjectile;
 
             GetDataHandlers.HealOtherPlayer += OnHealOtherPlayer;
+
+            //GetDataHandlers.ItemDrop
 
             ServerApi.Hooks.NpcSpawn.Register(this, OnNPCSpawn);
 
@@ -171,19 +179,16 @@ namespace MKLP
 
             Commands.ChatCommands.Add(new Command(Config.Permissions.CMD_ClearMessage, CMD_ClearMessage, "clearmessage", "messageclear", "purgemessage")
             {
-                AllowServer = false,
                 HelpText = "Clears the whole message chat"
             });
 
             Commands.ChatCommands.Add(new Command(Config.Permissions.CMD_LockDown, CMD_LockDown, "lockdown")
             {
-                AllowServer = false,
                 HelpText = "Prevents Players from joining the server"
             });
 
             Commands.ChatCommands.Add(new Command(Config.Permissions.CMD_LockDownRegister, CMD_LockDownRegister, "lockdownregister", "lockdownreg")
             {
-                AllowServer = false,
                 HelpText = "Prevents Players to register their account"
             });
 
@@ -205,6 +210,7 @@ namespace MKLP
 
             Commands.ChatCommands.Add(new Command(Config.Permissions.CMD_Vanish, CMD_Vanish, "vanish", "ghost")
             {
+                AllowServer = false,
                 HelpText = "allows you to become completely invisible to players."
             });
 
@@ -274,7 +280,7 @@ namespace MKLP
                 HelpText = "View's inventory of a player"
             });
 
-            Commands.ChatCommands.Add(new Command("", CMD_Spy, "spy")
+            Commands.ChatCommands.Add(new Command(Config.Permissions.CMD_Spy, CMD_Spy, "spy")
             {
                 HelpText = "allows you to stalk a player"
             });
@@ -299,6 +305,12 @@ namespace MKLP
             {
                 MKLP_Console.SendLog_Message_DiscordBot("Discord bot token has not been set!", " {Setup} ");
             }
+
+            for (int i = 0; i < Main.item.Length; i++)
+            {
+                prevItemDrops[i] = new Item();
+                prevItemDrops[i].SetDefaults(0); // Initialize as 'empty' item
+            }
         }
 
         #endregion
@@ -321,6 +333,8 @@ namespace MKLP
 
                 //=====================game=====================
                 ServerApi.Hooks.NetGetData.Deregister(this, OnGetData);
+
+                ServerApi.Hooks.GameUpdate.Deregister(this, OnGameUpdate);
 
                 GetDataHandlers.TileEdit -= OnTileEdit;
 
@@ -367,7 +381,7 @@ namespace MKLP
 
             using (StreamReader sr = new StreamReader(res.GetResponseStream()))
             {
-                Version latestversion = new(sr.ReadToEnd());
+                System.Version latestversion = new(sr.ReadToEnd());
 
                 if (latestversion > Version)
                 {
@@ -384,13 +398,16 @@ namespace MKLP
 
         #region =={[ On Get Data ]}==
 
+        Item[] prevItemDrops = new Item[401];
+        public static Dictionary<int, Item> newitemDrops = new();
+        //static Item[] lostitemDrops = null;
         private void OnGetData(GetDataEventArgs args)
         {
             if (args.Handled)
                 return;
 
             var player = TShock.Players[args.Msg.whoAmI];
-
+            #region [ latency ]
             if (args.MsgID == PacketTypes.ItemOwner)
             {
                 if (player.ContainsData("MKLP_StartGetLatency"))
@@ -399,7 +416,9 @@ namespace MKLP
                     player.RemoveData("MKLP_StartGetLatency");
                 }
             }
+            #endregion
 
+            #region [ Disable ]
             if (player.ContainsData("MKLP_IsDisabled"))
             {
                 if (!player.GetData<bool>("MKLP_IsDisabled"))
@@ -424,7 +443,8 @@ namespace MKLP
                 args.Handled = true;
                 return;
             }
-            
+            #endregion
+
             #region [ Vanish ]
 
             if (args.MsgID == PacketTypes.PlayerActive)
@@ -490,26 +510,63 @@ namespace MKLP
             #region ( Inventory Checking )
             if (args.MsgID == PacketTypes.PlayerSlot)
             {
+
                 if (!player.IsLoggedIn) return;
-                if ((!player.HasPermission("tshock.item") || !player.HasPermission("tshock.item.*")))
+
+                if (player.HasPermission(Permissions.item) ||
+                    player.HasPermission(Permissions.give)) return;
+
+                if ((bool)Config.Main.DetectAllPlayerInv)
                 {
-                    ManagePlayer.Check_Survival_Code1(player);
-                    ManagePlayer.Check_Main_Code1(player);
-                }
+                    if (player.ContainsData("MKLP_PrevInventory") &&
+                    player.ContainsData("MKLP_PrevPiggyBank") &&
+                    player.ContainsData("MKLP_PrevSafe") &&
+                    player.ContainsData("MKLP_PrevDefenderForge") &&
+                    player.ContainsData("MKLP_PrevVoidVault"))
+                    {
+                        ManagePlayer.CheckPlayerInventory(player,
+                            player.GetData<Item[]>("MKLP_PrevInventory"),
+                            player.GetData<Item[]>("MKLP_PrevPiggyBank"),
+                            player.GetData<Item[]>("MKLP_PrevSafe"),
+                            player.GetData<Item[]>("MKLP_PrevDefenderForge"),
+                            player.GetData<Item[]>("MKLP_PrevVoidVault"));
 
-                if (player.ContainsData("MKLP_PrevInventory"))
+                        if (player.ActiveChest != -1) player.SetData("MKLP_PrevChestOpen", Main.chest[player.ActiveChest].item.Clone());
+                        player.SetData("MKLP_PrevInventory", player.TPlayer.inventory.Clone());
+                        player.SetData("MKLP_PrevPiggyBank", player.TPlayer.bank.item.Clone());
+                        player.SetData("MKLP_PrevSafe", player.TPlayer.bank2.item.Clone());
+                        player.SetData("MKLP_PrevDefenderForge", player.TPlayer.bank3.item.Clone());
+                        player.SetData("MKLP_PrevVoidVault", player.TPlayer.bank4.item.Clone());
+                    }
+                    else
+                    {
+                        if (player.ActiveChest != -1) player.SetData("MKLP_PrevChestOpen", Main.chest[player.ActiveChest].item.Clone());
+                        player.SetData("MKLP_PrevInventory", player.TPlayer.inventory.Clone());
+                        player.SetData("MKLP_PrevPiggyBank", player.TPlayer.bank.item.Clone());
+                        player.SetData("MKLP_PrevSafe", player.TPlayer.bank2.item.Clone());
+                        player.SetData("MKLP_PrevDefenderForge", player.TPlayer.bank3.item.Clone());
+                        player.SetData("MKLP_PrevVoidVault", player.TPlayer.bank4.item.Clone());
+                    }
+                } else
                 {
+                    if (player.ContainsData("MKLP_PrevInventory"))
+                    {
 
-                    Item[] prevplayer = player.GetData<Item[]>("MKLP_PrevInventory");
+                        ManagePlayer.CheckPlayerInventory(player,
+                            player.GetData<Item[]>("MKLP_PrevInventory"),
+                            null,
+                            null,
+                            null,
+                            null);
 
-                    ManagePlayer.CheckPreviousInventory(player, player.TPlayer.inventory, prevplayer);
-
-                    player.SetData("MKLP_PrevInventory", player.TPlayer.inventory.Clone());
+                        player.SetData("MKLP_PrevInventory", player.TPlayer.inventory.Clone());
+                    }
+                    else
+                    {
+                        player.SetData("MKLP_PrevInventory", player.TPlayer.inventory.Clone());
+                    }
                 }
-                else
-                {
-                    player.SetData("MKLP_PrevInventory", player.TPlayer.inventory.Clone());
-                }
+                
             }
             #endregion
 
@@ -564,6 +621,79 @@ namespace MKLP
 
         #endregion
 
+        #region [ OnGameUpdate ]
+
+        private void OnGameUpdate(EventArgs args)
+        {
+            //List<Item> newitemget = new();
+            if (!(bool)Config.Main.Use_OnUpdate_Func) return;
+
+            for (int i = 0; i < Main.item.Count(); i++)
+            {
+                if (Main.item[i] == null) continue;
+                if (prevItemDrops[i] == null)
+                {
+                    AddDItemList(i, Main.item[i]);
+                    continue;
+                }
+
+                if (!Main.item[i].active && !prevItemDrops[i].active) continue;
+
+                if (Main.item[i].active && !prevItemDrops[i].active)
+                {
+                    AddDItemList(i, Main.item[i]);
+                    continue;
+                }
+                if (Main.item[i].stack > prevItemDrops[i].stack)
+                {
+                    Item item = Main.item[i];
+                    item.stack -= prevItemDrops[i].stack;
+                    AddDItemList(i, Main.item[i]);
+                    continue;
+                }
+            }
+            prevItemDrops = (Item[])Main.item.Clone();
+
+            void AddDItemList(int index, Item TItem)
+            {
+                if (!newitemDrops.ContainsKey(index))
+                {
+                    newitemDrops.Add(index, TItem);
+                } else
+                {
+                    newitemDrops[index] = TItem;
+                }
+            }
+
+            if (checklatency_interval < DateTime.UtcNow)
+            {
+                checklatency_interval.AddSeconds(5);
+                foreach (TSPlayer player in TShock.Players)
+                {
+                    if (player == null) continue;
+                    player.SetData("MKLP_StartGetLatency", DateTime.UtcNow);
+                    NetMessage.SendData((int)PacketTypes.ItemOwner, player.Index, -1, null, 0, player.Index);
+                }
+            }
+
+            foreach (TSPlayer player in TShock.Players)
+            {
+                if (player == null) continue;
+                if (player.ContainsData("MKLP_TargetSpy"))
+                {
+                    player.TPlayer.position = player.GetData<TSPlayer>("MKLP_TargetSpy").TPlayer.position;
+                    player.SendData(PacketTypes.PlayerUpdate, "", player.Index);
+
+                    player.SetBuff(BuffID.Invisibility, 15 * 60);
+                    player.SetBuff(BuffID.ObsidianSkin, 20 * 60);
+                    player.SetBuff(BuffID.Webbed, 10 * 60);
+
+                }
+            }
+        }
+
+        #endregion
+
         #region { Player }
 
         bool LockDown = false;
@@ -573,6 +703,7 @@ namespace MKLP
         private void OnPlayerUpdate(object? sender, GetDataHandlers.PlayerUpdateEventArgs args)
         {
             #region code
+            if ((bool)Config.Main.Use_OnUpdate_Func) return;
 
             if (checklatency_interval < DateTime.UtcNow)
             {
@@ -1032,17 +1163,21 @@ namespace MKLP
             {
                 if (IllegalTileProgression.ContainsKey(new(Main.tile[tileX, tileY].type, args.Style)) && !args.Player.HasPermission(Config.Permissions.IgnoreSurvivalCode_3) && (bool)Config.Main.Using_Survival_Code3)
                 {
-                    ManagePlayer.DisablePlayer(args.Player, $"{IllegalTileProgression[new(Main.tile[tileX, tileY].type, args.Style)]} Block Place", ServerReason: $"Survival,code,3|{Main.tile[tileX, tileY].type}|{args.Style}|{IllegalTileProgression[new(Main.tile[tileX, tileY].type, args.Style)]}");
-                    args.Player.SendTileSquareCentered(tileX, tileY, 4);
-                    args.Handled = true;
-                    return;
+                    if (PunishPlayer(MKLP_CodeType.Survival, 3, args.Player, $"{IllegalTileProgression[new(Main.tile[tileX, tileY].type, args.Style)]} Block Place", $"Player **{args.Player.Name}** has placed illegal tile progression `tile id: {Main.tile[tileX, tileY].type} style: {args.Style}` **{IllegalTileProgression[new(Main.tile[tileX, tileY].type, args.Style)]}**"))
+                    {
+                        args.Player.SendTileSquareCentered(tileX, tileY, 4);
+                        args.Handled = true;
+                        return;
+                    }
                 }
                 if (IllegalTileProgression.ContainsKey(new(Main.tile[tileX, tileY].type, 0, true)) && !args.Player.HasPermission(Config.Permissions.IgnoreSurvivalCode_3) && (bool)Config.Main.Using_Survival_Code3)
                 {
-                    ManagePlayer.DisablePlayer(args.Player, $"{IllegalTileProgression[new(Main.tile[tileX, tileY].type, 0, true)]} Block Place", ServerReason: $"Survival,code,3|{Main.tile[tileX, tileY].type}|{args.Style}|{IllegalTileProgression[new(Main.tile[tileX, tileY].type, 0, true)]}");
-                    args.Player.SendTileSquareCentered(tileX, tileY, 4);
-                    args.Handled = true;
-                    return;
+                    if (PunishPlayer(MKLP_CodeType.Survival, 3, args.Player, $"{IllegalTileProgression[new(Main.tile[tileX, tileY].type, 0, true)]} Block Place", $"Player **{args.Player.Name}** has placed illegal tile progression `tile id: {Main.tile[tileX, tileY].type} style: {args.Style}` **{IllegalTileProgression[new(Main.tile[tileX, tileY].type, 0, true)]}**"))
+                    {
+                        args.Player.SendTileSquareCentered(tileX, tileY, 4);
+                        args.Handled = true;
+                        return;
+                    }
                 }
             }
 
@@ -1052,10 +1187,12 @@ namespace MKLP
                     !args.Player.HasPermission(Config.Permissions.IgnoreSurvivalCode_4) &&
                     (bool)Config.Main.Using_Survival_Code4)
                 {
-                    ManagePlayer.DisablePlayer(args.Player, $"{IllegalWallProgression[Main.tile[tileX, tileY].wall]} Wall Place", ServerReason: $"Survival,code,4|{Main.tile[tileX, tileY].wall}|{IllegalWallProgression[Main.tile[tileX, tileY].wall]}");
-                    args.Player.SendTileSquareCentered(tileX, tileY, 4);
-                    args.Handled = true;
-                    return;
+                    if (PunishPlayer(MKLP_CodeType.Survival, 4, args.Player, $"{IllegalWallProgression[Main.tile[tileX, tileY].wall]} Wall Place", $"Player **{args.Player.Name}** has placed illegal wall progression `wall id:{Main.tile[tileX, tileY].wall}` **{IllegalWallProgression[Main.tile[tileX, tileY].wall]}**"))
+                    {
+                        args.Player.SendTileSquareCentered(tileX, tileY, 4);
+                        args.Handled = true;
+                        return;
+                    }
                 }
             }
 
@@ -1159,8 +1296,9 @@ namespace MKLP
                     args.Action == GetDataHandlers.EditAction.PlaceWire4 &&
                     (
                     !args.Player.HasPermission(Config.Permissions.Ignore_IllegalWireProgression) &&
-                    !args.Player.HasPermission("tshock.item") &&
-                    !args.Player.HasPermission("tshock.item.*")
+                    !args.Player.HasPermission(TShockAPI.Permissions.item) &&
+                    !args.Player.HasPermission(TShockAPI.Permissions.give) &&
+                    !args.Player.HasPermission(TShockAPI.Permissions.manageitem)
                     ) && (bool)Config.Main.Prevent_IllegalWire_Progression
                     )
                 {
@@ -1248,10 +1386,12 @@ namespace MKLP
 
                 if (args.Player.TileKillThreshold >= max)
                 {
-                    ManagePlayer.DisablePlayer(args.Player, $"Breaking blocks to fast", ServerReason: $"Default,code,1|{args.Player.SelectedItem.netID}");
-                    args.Player.SendTileSquareCentered(tileX, tileY, 4);
-                    args.Handled = true;
-                    return true;
+                    if (PunishPlayer(MKLP_CodeType.Default, 1, args.Player, $"Breaking blocks to fast", $"Player **{args.Player.Name}** has exceeded TileKill Threshold `itemheld: {args.Player.SelectedItem.netID}` `Threshold: {max}`"))
+                    {
+                        args.Player.SendTileSquareCentered(tileX, tileY, 4);
+                        args.Handled = true;
+                        return true;
+                    }
                 }
                 return false;
             }
@@ -1297,15 +1437,19 @@ namespace MKLP
 
                 if (args.Player.TilePlaceThreshold >= max)
                 {
-                    ManagePlayer.DisablePlayer(args.Player, $"Placing blocks too fast", ServerReason: $"Default,code,2|{args.Player.SelectedItem.netID}");
-                    args.Player.SendTileSquareCentered(tileX, tileY, 4);
-                    args.Handled = true;
-                    return true;
+                    if (PunishPlayer(MKLP_CodeType.Default, 2, args.Player, $"Placing blocks too fast", $"Player **{args.Player.Name}** has exceeded TilePlace Threshold `itemheld: {args.Player.SelectedItem.netID}` `Threshold: {max}`"))
+                    {
+                        args.Player.SendTileSquareCentered(tileX, tileY, 4);
+                        args.Handled = true;
+                        return true;
+                    }
                 }
 
                 return false;
             }
             #endregion
+
+            
 
             #endregion
         }
@@ -1353,17 +1497,21 @@ namespace MKLP
 
             if (IllegalTileProgression.ContainsKey(new(Main.tile[tileX, tileY].type, args.Style)) && !args.Player.HasPermission(Config.Permissions.IgnoreSurvivalCode_3) && (bool)Config.Main.Using_Survival_Code3)
             {
-                ManagePlayer.DisablePlayer(args.Player, $"{IllegalTileProgression[new(Main.tile[tileX, tileY].type, args.Style)]} Block Place", ServerReason: $"Survival,code,3|{Main.tile[tileX, tileY].type}|{args.Style}|{IllegalTileProgression[new(Main.tile[tileX, tileY].type, args.Style)]}");
-                args.Player.SendTileSquareCentered(tileX, tileY, 4);
-                args.Handled = true;
-                return;
+                if (PunishPlayer(MKLP_CodeType.Survival, 3, args.Player, $"{IllegalTileProgression[new(Main.tile[tileX, tileY].type, 0, true)]} Block Place", $"Player **{args.Player.Name}** has placed illegal tile progression `tile id: {Main.tile[tileX, tileY].type} style: {args.Style}` **{IllegalTileProgression[new(Main.tile[tileX, tileY].type, 0, true)]}**"))
+                {
+                    args.Player.SendTileSquareCentered(tileX, tileY, 10);
+                    args.Handled = true;
+                    return;
+                }
             }
             if (IllegalTileProgression.ContainsKey(new(Main.tile[tileX, tileY].type, 0, true)) && !args.Player.HasPermission(Config.Permissions.IgnoreSurvivalCode_3) && (bool)Config.Main.Using_Survival_Code3)
             {
-                ManagePlayer.DisablePlayer(args.Player, $"{IllegalTileProgression[new(Main.tile[tileX, tileY].type, 0, true)]} Block Place", ServerReason: $"Survival,code,3|{Main.tile[tileX, tileY].type}|{args.Style}|{IllegalTileProgression[new(Main.tile[tileX, tileY].type, 0, true)]}");
-                args.Player.SendTileSquareCentered(tileX, tileY, 4);
-                args.Handled = true;
-                return;
+                if (PunishPlayer(MKLP_CodeType.Survival, 3, args.Player, $"{IllegalTileProgression[new(Main.tile[tileX, tileY].type, 0, true)]} Block Place", $"Player **{args.Player.Name}** has placed illegal tile progression `tile id: {Main.tile[tileX, tileY].type} style: {args.Style}` **{IllegalTileProgression[new(Main.tile[tileX, tileY].type, 0, true)]}**"))
+                {
+                    args.Player.SendTileSquareCentered(tileX, tileY, 10);
+                    args.Handled = true;
+                    return;
+                }
             }
 
             #region ( door near at bast statue )
@@ -1444,10 +1592,12 @@ namespace MKLP
 
                 if (args.Player.TilePlaceThreshold >= max)
                 {
-                    ManagePlayer.DisablePlayer(args.Player, $"Placing blocks too fast", ServerReason: $"Default,code,2|{args.Player.SelectedItem.netID}");
-                    args.Player.SendTileSquareCentered(tileX, tileY, 4);
-                    args.Handled = true;
-                    return true;
+                    if (PunishPlayer(MKLP_CodeType.Default, 2, args.Player, $"Placing blocks to fast", $"Player **{args.Player.Name}** has exceeded TilePlace Threshold `itemheld: {args.Player.SelectedItem.netID}` `Threshold: {max}`"))
+                    {
+                        args.Player.SendTileSquareCentered(tileX, tileY, 4);
+                        args.Handled = true;
+                        return true;
+                    }
                 }
 
                 return false;
@@ -1494,10 +1644,12 @@ namespace MKLP
 
                 if (args.Player.PaintThreshold >= max)
                 {
-                    ManagePlayer.DisablePlayer(args.Player, $"Painting too fast", ServerReason: $"Default,code,3|{args.Player.SelectedItem.netID}");
-                    args.Player.SendTileSquareCentered(tileX, tileY, 4);
-                    args.Handled = true;
-                    return true;
+                    if (PunishPlayer(MKLP_CodeType.Default, 3, args.Player, $"Painting too fast", $"Player **{args.Player.Name}** has exceeded Paint Threshold `itemheld: {args.Player.SelectedItem.netID}` `Threshold {max}`"))
+                    {
+                        args.Player.SendTileSquareCentered(tileX, tileY, 4);
+                        args.Handled = true;
+                        return true;
+                    }
                 }
 
                 return false;
@@ -1544,10 +1696,12 @@ namespace MKLP
 
                 if (args.Player.PaintThreshold >= max)
                 {
-                    ManagePlayer.DisablePlayer(args.Player, $"Painting too fast", ServerReason: $"Default,code,3|{args.Player.SelectedItem.netID}");
-                    args.Player.SendTileSquareCentered(tileX, tileY, 4);
-                    args.Handled = true;
-                    return true;
+                    if (PunishPlayer(MKLP_CodeType.Default, 3, args.Player, $"Painting too fast", $"Player **{args.Player.Name}** has exceeded Paint Threshold `itemheld: {args.Player.SelectedItem.netID}` `Threshold {max}`"))
+                    {
+                        args.Player.SendTileSquareCentered(tileX, tileY, 4);
+                        args.Handled = true;
+                        return true;
+                    }
                 }
 
                 return false;
@@ -1637,7 +1791,7 @@ namespace MKLP
                 ItemID.ArchitectGizmoPack,
                 ItemID.BrickLayer,
                 ItemID.PortableCementMixer
-            };
+                };
                 foreach (Item check in args.Player.TPlayer.armor)
                 {
                     if (boost.Contains(check.netID))
@@ -1652,7 +1806,7 @@ namespace MKLP
                 ItemID.WetBomb,
                 ItemID.LavaBomb,
                 ItemID.HoneyBomb
-            };
+                };
                 foreach (Item check in args.Player.Inventory)
                 {
                     if (bomb.Contains(check.netID))
@@ -1664,10 +1818,12 @@ namespace MKLP
 
                 if (args.Player.TileLiquidThreshold >= max)
                 {
-                    ManagePlayer.DisablePlayer(args.Player, $"Exceeded Liquid place", ServerReason: $"Default,code,4|{args.Player.SelectedItem.netID}");
-                    args.Player.SendTileSquareCentered(TileX, TileY, 4);
-                    args.Handled = true;
-                    return true;
+                    if (PunishPlayer(MKLP_CodeType.Default, 4, args.Player, $"Exceeded Liquid place", $"Player **{args.Player.Name}** has exceeded TileLiquid Threshold `itemheld: {args.Player.SelectedItem.netID}` `Threshold: {max}`"))
+                    {
+                        args.Player.SendTileSquareCentered(TileX, TileY, 4);
+                        args.Handled = true;
+                        return true;
+                    }
                 }
 
                 return false;
@@ -1699,10 +1855,12 @@ namespace MKLP
                 !args.Player.HasPermission(Config.Permissions.IgnoreSurvivalCode_2) &&
                 (bool)Config.Main.Using_Survival_Code2)
             {
-                ManagePlayer.DisablePlayer(args.Player, $"{GetIllegalProj[type]} Projectile", ServerReason: $"Survival,code,2|{type}|{GetIllegalProj[type]}");
-                args.Player.RemoveProjectile(ident, owner);
-                args.Handled = true;
-                return;
+                if (PunishPlayer(MKLP_CodeType.Survival, 2, args.Player, $"{GetIllegalProj[type]} Projectile", $"Player **{args.Player.Name}** spawned illegal Projectile progression `itemheld: {args.Player.SelectedItem.netID} projectile: {Lang.GetProjectileName(type)}` **{GetIllegalProj[type]}**"))
+                {
+                    args.Player.RemoveProjectile(ident, owner);
+                    args.Handled = true;
+                    return;
+                }
             }
             short[] InfectionProj =
             {
@@ -1752,7 +1910,7 @@ namespace MKLP
                 }
             }
             
-            if (args.Player.TileY >= (int)Main.worldSurface)
+            if (args.Player.TileY <= (int)Main.worldSurface)
             {
                 short[] explosives =
                 {
@@ -1822,10 +1980,12 @@ namespace MKLP
 
                 if (args.Player.ProjectileThreshold >= max)
                 {
-                    ManagePlayer.DisablePlayer(args.Player, $"Spawning too many projectiles at onces!", ServerReason: $"Default,code,5|{args.Player.SelectedItem.netID}|{type}");
-                    args.Player.RemoveProjectile(ident, owner);
-                    args.Handled = true;
-                    return true;
+                    if (PunishPlayer(MKLP_CodeType.Default, 5, args.Player, $"Spawning too many projectiles at onces!", $"Player **{args.Player.Name}** Spawned to many projectile at onces! `itemheld: {args.Player.SelectedItem.netID} projectile id: {type}` `Threshold: {max}`"))
+                    {
+                        args.Player.RemoveProjectile(ident, owner);
+                        args.Handled = true;
+                        return true;
+                    }
                 }
 
                 return false;
@@ -1869,9 +2029,11 @@ namespace MKLP
 
                 if (args.Player.HealOtherThreshold >= max)
                 {
-                    ManagePlayer.DisablePlayer(args.Player, $"Healing others to fast!", ServerReason: $"Default,code,6|{args.Player.SelectedItem.netID}");
-                    args.Handled = true;
-                    return true;
+                    if (PunishPlayer(MKLP_CodeType.Default, 6, args.Player, $"Healing others to fast!", $"Player **{args.Player.Name}** has exceeded HealOther Threshold `itemheld: {args.Player.SelectedItem.netID}` `Threshold: {max}`"))
+                    {
+                        args.Handled = true;
+                        return true;
+                    }
                 }
 
                 return false;
@@ -1896,183 +2058,269 @@ namespace MKLP
                         npc.type == NPCID.SkeletronPrime ||
                         npc.type == NPCID.DukeFishron))
                     {
-                        Main.npc[i].active = false;
-                        Main.npc[i].type = 0;
-                        TSPlayer.All.SendData(PacketTypes.NpcUpdate, "", i);
+                        DespawnNPC();
                     }
 
                     if (!NPC.downedMechBoss1 && !NPC.downedMechBoss2 && !NPC.downedMechBoss3 && (npc.type == NPCID.Plantera))
                     {
-                        Main.npc[i].active = false;
-                        Main.npc[i].type = 0;
-                        TSPlayer.All.SendData(PacketTypes.NpcUpdate, "", i);
+                        DespawnNPC();
                     }
                     if (!NPC.downedPlantBoss && (npc.type == NPCID.HallowBoss || npc.type == NPCID.EmpressButterfly || npc.type == NPCID.Golem))
                     {
-                        Main.npc[i].active = false;
-                        Main.npc[i].type = 0;
-                        TSPlayer.All.SendData(PacketTypes.NpcUpdate, "", i);
+                        DespawnNPC();
                     }
                     if (!NPC.downedGolemBoss && (npc.type == NPCID.CultistBoss || npc.type == NPCID.MoonLordCore))
                     {
-                        Main.npc[i].active = false;
-                        Main.npc[i].type = 0;
-                        TSPlayer.All.SendData(PacketTypes.NpcUpdate, "", i);
+                        DespawnNPC();
                     }
                 }
 
-                if (TShock.Utils.GetActivePlayerCount() < Config.BossManager.RequiredPlayersforBoss && (
-                    !NPC.downedSlimeKing && npc.type == NPCID.KingSlime ||
-                    !NPC.downedBoss1 && npc.type == NPCID.EyeofCthulhu ||
-                    !NPC.downedBoss2 && !WorldGen.crimson && npc.type == NPCID.EaterofWorldsHead ||
-                    !NPC.downedBoss2 && WorldGen.crimson && npc.type == NPCID.BrainofCthulhu ||
-                    !NPC.downedDeerclops && npc.type == NPCID.Deerclops ||
-                    !NPC.downedBoss3 && npc.type == NPCID.SkeletronHead ||
-                    !NPC.downedQueenBee && npc.type == NPCID.QueenBee ||
-                    !Main.hardMode && npc.type == NPCID.WallofFlesh ||
-                    !NPC.downedQueenSlime && npc.type == NPCID.QueenSlimeBoss ||
-                    !NPC.downedMechBoss1 && npc.type == NPCID.TheDestroyer ||
-                    !NPC.downedMechBoss2 && npc.type == NPCID.Retinazer ||
-                    !NPC.downedMechBoss2 && npc.type == NPCID.Spazmatism ||
-                    !NPC.downedMechBoss3 && npc.type == NPCID.SkeletronPrime ||
-                    !NPC.downedPlantBoss && npc.type == NPCID.Plantera ||
-                    !NPC.downedGolemBoss && npc.type == NPCID.Golem ||
-                    !NPC.downedFishron && npc.type == NPCID.DukeFishron ||
-                    !NPC.downedMoonlord && npc.type == NPCID.MoonLordCore ||
-                    !NPC.downedAncientCultist && npc.type == NPCID.CultistBoss ||
-                    !NPC.downedEmpressOfLight && npc.type == NPCID.HallowBoss))
+
+                if (!NPC.downedSlimeKing && npc.type == NPCID.KingSlime) // King Slime
                 {
-                    Main.npc[i].active = false;
-                    Main.npc[i].type = 0;
-                    TSPlayer.All.SendData(PacketTypes.NpcUpdate, "", 0);
+                    if (!(bool)Config.BossManager.AllowKingSlime)
+                    {
+                        DespawnNPC();
+                    }
+                    if (TShock.Utils.GetActivePlayerCount() < (int)Config.BossManager.KingSlime_RequiredPlayersforBoss)
+                    {
+                        DespawnNPC();
+                    }
                 }
 
-                if (!(bool)Config.BossManager.AllowKingSlime && npc.type == NPCID.KingSlime) // King Slime
+                if (!NPC.downedBoss1 && npc.type == NPCID.EyeofCthulhu) // Eye of Cthulhu
                 {
-                    Main.npc[i].active = false;
-                    Main.npc[i].type = 0;
-                    TSPlayer.All.SendData(PacketTypes.NpcUpdate, "", i);
+                    if (!(bool)Config.BossManager.AllowEyeOfCthulhu)
+                    {
+                        DespawnNPC();
+                    }
+                    if (TShock.Utils.GetActivePlayerCount() < (int)Config.BossManager.EyeOfCthulhu_RequiredPlayersforBoss)
+                    {
+                        DespawnNPC();
+                    }
                 }
 
-                if (!(bool)Config.BossManager.AllowEyeOfCthulhu && npc.type == NPCID.EyeofCthulhu) // Eye of Cthulhu
+                if (!NPC.downedBoss2 && npc.type == NPCID.EaterofWorldsHead) // Eater of Worlds
                 {
-                    Main.npc[i].active = false;
-                    Main.npc[i].type = 0;
-                    TSPlayer.All.SendData(PacketTypes.NpcUpdate, "", i);
+                    if (!(bool)Config.BossManager.AllowEaterOfWorlds)
+                    {
+                        DespawnNPC();
+                    }
+                    if (TShock.Utils.GetActivePlayerCount() < (int)Config.BossManager.EaterOfWorlds_RequiredPlayersforBoss)
+                    {
+                        DespawnNPC();
+                    }
                 }
 
-                if (!(bool)Config.BossManager.AllowEaterOfWorlds && npc.type == NPCID.EaterofWorldsHead) // Eater of Worlds
+                if (!NPC.downedBoss2 && npc.type == NPCID.BrainofCthulhu) // Brain of Cthulhu
                 {
-                    Main.npc[i].active = false;
-                    Main.npc[i].type = 0;
-                    TSPlayer.All.SendData(PacketTypes.NpcUpdate, "", i);
+                    if (!(bool)Config.BossManager.AllowBrainOfCthulhu)
+                    {
+                        DespawnNPC();
+                    }
+                    if (TShock.Utils.GetActivePlayerCount() < (int)Config.BossManager.BrainOfCthulhu_RequiredPlayersforBoss)
+                    {
+                        DespawnNPC();
+                    }
                 }
 
-                if (!(bool)Config.BossManager.AllowBrainOfCthulhu && npc.type == NPCID.BrainofCthulhu) // Brain of Cthulhu
+                if (!NPC.downedQueenBee && npc.type == NPCID.QueenBee) // Queen Bee
                 {
-                    Main.npc[i].active = false;
-                    Main.npc[i].type = 0;
-                    TSPlayer.All.SendData(PacketTypes.NpcUpdate, "", i);
+                    if (!(bool)Config.BossManager.AllowQueenBee)
+                    {
+                        DespawnNPC();
+                    }
+                    if (TShock.Utils.GetActivePlayerCount() < (int)Config.BossManager.QueenBee_RequiredPlayersforBoss)
+                    {
+                        DespawnNPC();
+                    }
                 }
 
-                if (!(bool)Config.BossManager.AllowQueenBee && npc.type == NPCID.QueenBee) // Queen Bee
+                if (!NPC.downedBoss3 && npc.type == NPCID.SkeletronHead) // Skeletron
                 {
-                    Main.npc[i].active = false;
-                    Main.npc[i].type = 0;
-                    TSPlayer.All.SendData(PacketTypes.NpcUpdate, "", i);
+                    if (!(bool)Config.BossManager.AllowSkeletron)
+                    {
+                        DespawnNPC();
+                    }
+                    if (TShock.Utils.GetActivePlayerCount() < (int)Config.BossManager.Skeletron_RequiredPlayersforBoss)
+                    {
+                        DespawnNPC();
+                    }
                 }
 
-                if (!(bool)Config.BossManager.AllowSkeletron && npc.type == NPCID.SkeletronHead) // Skeletron
+                if (!NPC.downedDeerclops && npc.type == NPCID.Deerclops) // Deerclops
                 {
-                    Main.npc[i].active = false;
-                    Main.npc[i].type = 0;
-                    TSPlayer.All.SendData(PacketTypes.NpcUpdate, "", i);
+                    if (!(bool)Config.BossManager.AllowDeerclops)
+                    {
+                        DespawnNPC();
+                    }
+                    if (TShock.Utils.GetActivePlayerCount() < (int)Config.BossManager.Deerclops_RequiredPlayersforBoss)
+                    {
+                        DespawnNPC();
+                    }
                 }
 
-                if (!(bool)Config.BossManager.AllowDeerclops && npc.type == NPCID.Deerclops) // Deerclops
+                if (!Main.hardMode && npc.type == NPCID.WallofFlesh) // Wall of Flesh
                 {
-                    Main.npc[i].active = false;
-                    Main.npc[i].type = 0;
-                    TSPlayer.All.SendData(PacketTypes.NpcUpdate, "", i);
+                    if (!(bool)Config.BossManager.AllowWallOfFlesh)
+                    {
+                        DespawnNPC();
+                    }
+                    if (TShock.Utils.GetActivePlayerCount() < (int)Config.BossManager.WallOfFlesh_RequiredPlayersforBoss)
+                    {
+                        DespawnNPC();
+                    }
                 }
 
-                if (!(bool)Config.BossManager.AllowWallOfFlesh && npc.type == NPCID.WallofFlesh) // Wall of Flesh
+                if (!NPC.downedQueenSlime && npc.type == NPCID.QueenSlimeBoss) // Queen Slime
                 {
-                    Main.npc[i].active = false;
-                    Main.npc[i].type = 0;
-                    TSPlayer.All.SendData(PacketTypes.NpcUpdate, "", i);
+                    if (!(bool)Config.BossManager.AllowQueenSlime)
+                    {
+                        DespawnNPC();
+                    }
+                    if (TShock.Utils.GetActivePlayerCount() < (int)Config.BossManager.QueenSlime_RequiredPlayersforBoss)
+                    {
+                        DespawnNPC();
+                    }
                 }
 
-                if (!(bool)Config.BossManager.AllowQueenSlime && npc.type == NPCID.QueenSlimeBoss) // Queen Slime
+                if (Main.zenithWorld)
                 {
-                    Main.npc[i].active = false;
-                    Main.npc[i].type = 0;
-                    TSPlayer.All.SendData(PacketTypes.NpcUpdate, "", i);
+                    if ((!NPC.downedMechBoss1 && !NPC.downedMechBoss2 && !NPC.downedMechBoss1) &&
+                        (npc.type == NPCID.Retinazer || npc.type == NPCID.Spazmatism || npc.type == NPCID.TheDestroyer || npc.type == NPCID.SkeletronPrime)
+                        )
+                    {
+                        if (!(bool)Config.BossManager.AllowMechdusa)
+                        {
+                            DespawnNPC();
+                        }
+                        if (TShock.Utils.GetActivePlayerCount() < (int)Config.BossManager.Mechdusa_RequiredPlayersforBoss)
+                        {
+                            DespawnNPC();
+                        }
+                    }
+                } else
+                {
+                    if (!NPC.downedMechBoss2 && (npc.type == NPCID.Retinazer || npc.type == NPCID.Spazmatism)) // The Twins
+                    {
+                        if (!(bool)Config.BossManager.AllowTheTwins)
+                        {
+                            DespawnNPC();
+                        }
+                        if (TShock.Utils.GetActivePlayerCount() < (int)Config.BossManager.TheTwins_RequiredPlayersforBoss)
+                        {
+                            DespawnNPC();
+                        }
+                    }
+
+                    if (!NPC.downedMechBoss1 && npc.type == NPCID.TheDestroyer) // The Destroyer
+                    {
+                        if (!(bool)Config.BossManager.AllowTheDestroyer)
+                        {
+                            DespawnNPC();
+                        }
+                        if (TShock.Utils.GetActivePlayerCount() < (int)Config.BossManager.TheDestroyer_RequiredPlayersforBoss)
+                        {
+                            DespawnNPC();
+                        }
+                    }
+
+                    if (!NPC.downedMechBoss3 && npc.type == NPCID.SkeletronPrime) // Skeletron Prime
+                    {
+                        if (!(bool)Config.BossManager.AllowSkeletronPrime)
+                        {
+                            DespawnNPC();
+                        }
+                        if (TShock.Utils.GetActivePlayerCount() < (int)Config.BossManager.SkeletronPrime_RequiredPlayersforBoss)
+                        {
+                            DespawnNPC();
+                        }
+                    }
                 }
 
-                if (!(bool)Config.BossManager.AllowTheTwins && (npc.type == NPCID.Retinazer || npc.type == NPCID.Spazmatism)) // The Twins
+                
+
+                if (!NPC.downedPlantBoss && npc.type == NPCID.Plantera) // Plantera
                 {
-                    Main.npc[i].active = false;
-                    Main.npc[i].type = 0;
-                    TSPlayer.All.SendData(PacketTypes.NpcUpdate, "", i);
+                    if (!(bool)Config.BossManager.AllowPlantera)
+                    {
+                        DespawnNPC();
+                    }
+                    if (TShock.Utils.GetActivePlayerCount() < (int)Config.BossManager.Plantera_RequiredPlayersforBoss)
+                    {
+                        DespawnNPC();
+                    }
                 }
 
-                if (!(bool)Config.BossManager.AllowTheDestroyer && npc.type == NPCID.TheDestroyer) // The Destroyer
+                if (!NPC.downedGolemBoss && npc.type == NPCID.Golem) // Golem
                 {
-                    Main.npc[i].active = false;
-                    Main.npc[i].type = 0;
-                    TSPlayer.All.SendData(PacketTypes.NpcUpdate, "", i);
+                    if (!(bool)Config.BossManager.AllowGolem)
+                    {
+                        DespawnNPC();
+                    }
+                    if (TShock.Utils.GetActivePlayerCount() < (int)Config.BossManager.Golem_RequiredPlayersforBoss)
+                    {
+                        DespawnNPC();
+                    }
                 }
 
-                if (!(bool)Config.BossManager.AllowSkeletronPrime && npc.type == NPCID.SkeletronPrime) // Skeletron Prime
+                if (!NPC.downedFishron && npc.type == NPCID.DukeFishron) // Duke Fishron
                 {
-                    Main.npc[i].active = false;
-                    Main.npc[i].type = 0;
-                    TSPlayer.All.SendData(PacketTypes.NpcUpdate, "", i);
+                    if (!(bool)Config.BossManager.AllowDukeFishron)
+                    {
+                        DespawnNPC();
+                    }
+                    if (TShock.Utils.GetActivePlayerCount() < (int)Config.BossManager.DukeFishron_RequiredPlayersforBoss)
+                    {
+                        DespawnNPC();
+                    }
                 }
 
-                if (!(bool)Config.BossManager.AllowPlantera && npc.type == NPCID.Plantera) // Plantera
+                if (!NPC.downedEmpressOfLight && npc.type == NPCID.HallowBoss) // Empress of Light
                 {
-                    Main.npc[i].active = false;
-                    Main.npc[i].type = 0;
-                    TSPlayer.All.SendData(PacketTypes.NpcUpdate, "", i);
+                    if (!(bool)Config.BossManager.AllowEmpressOfLight)
+                    {
+                        DespawnNPC();
+                    }
+                    if (TShock.Utils.GetActivePlayerCount() < (int)Config.BossManager.EmpressOfLight_RequiredPlayersforBoss)
+                    {
+                        DespawnNPC();
+                    }
                 }
 
-                if (!(bool)Config.BossManager.AllowGolem && npc.type == NPCID.Golem) // Golem
+                if (!NPC.downedAncientCultist && npc.type == NPCID.CultistBoss) // Lunatic Cultist
                 {
-                    Main.npc[i].active = false;
-                    Main.npc[i].type = 0;
-                    TSPlayer.All.SendData(PacketTypes.NpcUpdate, "", i);
+                    if (!(bool)Config.BossManager.AllowLunaticCultist)
+                    {
+                        DespawnNPC();
+                    }
+                    if (TShock.Utils.GetActivePlayerCount() < (int)Config.BossManager.LunaticCultist_RequiredPlayersforBoss)
+                    {
+                        DespawnNPC();
+                    }
                 }
 
-                if (!(bool)Config.BossManager.AllowDukeFishron && npc.type == NPCID.DukeFishron) // Duke Fishron
+                if (!NPC.downedMoonlord && npc.type == NPCID.MoonLordCore) // Moon Lord
                 {
-                    Main.npc[i].active = false;
-                    Main.npc[i].type = 0;
-                    TSPlayer.All.SendData(PacketTypes.NpcUpdate, "", i);
+                    if (!(bool)Config.BossManager.AllowMoonLord)
+                    {
+                        DespawnNPC();
+                    }
+                    if (TShock.Utils.GetActivePlayerCount() < (int)Config.BossManager.MoonLord_RequiredPlayersforBoss)
+                    {
+                        DespawnNPC();
+                    }
                 }
 
-                if (!(bool)Config.BossManager.AllowEmpressOfLight && npc.type == NPCID.HallowBoss) // Empress of Light
+                void DespawnNPC()
                 {
-                    Main.npc[i].active = false;
-                    Main.npc[i].type = 0;
-                    TSPlayer.All.SendData(PacketTypes.NpcUpdate, "", i);
-                }
-
-                if (!(bool)Config.BossManager.AllowLunaticCultist && npc.type == NPCID.CultistBoss) // Lunatic Cultist
-                {
-                    Main.npc[i].active = false;
-                    Main.npc[i].type = 0;
-                    TSPlayer.All.SendData(PacketTypes.NpcUpdate, "", i);
-                }
-
-                if (!(bool)Config.BossManager.AllowMoonLord && npc.type == NPCID.MoonLordCore) // Moon Lord
-                {
+                    args.Handled = true;
                     Main.npc[i].active = false;
                     Main.npc[i].type = 0;
                     TSPlayer.All.SendData(PacketTypes.NpcUpdate, "", i);
                 }
             }
+
             #endregion
         }
 
@@ -2117,7 +2365,7 @@ namespace MKLP
         }
 
         private static bool nullboss_Confirmed_Twins = false;
-        private static bool HandleSpawnBoss(GetDataHandlerArgs args)
+        private bool HandleSpawnBoss(GetDataHandlerArgs args)
         {
             #region code
             if (args.Player.IsBouncerThrottled())
@@ -2157,8 +2405,7 @@ namespace MKLP
                     {
                         if (args.Player.SelectedItem.type != 5334)
                         {
-                            ManagePlayer.DisablePlayer(args.Player, $"null item boss spawn", ServerReason: $"Main,code,2|{args.Player.SelectedItem.netID}|Mechdusa");
-                            return true;
+                            return PunishPlayer(MKLP_CodeType.Main, 2, args.Player, $"null item boss/invasion spawn", $"Player **{args.Player.Name}** had triggered null item boss/event spawn `itemheld: {args.Player.SelectedItem.Name}` `boss: Mechdusa`");
                         }
 
                         return false;
@@ -2184,8 +2431,7 @@ namespace MKLP
                     {
                         if (args.Player.SelectedItem.type != 4271)
                         {
-                            ManagePlayer.DisablePlayer(args.Player, $"null item invasion spawn", ServerReason: $"Main,code,2|{args.Player.SelectedItem.netID}|Blood Moon");
-                            return true;
+                            return PunishPlayer(MKLP_CodeType.Main, 2, args.Player, $"null item boss/invasion spawn", $"Player **{args.Player.Name}** had triggered null item boss/event spawn `itemheld: {args.Player.SelectedItem.Name}` `invasion: Blood Moon`");
                         }
 
                         break;
@@ -2194,8 +2440,7 @@ namespace MKLP
                     {
                         if (args.Player.SelectedItem.type != 3601)
                         {
-                            ManagePlayer.DisablePlayer(args.Player, $"null item invasion spawn", ServerReason: $"Main,code,2|{args.Player.SelectedItem.netID}|Impending doom approaches... (Moon Lord)");
-                            return true;
+                            return PunishPlayer(MKLP_CodeType.Main, 2, args.Player, $"null item boss/invasion spawn", $"Player **{args.Player.Name}** had triggered null item boss/event spawn `itemheld: {args.Player.SelectedItem.Name}` `boss/invasion: Impending doom approaches... (Moon Lord)`");
                         }
 
                         break;
@@ -2208,8 +2453,7 @@ namespace MKLP
                     {
                         if (args.Player.SelectedItem.type != 2767)
                         {
-                            ManagePlayer.DisablePlayer(args.Player, $"null item invasion spawn", ServerReason: $"Main,code,2|{args.Player.SelectedItem.netID}|Solar Eclipse");
-                            return true;
+                            return PunishPlayer(MKLP_CodeType.Main, 2, args.Player, $"null item boss/invasion spawn", $"Player **{args.Player.Name}** had triggered null item boss/event spawn `itemheld: {args.Player.SelectedItem.Name}` `event: Solar Eclipse`");
                         }
 
                         return false;
@@ -2218,8 +2462,7 @@ namespace MKLP
                     {
                         if (args.Player.SelectedItem.type != 1958)
                         {
-                            ManagePlayer.DisablePlayer(args.Player, $"null item invasion spawn", ServerReason: $"Main,code,2|{args.Player.SelectedItem.netID}|Frost Moon");
-                            return true;
+                            return PunishPlayer(MKLP_CodeType.Main, 2, args.Player, $"null item boss/invasion spawn", $"Player **{args.Player.Name}** had triggered null item boss/event spawn `itemheld: {args.Player.SelectedItem.Name}` `event: Frost Moon`");
                         }
 
                         return false;
@@ -2228,8 +2471,7 @@ namespace MKLP
                     {
                         if (args.Player.SelectedItem.type != 1844)
                         {
-                            ManagePlayer.DisablePlayer(args.Player, $"null item invasion spawn", ServerReason: $"Main,code,2|{args.Player.SelectedItem.netID}|Pumkin Moon");
-                            return true;
+                            return PunishPlayer(MKLP_CodeType.Main, 2, args.Player, $"null item boss/invasion spawn", $"Player **{args.Player.Name}** had triggered null item boss/event spawn `itemheld: {args.Player.SelectedItem.Name}` `event: Pumpkin Moon`");
                         }
 
                         return false;
@@ -2238,8 +2480,7 @@ namespace MKLP
                     {
                         if (args.Player.SelectedItem.type != 1315)
                         {
-                            ManagePlayer.DisablePlayer(args.Player, $"null item invasion spawn", ServerReason: $"Main,code,2|{args.Player.SelectedItem.netID}|Pirate Invasion");
-                            return true;
+                            return PunishPlayer(MKLP_CodeType.Main, 2, args.Player, $"null item boss/invasion spawn", $"Player **{args.Player.Name}** had triggered null item boss/event spawn `itemheld: {args.Player.SelectedItem.Name}` `invasion: Pirate Invasion`");
                         }
 
                         return false;
@@ -2248,8 +2489,7 @@ namespace MKLP
                     {
                         if (args.Player.SelectedItem.type != 602)
                         {
-                            ManagePlayer.DisablePlayer(args.Player, $"null item invasion spawn", ServerReason: $"Main,code,2|{args.Player.SelectedItem.netID}|Frost Legion");
-                            return true;
+                            return PunishPlayer(MKLP_CodeType.Main, 2, args.Player, $"null item boss/invasion spawn", $"Player **{args.Player.Name}** had triggered null item boss/event spawn `itemheld: {args.Player.SelectedItem.Name}` `invasion: Legion`");
                         }
 
                         return false;
@@ -2258,16 +2498,13 @@ namespace MKLP
                     {
                         if (args.Player.SelectedItem.type != 361)
                         {
-                            ManagePlayer.DisablePlayer(args.Player, $"null item invasion spawn", ServerReason: $"Main,code,2|{args.Player.SelectedItem.netID}|Goblin Army");
-                            return true;
+                            return PunishPlayer(MKLP_CodeType.Main, 2, args.Player, $"null item boss/invasion spawn", $"Player **{args.Player.Name}** had triggered null item boss/event spawn `itemheld: {args.Player.SelectedItem.Name}` `invasion: Goblin Army`");
                         }
 
                         return false;
                     }
                 
                 default:
-                    if (!isKnownBoss)
-                        TShock.Log.ConsoleDebug("GetDataHandlers / HandleSpawnBoss unknown boss {0} summoned by {1}", thingType, args.Player.Name);
                     NPC npc = new NPC();
                     npc.SetDefaults(thingType);
                     
@@ -2277,8 +2514,7 @@ namespace MKLP
                             {
                                 if (args.Player.SelectedItem.type != 560)
                                 {
-                                    ManagePlayer.DisablePlayer(args.Player, $"null item boss spawn", ServerReason: $"Main,code,2|{args.Player.SelectedItem.netID}|{getnpc.FullName}");
-                                    return true;
+                                    return PunishPlayer(MKLP_CodeType.Main, 2, args.Player, $"null item boss/invasion spawn", $"Player **{args.Player.Name}** had triggered null item boss/event spawn `itemheld: {args.Player.SelectedItem.Name}` `boss: King Slime`");
                                 }
 
                                 break;
@@ -2287,8 +2523,7 @@ namespace MKLP
                             {
                                 if (args.Player.SelectedItem.type != 43)
                                 {
-                                    ManagePlayer.DisablePlayer(args.Player, $"null item boss spawn", ServerReason: $"Main,code,2|{args.Player.SelectedItem.netID}|{getnpc.FullName}");
-                                    return true;
+                                    return PunishPlayer(MKLP_CodeType.Main, 2, args.Player, $"null item boss/invasion spawn", $"Player **{args.Player.Name}** had triggered null item boss/event spawn `itemheld: {args.Player.SelectedItem.Name}` `boss: Eye Of Cthulhu`");
                                 }
 
                                 break;
@@ -2299,13 +2534,11 @@ namespace MKLP
                             {
                                 if (!args.Player.TPlayer.ZoneCorrupt)
                                 {
-                                    ManagePlayer.DisablePlayer(args.Player, $"null item boss spawn", ServerReason: $"Main,code,2|{args.Player.SelectedItem.netID}|{getnpc.FullName}");
-                                    return true;
+                                    return PunishPlayer(MKLP_CodeType.Main, 2, args.Player, $"null item boss/invasion spawn", $"Player **{args.Player.Name}** had triggered null item boss/event spawn `itemheld: {args.Player.SelectedItem.Name}` `boss: Eater Of Worlds` **not in corruption zone**");
                                 }
                                 if (args.Player.SelectedItem.type != 70)
                                 {
-                                    ManagePlayer.DisablePlayer(args.Player, $"null item boss spawn", ServerReason: $"Main,code,2|{args.Player.SelectedItem.netID}|{getnpc.FullName}");
-                                    return true;
+                                    return PunishPlayer(MKLP_CodeType.Main, 2, args.Player, $"null item boss/invasion spawn",$"Player **{args.Player.Name}** had triggered null item boss/event spawn `itemheld: {args.Player.SelectedItem.Name}` `boss: Eater Of Worlds`");
                                 }
 
                                 break;
@@ -2314,13 +2547,11 @@ namespace MKLP
                             {
                                 if (!args.Player.TPlayer.ZoneCrimson)
                                 {
-                                    ManagePlayer.DisablePlayer(args.Player, $"null item boss spawn", ServerReason: $"Main,code,2|{args.Player.SelectedItem.netID}|{getnpc.FullName}");
-                                    return true;
+                                    return PunishPlayer(MKLP_CodeType.Main, 2, args.Player, $"null item boss/invasion spawn", $"Player **{args.Player.Name}** had triggered null item boss/event spawn `itemheld: {args.Player.SelectedItem.Name}` `boss: Brain Of Cthulhu` **not in crimson zone**");
                                 }
                                 if (args.Player.SelectedItem.type != 1331)
                                 {
-                                    ManagePlayer.DisablePlayer(args.Player, $"null item boss spawn", ServerReason: $"Main,code,2|{args.Player.SelectedItem.netID}|{getnpc.FullName}");
-                                    return true;
+                                    return PunishPlayer(MKLP_CodeType.Main, 2, args.Player, $"null item boss/invasion spawn", $"Player **{args.Player.Name}** had triggered null item boss/event spawn `itemheld: {args.Player.SelectedItem.Name}` `boss: Brain Of Cthulhu`");
                                 }
 
                                 break;
@@ -2329,13 +2560,11 @@ namespace MKLP
                             {
                                 if (!args.Player.TPlayer.ZoneJungle)
                                 {
-                                    ManagePlayer.DisablePlayer(args.Player, $"null item boss spawn", ServerReason: $"Main,code,2|{args.Player.SelectedItem.netID}|{getnpc.FullName}");
-                                    return true;
+                                    return PunishPlayer(MKLP_CodeType.Main, 2, args.Player, $"null item boss/invasion spawn", $"Player **{args.Player.Name}** had triggered null item boss/event spawn `itemheld: {args.Player.SelectedItem.Name}` `boss: Queen Bee` **not in jungle zone**");
                                 }
                                 if (args.Player.SelectedItem.type != 1133)
                                 {
-                                    ManagePlayer.DisablePlayer(args.Player, $"null item boss spawn", ServerReason: $"Main,code,2|{args.Player.SelectedItem.netID}|{getnpc.FullName}");
-                                    return true;
+                                    return PunishPlayer(MKLP_CodeType.Main, 2, args.Player, $"null item boss/invasion spawn", $"Player **{args.Player.Name}** had triggered null item boss/event spawn `itemheld: {args.Player.SelectedItem.Name}` `boss: Queen Bee`");
                                 }
 
                                 break;
@@ -2344,14 +2573,12 @@ namespace MKLP
                             {
                                 if (!args.Player.TPlayer.ZoneSnow)
                                 {
-                                    ManagePlayer.DisablePlayer(args.Player, $"null item boss spawn", ServerReason: $"Main,code,2|{args.Player.SelectedItem.netID}|{getnpc.FullName}");
-                                    return true;
+                                    return PunishPlayer(MKLP_CodeType.Main, 2, args.Player, $"null item boss/invasion spawn", $"Player **{args.Player.Name}** had triggered null item boss/event spawn `itemheld: {args.Player.SelectedItem.Name}` `boss: Deerclops` **not in snow zone**");
                                 }
 
                                 if (args.Player.SelectedItem.type != 5120)
                                 {
-                                    ManagePlayer.DisablePlayer(args.Player, $"null item boss spawn", ServerReason: $"Main,code,2|{args.Player.SelectedItem.netID}|{getnpc.FullName}");
-                                    return true;
+                                    return PunishPlayer(MKLP_CodeType.Main, 2, args.Player, $"null item boss/invasion spawn", $"Player **{args.Player.Name}** had triggered null item boss/event spawn `itemheld: {args.Player.SelectedItem.Name}` `boss: Deerclops`");
                                 }
 
                                 break;
@@ -2361,37 +2588,32 @@ namespace MKLP
                             {
                                 if (NPC.downedBoss3)
                                 {
-                                    ManagePlayer.DisablePlayer(args.Player, $"null item boss spawn", ServerReason: $"Main,code,2|{args.Player.SelectedItem.netID}|{getnpc.FullName}");
-                                    return true;
+                                    return PunishPlayer(MKLP_CodeType.Main, 2, args.Player, $"null item boss/invasion spawn", $"Player **{args.Player.Name}** had triggered null item boss/event spawn `itemheld: {args.Player.SelectedItem.Name}` `boss: Skeletron`");
                                 }
                                 break;
                             }
                         case 113: // Wall of Flesh
                             {
-                                ManagePlayer.DisablePlayer(args.Player, $"null item boss spawn", ServerReason: $"Main,code,2|{args.Player.SelectedItem.netID}|{getnpc.FullName}");
-                                return true;
+                                return PunishPlayer(MKLP_CodeType.Main, 2, args.Player, $"null item boss/invasion spawn", $"Player **{args.Player.Name}** had triggered null item boss/event spawn `itemheld: {args.Player.SelectedItem.Name}` `boss: Wall Of Flesh`");
                             }
                         case 657: // Queen Slime
                             {
                                 if (!args.Player.TPlayer.ZoneHallow)
                                 {
-                                    ManagePlayer.DisablePlayer(args.Player, $"null item boss spawn", ServerReason: $"Main,code,2|{args.Player.SelectedItem.netID}|{getnpc.FullName}");
-                                    return true;
+                                    return PunishPlayer(MKLP_CodeType.Main, 2, args.Player, $"null item boss/invasion spawn", $"Player **{args.Player.Name}** had triggered null item boss/event spawn `itemheld: {args.Player.SelectedItem.Name}` `boss: Queen Slime` **not in hallow zone**");
                                 }
                                 if (args.Player.SelectedItem.type != 4988)
                                 {
-                                    ManagePlayer.DisablePlayer(args.Player, $"null item boss spawn", ServerReason: $"Main,code,2|{args.Player.SelectedItem.netID}|{getnpc.FullName}");
-                                    return true;
+                                    return PunishPlayer(MKLP_CodeType.Main, 2, args.Player, $"null item boss/invasion spawn", $"Player **{args.Player.Name}** had triggered null item boss/event spawn `itemheld: {args.Player.SelectedItem.Name}` `boss: Queen Slime`");
                                 }
 
                                 break;
                             }
                         case 125: // The Twins
                             {
-                                if (args.Player.SelectedItem.type != 1133)
+                                if (args.Player.SelectedItem.type != 544)
                                 {
-                                    ManagePlayer.DisablePlayer(args.Player, $"null item boss spawn", ServerReason: $"Main,code,2|{args.Player.SelectedItem.netID}|{getnpc.FullName}");
-                                    return true;
+                                    return PunishPlayer(MKLP_CodeType.Main, 2, args.Player, $"null item boss/invasion spawn", $"Player **{args.Player.Name}** had triggered null item boss/event spawn `itemheld: {args.Player.SelectedItem.Name}` `boss: The Twins`");
                                 }
                                 nullboss_Confirmed_Twins = true;
                                 break;
@@ -2400,10 +2622,9 @@ namespace MKLP
                             {
                                 if (!nullboss_Confirmed_Twins)
                                 {
-                                    if (args.Player.SelectedItem.type != 1133)
+                                    if (args.Player.SelectedItem.type != 544)
                                     {
-                                        ManagePlayer.DisablePlayer(args.Player, $"null item boss spawn", ServerReason: $"Main,code,2|{args.Player.SelectedItem.netID}|{getnpc.FullName}");
-                                        return true;
+                                        return PunishPlayer(MKLP_CodeType.Main, 2, args.Player, $"null item boss/invasion spawn", $"Player **{args.Player.Name}** had triggered null item boss/event spawn `itemheld: {args.Player.SelectedItem.Name}` `boss: The Twins`");
                                     }
                                 }
                                 nullboss_Confirmed_Twins = false;
@@ -2415,8 +2636,7 @@ namespace MKLP
                             {
                                 if (args.Player.SelectedItem.type != 556)
                                 {
-                                    ManagePlayer.DisablePlayer(args.Player, $"null item boss spawn", ServerReason: $"Main,code,2|{args.Player.SelectedItem.netID}|{getnpc.FullName}");
-                                    return true;
+                                    return PunishPlayer(MKLP_CodeType.Main, 2, args.Player, $"null item boss/invasion spawn", $"Player **{args.Player.Name}** had triggered null item boss/event spawn `itemheld: {args.Player.SelectedItem.Name}` `boss: The Destroyer`");
                                 }
 
                                 break;
@@ -2425,16 +2645,14 @@ namespace MKLP
                             {
                                 if (args.Player.SelectedItem.type != 557)
                                 {
-                                    ManagePlayer.DisablePlayer(args.Player, $"null item boss spawn", ServerReason: $"Main,code,2|{args.Player.SelectedItem.netID}|{getnpc.FullName}");
-                                    return true;
+                                    return PunishPlayer(MKLP_CodeType.Main, 2, args.Player, $"null item boss/invasion spawn", $"Player **{args.Player.Name}** had triggered null item boss/event spawn `itemheld: {args.Player.SelectedItem.Name}` `boss: Skeletron Prime`");
                                 }
 
                                 break;
                             }
                         case 262: // Plantera
                             {
-                                ManagePlayer.DisablePlayer(args.Player, $"null item boss spawn", ServerReason: $"Main,code,2|{args.Player.SelectedItem.netID}|{getnpc.FullName}");
-                                return true;
+                                return PunishPlayer(MKLP_CodeType.Main, 2, args.Player, $"null item boss/invasion spawn", $"Player **{args.Player.Name}** had triggered null item boss/event spawn `itemheld: {args.Player.SelectedItem.Name}` `boss: Plantera`");
                             }
                         case 245: // Golem
                         case 246:
@@ -2443,8 +2661,7 @@ namespace MKLP
                             {
                                 if (!NPC.downedPlantBoss)
                                 {
-                                    ManagePlayer.DisablePlayer(args.Player, $"null item boss spawn", ServerReason: $"Main,code,2|{args.Player.SelectedItem.netID}|{getnpc.FullName}");
-                                    return true;
+                                    return PunishPlayer(MKLP_CodeType.Main, 2, args.Player, $"null item boss/invasion spawn", $"Player **{args.Player.Name}** had triggered null item boss/event spawn `itemheld: {args.Player.SelectedItem.Name}` `boss: Golem`");
                                 }
                                 /*
                                 if (!args.Player.Inventory.All(i => i.type == 1293) && !args.Player.TPlayer.bank4.item.All(i => i.type == 1293))
@@ -2455,8 +2672,7 @@ namespace MKLP
                                 */
                                 if (!IsNextGolemSpawn(args.Player))
                                 {
-                                    ManagePlayer.DisablePlayer(args.Player, $"null item boss spawn", ServerReason: $"Main,code,2|{args.Player.SelectedItem.netID}|{getnpc.FullName}");
-                                    return true;
+                                    return PunishPlayer(MKLP_CodeType.Main, 2, args.Player, $"null item boss/invasion spawn", $"Player **{args.Player.Name}** had triggered null item boss/event spawn `itemheld: {args.Player.SelectedItem.Name}` `boss: Golem` **not near on altar**");
                                 }
                                 break;
                             }
@@ -2464,8 +2680,7 @@ namespace MKLP
                             {
                                 if (!Main.hardMode)
                                 {
-                                    ManagePlayer.DisablePlayer(args.Player, $"null item boss spawn", ServerReason: $"Main,code,2|{args.Player.SelectedItem.netID}|{getnpc.FullName}");
-                                    return true;
+                                    return PunishPlayer(MKLP_CodeType.Main, 2, args.Player, $"null item boss/invasion spawn", $"Player **{args.Player.Name}** had triggered null item boss/event spawn `itemheld: {args.Player.SelectedItem.Name}` `boss: Duke Fishron` **not hardmode**");
                                 }
                                 int[] fishing_rods =
                                 {
@@ -2483,13 +2698,11 @@ namespace MKLP
                                 };
                                 if (!args.Player.TPlayer.ZoneBeach)
                                 {
-                                    ManagePlayer.DisablePlayer(args.Player, $"null item boss spawn", ServerReason: $"Main,code,2|{args.Player.SelectedItem.netID}|{getnpc.FullName}");
-                                    return true;
+                                    return PunishPlayer(MKLP_CodeType.Main, 2, args.Player, $"null item boss/invasion spawn", $"Player **{args.Player.Name}** had triggered null item boss/event spawn `itemheld: {args.Player.SelectedItem.Name}` `boss: Duke Fishron` **not in beach zone**");
                                 }
                                 if (!fishing_rods.Contains(args.Player.SelectedItem.type))
                                 {
-                                    ManagePlayer.DisablePlayer(args.Player, $"null item boss spawn", ServerReason: $"Main,code,2|{args.Player.SelectedItem.netID}|{getnpc.FullName}");
-                                    return true;
+                                    return PunishPlayer(MKLP_CodeType.Main, 2, args.Player, $"null item boss/invasion spawn", $"Player **{args.Player.Name}** had triggered null item boss/event spawn `itemheld: {args.Player.SelectedItem.Name}` `boss: Duke Fishron`");
                                 }
                                 /*
                                 if (!args.Player.Inventory.All(i => fishing_rods.Contains(i.type)))
@@ -2508,13 +2721,11 @@ namespace MKLP
                             }
                         case 636: // Empress Of Light
                             {
-                                ManagePlayer.DisablePlayer(args.Player, $"null item boss spawn", ServerReason: $"Main,code,2|{args.Player.SelectedItem.netID}|{getnpc.FullName}");
-                                return true;
+                                return PunishPlayer(MKLP_CodeType.Main, 2, args.Player, $"null item boss/invasion spawn", $"Player **{args.Player.Name}** had triggered null item boss/event spawn `itemheld: {args.Player.SelectedItem.Name}` `boss: Empress Of Light`");
                             }
                         case 440: // Lunatic Cultist
                             {
-                                ManagePlayer.DisablePlayer(args.Player, $"null item boss spawn", ServerReason: $"Main,code,2|{args.Player.SelectedItem.netID}|{getnpc.FullName}");
-                                return true;
+                                return PunishPlayer(MKLP_CodeType.Main, 2, args.Player, $"null item boss/invasion spawn", $"Player **{args.Player.Name}** had triggered null item boss/event spawn `itemheld: {args.Player.SelectedItem.Name}` `boss: Lunatic Cultist`");
                             }
                     }
 
@@ -2605,7 +2816,7 @@ namespace MKLP
             #endregion
         }
 
-            private void OnReload(ReloadEventArgs args)
+        private void OnReload(ReloadEventArgs args)
         {
             Config = Config.Read();
             LinkAccountManager.ReloadConfig();
@@ -2808,10 +3019,6 @@ namespace MKLP
             foreach (TSPlayer player in TShock.Players)
             {
                 if (player == null) continue;
-                try
-                {
-                    ManagePlayer.Check_Survival_Code1_2(player);
-                } catch { }
                 try
                 {
                     DBManager.CheckPlayerMute(player, true);
@@ -3523,10 +3730,204 @@ namespace MKLP
             }
             #endregion
 
+            #region { GetNextBossSchedule }
+
+            string GetNextBossSchedule()
+            {
+                string result = "";
+
+                DateTime nextsched = DateTime.MaxValue;
+
+                if (!(bool)Config.BossManager.AllowKingSlime && NPC.downedSlimeKing)
+                {
+                    if (nextsched > (DateTime)Config.BossManager.ScheduleAllowKingSlime)
+                    {
+                        result = "\n\nNext Boss is King Slime in ";
+                        nextsched = (DateTime)Config.BossManager.ScheduleAllowKingSlime;
+                    }
+                }
+
+                if (!(bool)Config.BossManager.AllowEyeOfCthulhu && NPC.downedBoss1)
+                {
+                    if (nextsched > (DateTime)Config.BossManager.ScheduleAllowEyeOfCthulhu)
+                    {
+                        result = "\n\nNext Boss is Eye Of Cthulhu in ";
+                        nextsched = (DateTime)Config.BossManager.ScheduleAllowEyeOfCthulhu;
+                    }
+                }
+
+                if (!(bool)Config.BossManager.AllowEaterOfWorlds && NPC.downedBoss2)
+                {
+                    if (nextsched > (DateTime)Config.BossManager.ScheduleAllowEaterOfWorlds)
+                    {
+                        result = "\n\nNext Boss is Eater Of Worlds in ";
+                        nextsched = (DateTime)Config.BossManager.ScheduleAllowEaterOfWorlds;
+                    }
+                }
+
+                if (!(bool)Config.BossManager.AllowDeerclops && NPC.downedDeerclops)
+                {
+                    if (nextsched > (DateTime)Config.BossManager.ScheduleAllowDeerclops)
+                    {
+                        result = "\n\nNext Boss is Deerclops in ";
+                        nextsched = (DateTime)Config.BossManager.ScheduleAllowDeerclops;
+                    }
+                }
+
+                if (!(bool)Config.BossManager.AllowQueenBee && NPC.downedQueenBee)
+                {
+                    if (nextsched > (DateTime)Config.BossManager.ScheduleAllowQueenBee)
+                    {
+                        result = "\n\nNext Boss is Queen Bee in ";
+                        nextsched = (DateTime)Config.BossManager.ScheduleAllowQueenBee;
+                    }
+                }
+
+                if (!(bool)Config.BossManager.AllowSkeletron && NPC.downedBoss3)
+                {
+                    if (nextsched > (DateTime)Config.BossManager.ScheduleAllowSkeletron)
+                    {
+                        result = "\n\nNext Boss is Skeletron in ";
+                        nextsched = (DateTime)Config.BossManager.ScheduleAllowSkeletron;
+                    }
+                }
+
+                if (!(bool)Config.BossManager.AllowWallOfFlesh && Main.hardMode)
+                {
+                    if (nextsched > (DateTime)Config.BossManager.ScheduleAllowWallOfFlesh)
+                    {
+                        result = "\n\nNext Boss is Wall of Flesh in ";
+                        nextsched = (DateTime)Config.BossManager.ScheduleAllowWallOfFlesh;
+                    }
+                }
+
+                if (!(bool)Config.BossManager.AllowQueenSlime && NPC.downedQueenSlime)
+                {
+                    if (nextsched > (DateTime)Config.BossManager.ScheduleAllowQueenSlime)
+                    {
+                        result = "\n\nNext Boss is Queen Slime in ";
+                        nextsched = (DateTime)Config.BossManager.ScheduleAllowQueenSlime;
+                    }
+                }
+
+                if (!(bool)Config.BossManager.AllowTheDestroyer && NPC.downedMechBoss1)
+                {
+                    if (nextsched > (DateTime)Config.BossManager.ScheduleAllowTheDestroyer)
+                    {
+                        result = "\n\nNext Boss is The Destroyer in ";
+                        nextsched = (DateTime)Config.BossManager.ScheduleAllowTheDestroyer;
+                    }
+                }
+
+                if (!(bool)Config.BossManager.AllowTheTwins && NPC.downedMechBoss2)
+                {
+                    if (nextsched > (DateTime)Config.BossManager.ScheduleAllowTheTwins)
+                    {
+                        result = "\n\nNext Boss is The Twins in ";
+                        nextsched = (DateTime)Config.BossManager.ScheduleAllowTheTwins;
+                    }
+                }
+
+                if (!(bool)Config.BossManager.AllowSkeletronPrime && NPC.downedMechBoss3)
+                {
+                    if (nextsched > (DateTime)Config.BossManager.ScheduleAllowSkeletronPrime)
+                    {
+                        result = "\n\nNext Boss is Skeletron Prime in ";
+                        nextsched = (DateTime)Config.BossManager.ScheduleAllowSkeletronPrime;
+                    }
+                }
+
+                if (!(bool)Config.BossManager.AllowDukeFishron && NPC.downedFishron)
+                {
+                    if (nextsched > (DateTime)Config.BossManager.ScheduleAllowDukeFishron)
+                    {
+                        result = "\n\nNext Boss is Duke Fishron in ";
+                        nextsched = (DateTime)Config.BossManager.ScheduleAllowDukeFishron;
+                    }
+                }
+
+                if (!(bool)Config.BossManager.AllowPlantera && NPC.downedPlantBoss)
+                {
+                    if (nextsched > (DateTime)Config.BossManager.ScheduleAllowPlantera)
+                    {
+                        result = "\n\nNext Boss is Plantera in ";
+                        nextsched = (DateTime)Config.BossManager.ScheduleAllowPlantera;
+                    }
+                }
+
+                if (!(bool)Config.BossManager.AllowEmpressOfLight && NPC.downedEmpressOfLight)
+                {
+                    if (nextsched > (DateTime)Config.BossManager.ScheduleAllowEmpressOfLight)
+                    {
+                        result = "\n\nNext Boss is Empress Of Light in ";
+                        nextsched = (DateTime)Config.BossManager.ScheduleAllowEmpressOfLight;
+                    }
+                }
+
+                if (!(bool)Config.BossManager.AllowGolem && NPC.downedGolemBoss)
+                {
+                    if (nextsched > (DateTime)Config.BossManager.ScheduleAllowGolem)
+                    {
+                        result = "\n\nNext Boss is Golem in ";
+                        nextsched = (DateTime)Config.BossManager.ScheduleAllowGolem;
+                    }
+                }
+
+                if (!(bool)Config.BossManager.AllowLunaticCultist && NPC.downedAncientCultist)
+                {
+                    if (nextsched > (DateTime)Config.BossManager.ScheduleAllowLunaticCultist)
+                    {
+                        result = "\n\nNext Boss is Lunatic Cultist in ";
+                        nextsched = (DateTime)Config.BossManager.ScheduleAllowLunaticCultist;
+                    }
+                }
+
+                if (!(bool)Config.BossManager.AllowMoonLord && NPC.downedMoonlord)
+                {
+                    if (nextsched > (DateTime)Config.BossManager.ScheduleAllowMoonLord)
+                    {
+                        result = "\n\nNext Boss is Moon Lord in ";
+                        nextsched = (DateTime)Config.BossManager.ScheduleAllowMoonLord;
+                    }
+                }
+
+                if (nextsched == DateTime.MaxValue) return "";
+
+                string GetTimeString(DateTime datetime)
+                {
+                    TimeSpan getresult = (DateTime.UtcNow - datetime);
+
+                    if (getresult.TotalDays >= 1)
+                    {
+                        return $"{Math.Floor(getresult.TotalDays)}{(getresult.TotalDays >= 2 ? "Days" : "Day")}";
+                    }
+                    if (getresult.TotalHours >= 1)
+                    {
+                        return $"{Math.Floor(getresult.TotalHours)}{(getresult.TotalHours >= 2 ? "Hours" : "Hour")}";
+                    }
+                    if (getresult.TotalMinutes >= 1)
+                    {
+                        return $"{Math.Floor(getresult.TotalMinutes)}{(getresult.TotalMinutes >= 2 ? "Minutes" : "Minute")}";
+                    }
+                    if (getresult.TotalSeconds >= 1)
+                    {
+                        return $"{Math.Floor(getresult.TotalSeconds)}{(getresult.TotalSeconds >= 2 ? "Seconds" : "Second")}";
+                    }
+                    if (getresult.TotalMilliseconds >= 1)
+                    {
+                        return $"{Math.Floor(getresult.TotalMilliseconds)}{(getresult.TotalMilliseconds >= 2 ? "Milliseconds" : "Millisecond")}";
+                    }
+                    return $"Time {Math.Floor(getresult.TotalSeconds)}{(getresult.TotalSeconds >= 2 ? "Seconds" : "Second")}";
+                }
+
+                return result + GetTimeString(nextsched);
+            }
+
+            #endregion
 
             args.Player.SendMessage(
                 $"List Of Bosses:" +
-                $"\n{GetListDefeatedBoss2()}",
+                $"\n{GetListDefeatedBoss2()}{GetNextBossSchedule()}",
                 Color.Gray);
 
             #endregion
@@ -5634,13 +6035,14 @@ namespace MKLP
                 args.Player.SendErrorMessage($"Usage: {Commands.Specifier}{((bool)Config.Main.Replace_Ban_TShockCommand ? "ban" : "qban")} <player> <reason> <duration> <args...>");
                 args.Player.SendMessage($"[c/8fbfd4:Example:] [c/a5d063:{Commands.Specifier}{((bool)Config.Main.Replace_Ban_TShockCommand ? "ban" : "qban")} {args.Player.Name} \"cheating\" \"1d 1m\" -offline]" +
                     $"\n[c/8fbfd4:duration:] 1d = 1day (d,h,m,s = day,hour,minute,second)" +
-                    $"\n[c/8fbfd4:args:] ( -alt = bans only name ) ( -offline = only used when banning a offline player )",
+                    $"\n[c/8fbfd4:args:] ( -alt = bans only name ) ( -account = only used when banning a offline player ) ( -accountid = only used when banning a offline player account id )",
                     Color.Gray);
                 return;
             }
 
             bool altban = args.Parameters.Any(p => p == "-alt");
-            bool offlineban = args.Parameters.Any(p => p == "-offline");
+            bool accountban = args.Parameters.Any(p => p == "-account");
+            bool accountidban = args.Parameters.Any(p => p == "-accountid");
 
 
             bool uuidip = true;
@@ -5648,7 +6050,7 @@ namespace MKLP
             if (altban == true) uuidip = false;
 
 
-            List<string> flags = new List<string>() { "-alt", "-offline" };
+            List<string> flags = new List<string>() { "-alt", "-account", "-accountid" };
 
             string reason = "No Reason Specified";
             string duration = null;
@@ -5678,7 +6080,67 @@ namespace MKLP
                 expiration = DateTime.UtcNow.AddSeconds(seconds);
             }
 
-            if (offlineban)
+            if (accountidban)
+            {
+                if (!args.Player.HasPermission(Config.Permissions.CMD_OfflineBan))
+                {
+                    args.Player.SendErrorMessage("You do not have permission to ban offline players!");
+                    return;
+                }
+
+                int accountidtarget = 0;
+
+                if (!int.TryParse(args.Parameters[0], out accountidtarget))
+                {
+                    args.Player.SendErrorMessage("Invalid Number!");
+                    return;
+                }
+
+                UserAccount targetaccount = TShock.UserAccounts.GetUserAccountByID(accountidtarget);
+
+                if (targetaccount == null)
+                {
+                    args.Player.SendErrorMessage($"Account ID {accountidtarget} doesn't exist");
+                    return;
+                }
+
+                var players = TSPlayer.FindByNameOrID(targetaccount.Name);
+
+                TSPlayer? targetplayer = null;
+
+                foreach (TSPlayer player in players)
+                {
+                    if (player == null) continue;
+                    if (player.Account.Name == targetaccount.Name)
+                    {
+                        targetplayer = player;
+                    }
+                }
+
+                if (targetplayer != null)
+                {
+                    if (ManagePlayer.OnlineBan(args.Silent, targetplayer, reason, args.Player.Account.Name, expiration, uuidip, uuidip))
+                    {
+                        args.Player.SendSuccessMessage($"Successfully banned {targetplayer.Name} for {reason}");
+                    }
+                    else
+                    {
+                        args.Player.SendErrorMessage($"Error occur banning {targetplayer.Name}");
+                    }
+                }
+                else
+                {
+                    if (ManagePlayer.OfflineBan(targetaccount, reason, args.Player.Account.Name, expiration, uuidip, uuidip))
+                    {
+                        args.Player.SendSuccessMessage($"Successfully banned Acc: {targetaccount.Name} for {reason}");
+                    }
+                    else
+                    {
+                        args.Player.SendErrorMessage($"Error occur banning Acc: {targetaccount.Name}");
+                    }
+                }
+
+            } else if (accountban)
             {
                 if (!args.Player.HasPermission(Config.Permissions.CMD_OfflineBan))
                 {
@@ -5691,6 +6153,7 @@ namespace MKLP
                 if (targetaccount == null)
                 {
                     args.Player.SendErrorMessage($"Account name {args.Parameters[0]} doesn't exist");
+                    return;
                 }
 
                 var players = TSPlayer.FindByNameOrID(args.Parameters[0]);
@@ -5764,13 +6227,44 @@ namespace MKLP
             if (args.Parameters.Count == 0)
             {
                 args.Player.SendErrorMessage($"Usage: {Commands.Specifier}unban <ticket number>" +
-                    $"\nor use '{Commands.Specifier}unban <account name> -account' to unban a account");
+                    $"\nor use '{Commands.Specifier}unban <account name> -account' to unban a account" +
+                    $"\nor use '{Commands.Specifier}unban <account id> -accountid' to unban a account");
                 return;
             }
 
             bool accountunban = args.Parameters.Any(p => p == "-account");
+            bool accountidunban = args.Parameters.Any(p => p == "-accountid");
 
-            if (accountunban)
+            if (accountidunban)
+            {
+                int accountid = 0;
+
+                if (!int.TryParse(args.Parameters[0], out accountid))
+                {
+                    args.Player.SendErrorMessage("Invalid Number!");
+                    return;
+                }
+
+                UserAccount targetaccount = TShock.UserAccounts.GetUserAccountByID(accountid);
+
+                if (targetaccount == null)
+                {
+                    args.Player.SendErrorMessage("Invalid Account");
+                    return;
+                }
+
+                if (ManagePlayer.UnBanAccount(targetaccount, args.Player.Name))
+                {
+                    args.Player.SendSuccessMessage($"Removing Ban Tickets from account: {targetaccount.Name}");
+                    return;
+                }
+                else
+                {
+                    args.Player.SendErrorMessage($"AccountID: '{accountid}' could not be found...");
+                    return;
+                }
+
+            } else if (accountunban)
             {
                 string targetname = string.Join(" ", args.Parameters.ToArray(), 0, args.Parameters.Count);
                 targetname = targetname.Replace(" -account", "");
@@ -6199,7 +6693,7 @@ namespace MKLP
 
             args.Player.Teleport(Main.spawnTileX * 16, Main.spawnTileY * 16);
 
-            godPower.SetEnabledState(player.Index, true);
+            godPower.SetEnabledState(args.Player.Index, true);
 
             args.Player.SetData("MKLP_TargetSpy", player);
 
@@ -6536,6 +7030,8 @@ namespace MKLP
         public static void TogglePlayerVanish(TSPlayer executer, bool vanish)
         {
             #region code
+            //PacketTypes.player
+            // set player null? ( completely invisible ) in future
 
             if (vanish)
             {
@@ -6593,7 +7089,267 @@ namespace MKLP
             #endregion
         }
 
+        public static bool PunishPlayer(MKLP_CodeType CodeType, byte CodeNumber, TSPlayer player, string Reason, string WarningMessage, bool RevertInventory = false)
+        {
+            #region code
+
+            if (CodeType == MKLP_CodeType.Main)
+            {
+                switch ((PunishmentType)Config.Main.Main_Code_PunishmentType)
+                {
+                    case PunishmentType.Ban:
+                        {
+
+                            ManagePlayer.OnlineBan(false, player, Reason, "MKLP-AntiCheat", DateTime.MaxValue);
+                            return true;
+                        }
+                    case PunishmentType.Disable:
+                        {
+                            ManagePlayer.DisablePlayer(player, Reason, "MKLP-AntiCheat", WarningMessage + $"\n-# {CodeType} Code {CodeNumber}");
+                            return true;
+                        }
+                    case PunishmentType.KickAndLog:
+                        {
+                            Discordklp.KLPBotSendMessage_Warning(WarningMessage + $"\n-# {CodeType} Code {CodeNumber}", player.Name, Reason);
+                            player.Kick(Reason, true, false, "MKLP-AntiCheat");
+                            return true;
+                        }
+                    case PunishmentType.Kick:
+                        {
+                            player.Kick(Reason, true, false, "MKLP-AntiCheat");
+                            return true;
+                        }
+                    case PunishmentType.RevertAndLog:
+                        {
+                            if (RevertInventory) RevertPlayerInv();
+                            Discordklp.KLPBotSendMessage_Warning(WarningMessage + $"\n-# {CodeType} Code {CodeNumber}", player.Name, Reason);
+                            player.SendWarningMessage(Reason);
+                            return true;
+                        }
+                    case PunishmentType.Revert:
+                        {
+                            if (RevertInventory) RevertPlayerInv();
+                            player.SendWarningMessage(Reason);
+                            return true;
+                        }
+                    case PunishmentType.Log:
+                        {
+                            Discordklp.KLPBotSendMessage_Warning(WarningMessage + $"\n-# {CodeType} Code {CodeNumber}", player.Name, Reason);
+                            return false;
+                        }
+                }
+                return false;
+            }
+            if (CodeType == MKLP_CodeType.Survival)
+            {
+                switch ((PunishmentType)Config.Main.Survival_Code_PunishmentType)
+                {
+                    case PunishmentType.Ban:
+                        {
+                            ManagePlayer.OnlineBan(false, player, Reason, "MKLP-AntiCheat", DateTime.MaxValue);
+                            return true;
+                        }
+                    case PunishmentType.Disable:
+                        {
+                            ManagePlayer.DisablePlayer(player, Reason, "MKLP-AntiCheat", WarningMessage + $"\n-# {CodeType} Code {CodeNumber}");
+                            return true;
+                        }
+                    case PunishmentType.KickAndLog:
+                        {
+                            Discordklp.KLPBotSendMessage_Warning(WarningMessage + $"\n-# {CodeType} Code {CodeNumber}", player.Name, Reason);
+                            player.Kick(Reason, true, false, "MKLP-AntiCheat");
+                            return true;
+                        }
+                    case PunishmentType.Kick:
+                        {
+                            player.Kick(Reason, true, false, "MKLP-AntiCheat");
+                            return true;
+                        }
+                    case PunishmentType.RevertAndLog:
+                        {
+                            if (RevertInventory) RevertPlayerInv();
+                            Discordklp.KLPBotSendMessage_Warning(WarningMessage + $"\n-# {CodeType} Code {CodeNumber}", player.Name, Reason);
+                            player.SendWarningMessage(Reason);
+                            return true;
+                        }
+                    case PunishmentType.Revert:
+                        {
+                            if (RevertInventory) RevertPlayerInv();
+                            player.SendWarningMessage(Reason);
+                            return true;
+                        }
+                    case PunishmentType.Log:
+                        {
+                            Discordklp.KLPBotSendMessage_Warning(WarningMessage + $"\n-# {CodeType} Code {CodeNumber}", player.Name, Reason);
+                            return false;
+                        }
+                }
+                return false;
+            }
+            if (CodeType == MKLP_CodeType.Default)
+            {
+                switch ((PunishmentType)Config.Main.Default_Code_PunishmentType)
+                {
+                    case PunishmentType.Ban:
+                        {
+                            ManagePlayer.OnlineBan(false, player, Reason, "MKLP-AntiCheat", DateTime.MaxValue);
+                            return true;
+                        }
+                    case PunishmentType.Disable:
+                        {
+                            ManagePlayer.DisablePlayer(player, Reason, "MKLP-AntiCheat", WarningMessage + $"\n-# {CodeType} Code {CodeNumber}");
+                            return true;
+                        }
+                    case PunishmentType.KickAndLog:
+                        {
+                            Discordklp.KLPBotSendMessage_Warning(WarningMessage + $"\n-# {CodeType} Code {CodeNumber}", player.Name, Reason);
+                            player.Kick(Reason, true, false, "MKLP-AntiCheat");
+                            return true;
+                        }
+                    case PunishmentType.Kick:
+                        {
+                            player.Kick(Reason, true, false, "MKLP-AntiCheat");
+                            return true;
+                        }
+                    case PunishmentType.RevertAndLog:
+                        {
+                            if (RevertInventory) RevertPlayerInv();
+                            Discordklp.KLPBotSendMessage_Warning(WarningMessage + $"\n-# {CodeType} Code {CodeNumber}", player.Name, Reason);
+                            player.SendWarningMessage(Reason);
+                            return true;
+                        }
+                    case PunishmentType.Revert:
+                        {
+                            if (RevertInventory) RevertPlayerInv();
+                            player.SendWarningMessage(Reason);
+                            return true;
+                        }
+                    case PunishmentType.Log:
+                        {
+                            Discordklp.KLPBotSendMessage_Warning(WarningMessage + $"\n-# {CodeType} Code {CodeNumber}", player.Name, Reason);
+                            return false;
+                        }
+                }
+            }
+            if (CodeType == MKLP_CodeType.Dupe)
+            {
+                switch ((PunishmentType)Config.Main.SuspiciousDupe_PunishmentType)
+                {
+                    case PunishmentType.Ban:
+                        {
+                            ManagePlayer.OnlineBan(false, player, Reason, "MKLP-AntiCheat", DateTime.MaxValue);
+                            return true;
+                        }
+                    case PunishmentType.Disable:
+                        {
+                            ManagePlayer.DisablePlayer(player, Reason, "MKLP-AntiCheat", WarningMessage + $"\n-# {CodeType} Code {CodeNumber}");
+                            return true;
+                        }
+                    case PunishmentType.KickAndLog:
+                        {
+                            Discordklp.KLPBotSendMessage_Warning(WarningMessage + $"\n-# {CodeType} Code {CodeNumber}", player.Name, Reason);
+                            player.Kick(Reason, true, false, "MKLP-AntiCheat");
+                            return true;
+                        }
+                    case PunishmentType.Kick:
+                        {
+                            player.Kick(Reason, true, false, "MKLP-AntiCheat");
+                            return true;
+                        }
+                    case PunishmentType.RevertAndLog:
+                        {
+                            if (RevertInventory) RevertPlayerInv();
+                            Discordklp.KLPBotSendMessage_Warning(WarningMessage + $"\n-# {CodeType} Code {CodeNumber}", player.Name, Reason);
+                            player.SendWarningMessage(Reason);
+                            return true;
+                        }
+                    case PunishmentType.Revert:
+                        {
+                            if (RevertInventory) RevertPlayerInv();
+                            player.SendWarningMessage(Reason);
+                            return true;
+                        }
+                    case PunishmentType.Log:
+                        {
+                            Discordklp.KLPBotSendMessage_Warning(WarningMessage + $"\n-# {CodeType} Code {CodeNumber}", player.Name, Reason);
+                            return false;
+                        }
+                }
+                return false;
+            }
+            return false;
+
+            void RevertPlayerInv()
+            {
+                Item[] previnv = player.GetData<Item[]>("MKLP_PrevInventory");
+                Item[] prevpig = player.GetData<Item[]>("MKLP_PrevPiggyBank");
+                Item[] prevsafe = player.GetData<Item[]>("MKLP_PrevSafe");
+                Item[] prevforge = player.GetData<Item[]>("MKLP_PrevDefenderForge");
+                Item[] prevvault = player.GetData<Item[]>("MKLP_PrevVoidVault");
+
+                player.SetData("MKLP_Confirmed_InvRev", 2);
+
+                // Clear Main Inventory (slots 0–49)
+                for (int i = 0; i < NetItem.InventorySlots; i++)
+                    player.TPlayer.inventory[i] = previnv[i];
+
+                // Clear Armor and Accessories (slots 50–79)
+                //for (int i = 0; i < player.TPlayer.armor.Length; i++)
+                //player.TPlayer.armor[i].SetDefaults(0);
+                if ((bool)Config.Main.DetectAllPlayerInv)
+                {
+                    // Clear Piggy Bank
+                    for (int i = 0; i < player.TPlayer.bank.item.Length; i++)
+                        player.TPlayer.bank.item[i] = prevpig[i];
+
+                    // Clear Safe
+                    for (int i = 0; i < player.TPlayer.bank2.item.Length; i++)
+                        player.TPlayer.bank2.item[i] = prevsafe[i];
+
+                    // Clear Void Vault (Forge)
+                    for (int i = 0; i < player.TPlayer.bank3.item.Length; i++)
+                        player.TPlayer.bank3.item[i] = prevforge[i];
+
+
+                    for (int i = 0; i < player.TPlayer.bank4.item.Length; i++)
+                        player.TPlayer.bank4.item[i] = prevvault[i];
+                }
+
+                // Send the updated inventory to the client
+                for (int k = 0; k < NetItem.MaxInventory - (NetItem.SafeSlots + NetItem.PiggySlots + NetItem.ForgeSlots + NetItem.VoidSlots); k++) //clear all slots excluding bank slots, bank slots cleared in ResetBanks method
+                {
+                    try
+                    {
+                        NetMessage.SendData((int)PacketTypes.PlayerSlot, -1, -1, NetworkText.Empty, player.Index, (float)k, 0f, 0f, 0);
+                    }
+                    catch (Exception e)
+                    {
+                        MKLP_Console.SendLog_Exception(e);
+                    }
+                }
+            }
+            #endregion
+        }
+
         #endregion
+    }
+    
+    public enum MKLP_CodeType
+    {
+        Main,
+        Survival,
+        Default,
+        Dupe
+    }
+    public enum PunishmentType
+    {
+        Ban,
+        Disable,
+        KickAndLog,
+        Kick,
+        RevertAndLog,
+        Revert,
+        Log
     }
 
     #region [ Colored Console ]

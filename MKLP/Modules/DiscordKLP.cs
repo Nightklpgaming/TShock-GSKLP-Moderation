@@ -144,8 +144,17 @@ namespace MKLP.Modules
                         .WithDescription("ingame account you want to moderate")
                         .WithType(ApplicationCommandOptionType.String)
                         .WithRequired(true)
+                        ),
+                new SlashCommandBuilder()
+                    .WithName("ingame-command")
+                    .WithDescription("execute a command ingame!")
+                    .AddOption(new SlashCommandOptionBuilder()
+                        .WithName("command")
+                        .WithDescription("type a command")
+                        .WithType(ApplicationCommandOptionType.String)
+                        .WithRequired(true)
                         )
-            };
+        };
             #endregion
 
 
@@ -1433,6 +1442,11 @@ namespace MKLP.Modules
                                         case "Ban":
                                             #region ( Type: Ban )
                                             {
+                                                if (AccountHasPermission(executer, MKLP.Config.Permissions.CMD_Ban))
+                                                {
+                                                    await message.RespondAsync("You do not have permission to Ban a player!", ephemeral: true);
+                                                    return;
+                                                }
 
                                                 var modal = new ModalBuilder()
                                                     .WithTitle($"Banning [ {message.Data.CustomId.Split(S_)[4]} ]")
@@ -1448,6 +1462,12 @@ namespace MKLP.Modules
                                         case "QBan":
                                             #region ( Type: QBan )
                                             {
+                                                if (AccountHasPermission(executer, MKLP.Config.Permissions.CMD_Ban))
+                                                {
+                                                    await message.RespondAsync("You do not have permission to Ban a player!", ephemeral: true);
+                                                    return;
+                                                }
+
                                                 TSPlayer? targetplayer = null;
                                                 foreach (TSPlayer player in TShock.Players)
                                                 {
@@ -1480,6 +1500,12 @@ namespace MKLP.Modules
                                                         return;
                                                     }
 
+                                                    if (AccountHasPermission(executer, MKLP.Config.Permissions.CMD_OfflineBan))
+                                                    {
+                                                        await message.RespondAsync("You do not have permission to Offline Ban a player!", ephemeral: true);
+                                                        return;
+                                                    }
+
                                                     if (ManagePlayer.OfflineBan(account, message.Data.CustomId.Split(S_)[5], executer.Name, DateTime.MaxValue, true, true))
                                                     {
                                                         await message.RespondAsync($"Successfully Banned **{account.Name}**", ephemeral: true);
@@ -1496,6 +1522,12 @@ namespace MKLP.Modules
                                         case "Disable":
                                             #region ( Type: Disable )
                                             {
+                                                if (AccountHasPermission(executer, MKLP.Config.Permissions.CMD_Disable))
+                                                {
+                                                    await message.RespondAsync("You do not have permission to Disable a player!", ephemeral: true);
+                                                    return;
+                                                }
+
                                                 var modal = new ModalBuilder()
                                                     .WithTitle($"Disable [ {message.Data.CustomId.Split(S_)[4]} ]")
                                                     .WithCustomId("MKLP_InGame_PlayerAction_Disable_".Replace('_', S_) + message.Data.CustomId.Split(S_)[4])
@@ -1508,7 +1540,11 @@ namespace MKLP.Modules
                                         case "Undisable":
                                             #region ( Type: Undisable )
                                             {
-
+                                                if (AccountHasPermission(executer, MKLP.Config.Permissions.CMD_Disable))
+                                                {
+                                                    await message.RespondAsync("You do not have permission to Enable a player!", ephemeral: true);
+                                                    return;
+                                                }
                                                 TSPlayer? targetplayer = null;
                                                 foreach (TSPlayer player in TShock.Players)
                                                 {
@@ -1540,6 +1576,11 @@ namespace MKLP.Modules
                                         case "Mute":
                                             #region ( Type: Mute )
                                             {
+                                                if (AccountHasPermission(executer, MKLP.Config.Permissions.CMD_Mute))
+                                                {
+                                                    await message.RespondAsync("You do not have permission to Mute a player!", ephemeral: true);
+                                                    return;
+                                                }
 
                                                 var modal = new ModalBuilder()
                                                     .WithTitle($"Mute [ {message.Data.CustomId.Split(S_)[4]} ]")
@@ -1555,6 +1596,11 @@ namespace MKLP.Modules
                                         case "UnMute":
                                             #region ( Type: UnMute )
                                             {
+                                                if (AccountHasPermission(executer, MKLP.Config.Permissions.CMD_UnMute))
+                                                {
+                                                    await message.RespondAsync("You do not have permission to UnMute a player!", ephemeral: true);
+                                                    return;
+                                                }
 
                                                 TSPlayer? targetplayer = null;
                                                 foreach (TSPlayer player in TShock.Players)
@@ -1586,6 +1632,12 @@ namespace MKLP.Modules
                                                     if (account == null)
                                                     {
                                                         await message.RespondAsync($"Account **{message.Data.CustomId.Split(S_)[4]}** does'nt exist!", ephemeral: true);
+                                                        return;
+                                                    }
+
+                                                    if (AccountHasPermission(executer, MKLP.Config.Permissions.CMD_OfflineUnMute))
+                                                    {
+                                                        await message.RespondAsync("You do not have permission to Offline UnMute a player!", ephemeral: true);
                                                         return;
                                                     }
 
@@ -1649,6 +1701,11 @@ namespace MKLP.Modules
                                         case "Ban":
                                             #region ( Type: Ban )
                                             {
+                                                if (AccountHasPermission(executer, MKLP.Config.Permissions.CMD_Ban))
+                                                {
+                                                    await modal.RespondAsync("You do not have permission to Ban a player!", ephemeral: true);
+                                                    return;
+                                                }
 
                                                 string reason = components
                                                     .First(x => x.CustomId == "Ban_reason".Replace('_', S_)).Value;
@@ -1696,6 +1753,12 @@ namespace MKLP.Modules
                                                         return;
                                                     }
 
+                                                    if (AccountHasPermission(executer, MKLP.Config.Permissions.CMD_OfflineBan))
+                                                    {
+                                                        await modal.RespondAsync("You do not have permission to Mute a player!", ephemeral: true);
+                                                        return;
+                                                    }
+
                                                     if (ManagePlayer.OfflineBan(account, reason, executer.Name, expiration, true, true))
                                                     {
                                                         await modal.RespondAsync($"Successfully banned **{account.Name}**" +
@@ -1714,6 +1777,11 @@ namespace MKLP.Modules
                                         case "Disable":
                                             #region ( Type: Disable )
                                             {
+                                                if (AccountHasPermission(executer, MKLP.Config.Permissions.CMD_Disable))
+                                                {
+                                                    await modal.RespondAsync("You do not have permission to Disable a player!", ephemeral: true);
+                                                    return;
+                                                }
 
                                                 string reason = components
                                                     .First(x => x.CustomId == "Disable_reason".Replace('_', S_)).Value;
@@ -1749,7 +1817,11 @@ namespace MKLP.Modules
                                         case "Mute":
                                             #region ( Type: Mute )
                                             {
-
+                                                if (AccountHasPermission(executer, MKLP.Config.Permissions.CMD_Mute))
+                                                {
+                                                    await modal.RespondAsync("You do not have permission to Mute a player!", ephemeral: true);
+                                                    return;
+                                                }
                                                 string reason = components
                                                     .First(x => x.CustomId == "Mute_reason".Replace('_', S_)).Value;
                                                 string duration = components
@@ -1794,6 +1866,12 @@ namespace MKLP.Modules
                                                     if (account == null)
                                                     {
                                                         await modal.RespondAsync($"Account **{account.Name}** does'nt exist!", ephemeral: true);
+                                                        return;
+                                                    }
+
+                                                    if (AccountHasPermission(executer, MKLP.Config.Permissions.CMD_OfflineMute))
+                                                    {
+                                                        await modal.RespondAsync("You do not have permission to Offline Mute a player!", ephemeral: true);
                                                         return;
                                                     }
 
@@ -2680,6 +2758,66 @@ namespace MKLP.Modules
 
                         return;
                     }
+                #endregion
+                case "ingame-command":
+                    #region ( Command | ingame-command )
+                    {
+                        UserAccount executer = GetUserIDAccHasPermission(command.User.Id, TSStaffPermission);
+                        if (executer == null)
+                        {
+                            await command.RespondAsync("You do not have permission to proceed this interaction!", ephemeral: true);
+                            return;
+                        }
+
+                        if (executer == null)
+                        {
+                            await command.RespondAsync("⚠️Warning⚠️ your Account does not Exist!", null, false, true);
+                            return;
+                        }
+
+                        var getgroup = TShock.Groups.GetGroupByName(executer.Group);
+                        TSRestPlayer player = new TSRestPlayer(executer.Name, getgroup);
+
+                        player.Account = executer;
+
+
+                        try
+                        {
+                            string option1 = command.Data.Options.First().Value.ToString();
+
+
+                            Commands.HandleCommand(player, option1);
+
+                            string OutPutResult = "";
+
+                            foreach (string output in player.GetCommandOutput())
+                            {
+                                OutPutResult += output;
+                            }
+
+                            if (OutPutResult == "") OutPutResult = "   ";
+
+                            if (OutPutResult.Length > 4096) OutPutResult = OutPutResult.Substring(0, 4096);
+
+                            var embed = new EmbedBuilder()
+                                .WithTitle("Command OutPut")
+                                .WithDescription("```\n" + OutPutResult + "\n```")
+                                .WithColor(Discord.Color.Purple)
+                                .Build();
+
+                            await command.RespondAsync($"## Command executed! `{option1}`", embed: embed, ephemeral: true);
+
+
+
+                        }
+                        catch (Exception e)
+                        {
+                            Console.WriteLine(e);
+                            await command.RespondAsync("there was an error trying to execute the command!", ephemeral: true);
+                            return;
+                        }
+                        return;
+                    }
                     #endregion
             }
 
@@ -2790,7 +2928,7 @@ namespace MKLP.Modules
             return;
         }
 
-        string TitleLog = "<:Announcement_Box:1269150552860659724> **[ MKLP ] :** ";
+        string TitleLog = "⚙️ **[ MKLP ] :** ";
 
         public async void KLPBotSendMessageLog(ulong channel, string message)
         {
@@ -2910,7 +3048,7 @@ namespace MKLP.Modules
                     .WithButton("Check Player", "MKLP_SendMsg_PlayerModView_Main_".Replace('_', S_) + playername, emote: new Emoji("\U0001F4B3"))
                     .WithButton("Quick Ban [ permanent ]", $"MKLP_InGame_PlayerAction_QBan_".Replace('_', S_) + playername + S_ + reason, ButtonStyle.Danger, emote: new Emoji("\U0001F528"), row: 1);
 
-                await ((SocketTextChannel)targetchannel).SendMessageAsync(TitleLog + message, components: buttons.Build());
+                await ((SocketTextChannel)targetchannel).SendMessageAsync(TitleLog + "**Warning!** " + message, components: buttons.Build());
                 return;
             }
             catch (Exception e)
@@ -2924,6 +3062,17 @@ namespace MKLP.Modules
 
         #endregion
 
+        public bool AccountHasPermission(UserAccount Account, string Permission)
+        {
+            var getgroup = TShock.Groups.GetGroupByName(Account.Group);
+
+            if (getgroup == null)
+            {
+                return false;
+            }
+
+            return getgroup.HasPermission(Permission);
+        }
 
         UserAccount GetUserIDAccHasPermission(ulong UserID, string Permission)
         {

@@ -20,6 +20,7 @@ namespace MKLP
         public CONFIG_DISCORD Discord;
         public CONFIG_BOSSES BossManager;
         public CONFIG_DATABASE DataBase;
+        public CONFIG_UNRELEASE_FEATURE Unrelease;
 
         static string path = Path.Combine(TShock.SavePath, "MKLP.json");
 
@@ -58,6 +59,9 @@ namespace MKLP
 
             if (args.DataBase == null) args.DataBase = new();
             args.DataBase.FixNull();
+
+            if (args.Unrelease == null) args.Unrelease = new();
+            args.Unrelease.FixNull();
 
             File.WriteAllText(path, JsonConvert.SerializeObject(args, Formatting.Indented));
             return args;
@@ -103,6 +107,10 @@ namespace MKLP
     {
         public string HelpText_Seperator1 = "■▶▶▶▶ Seperator ◀◀◀◀■";
         public string HelpText_Seperator2 = "- Warning this is used for discord buttons! if a player tried to use this character they woudn't able to join!";
+
+        public string HelpText_Space1 = " ";
+        public string HelpText_Space2 = " ";
+
         public string HelpText_Codes0a = "■▶▶▶▶ Disable Codes ◀◀◀◀■";
         public string HelpText_Codes1a = "▮▬▬▬ Main Code 1 ▬▬▮";
         public string HelpText_Codes1b = "[ High Stack Value ]";
@@ -130,6 +138,10 @@ namespace MKLP
         public string HelpText_Codes7f = "'Code 4' : Liquid Threshold";
         public string HelpText_Codes7g = "'Code 5' : Projectile Threshold";
         public string HelpText_Codes7h = "'Code 6' : HealOther Threshold";
+
+        public string HelpText_Space3 = " ";
+        public string HelpText_Space4 = " ";
+
         public string HelpText_StaffChat0a = "■▶▶▶▶ StaffChat ◀◀◀◀■";
         public string HelpText_StaffChat1a = "▮▬▬▬ MessageRecieved_Discord ▬▬▮";
         public string HelpText_StaffChat1b = "- %discordname% : Discord username";
@@ -157,6 +169,29 @@ namespace MKLP
         public string HelpText_StaffChat4g = "- %tempgroupsuffix% : player's temp group suffix";
         public string HelpText_StaffChat5a = "▮▬▬▬▬▬▬▬▬▬▬▬▬▬ Any ▬▬▬▬▬▬▬▬▬▬▬▬▮";
         public string HelpText_StaffChat5b = "- %message% : Message of player/discorduser";
+
+        public string HelpText_Space5 = " ";
+        public string HelpText_Space6 = " ";
+
+        public string HelpText_PunishType0a = "■▶▶▶▶ Punishment Type 0-6 ◀◀◀◀■";
+        public string HelpText_PunishType1a = "▮▬▬▬▬ [ 0 ] Ban ▬▬▬▬▬▮";
+        public string HelpText_PunishType1b = "- bans a player immidiately";
+        public string HelpText_PunishType2a = "▮▬▬▬▬ [ 1 ] Disable ▬▬▬▬▬▮";
+        public string HelpText_PunishType2b = "- acts a ban but it prevents them from sending packets ( disable's are temporary! )";
+        public string HelpText_PunishType3a = "▮▬▬▬▬ [ 2 ] KickAndLog ▬▬▬▬▬▮";
+        public string HelpText_PunishType3b = "- kicks a player and sends a modlog";
+        public string HelpText_PunishType4a = "▮▬▬▬▬ [ 3 ] Kick ▬▬▬▬▬▮";
+        public string HelpText_PunishType4b = "- kicks a player";
+        public string HelpText_PunishType5a = "▮▬▬▬▬ [ 4 ] RevertAndLog ▬▬▬▬▬▮";
+        public string HelpText_PunishType5b = "- revert their action or their inventory and sends a modlog";
+        public string HelpText_PunishType6a = "▮▬▬▬▬ [ 5 ] Revert ▬▬▬▬▬▮";
+        public string HelpText_PunishType6b = "- revert their action or their inventory";
+        public string HelpText_PunishType7a = "▮▬▬▬▬ [ 6 ] Log ▬▬▬▬▬▮";
+        public string HelpText_PunishType7b = "- sends a modlog";
+
+        public string HelpText_Space7 = " ";
+        public string HelpText_Space8 = " ";
+
         public string HelpText_Restart1 = "■▶▶▶▶ Reminder ◀◀◀◀■";
         public string HelpText_Restart2 = "- modifying database/command require's server restart";
     }
@@ -215,11 +250,17 @@ namespace MKLP
         public string Message_AntiGrief_Surface_Place = "You Cannot Place Blocks on Surface!";
         public string Message_AntiGrief_Surface_PlaceLiquid = "You Cannot use Liquids on Surface!";
 
-        public bool? ReceivedWarning_SuspiciousDupe = true;
+        public bool? Use_SuspiciousDupe = true;
+        public PunishmentType? SuspiciousDupe_PunishmentType = PunishmentType.Log;
+
         public bool? Prevent_IllegalWire_Progression = false;
         public bool? ReceivedWarning_WirePlaceUnderground = false;
 
         public bool? Prevent_Place_BastStatueNearDoor = true;
+
+        public PunishmentType? Main_Code_PunishmentType = PunishmentType.Disable;
+        public PunishmentType? Survival_Code_PunishmentType = PunishmentType.Disable;
+        public PunishmentType? Default_Code_PunishmentType = PunishmentType.Kick;
 
         public bool? Using_Main_Code1 = false;
         public bool? Using_Main_Code2 = false;
@@ -266,7 +307,9 @@ namespace MKLP
 
         public bool? Use_VanishCMD_TPlayer_Active_Var = false;
 
-        
+        public bool? Use_OnUpdate_Func = true;
+
+        public bool? DetectAllPlayerInv = false;
 
         public bool? Save_Inventory_Log = false;
         public int? Save_InvLog_Max = 70;
@@ -315,11 +358,17 @@ namespace MKLP
             if (Message_AntiGrief_Surface_Place == null) Message_AntiGrief_Surface_Place = getdefault.Message_AntiGrief_Surface_Place;
             if (Message_AntiGrief_Surface_PlaceLiquid == null) Message_AntiGrief_Surface_PlaceLiquid = getdefault.Message_AntiGrief_Surface_PlaceLiquid;
 
-            if (ReceivedWarning_SuspiciousDupe == null) ReceivedWarning_SuspiciousDupe = getdefault.ReceivedWarning_SuspiciousDupe;
+            if (Use_SuspiciousDupe == null) Use_SuspiciousDupe = getdefault.Use_SuspiciousDupe;
+            if (SuspiciousDupe_PunishmentType == null) SuspiciousDupe_PunishmentType = getdefault.SuspiciousDupe_PunishmentType;
+
             if (Prevent_IllegalWire_Progression == null) Prevent_IllegalWire_Progression = getdefault.Prevent_IllegalWire_Progression;
             if (ReceivedWarning_WirePlaceUnderground == null) ReceivedWarning_WirePlaceUnderground = getdefault.ReceivedWarning_WirePlaceUnderground;
 
             if (Prevent_Place_BastStatueNearDoor == null) Prevent_Place_BastStatueNearDoor = getdefault.Prevent_Place_BastStatueNearDoor;
+
+            if (Main_Code_PunishmentType == null) Main_Code_PunishmentType = getdefault.Main_Code_PunishmentType;
+            if (Survival_Code_PunishmentType == null) Survival_Code_PunishmentType = getdefault.Survival_Code_PunishmentType;
+            if (Default_Code_PunishmentType == null) Default_Code_PunishmentType = getdefault.Default_Code_PunishmentType;
 
             if (Using_Main_Code1 == null) Using_Main_Code1 = getdefault.Using_Main_Code1;
             if (Using_Main_Code2 == null) Using_Main_Code2 = getdefault.Using_Main_Code2;
@@ -365,6 +414,10 @@ namespace MKLP
             if (Ignore_Value_ClearLag == null) Ignore_Value_ClearLag = getdefault.Ignore_Value_ClearLag;
 
             if (Use_VanishCMD_TPlayer_Active_Var == null) Use_VanishCMD_TPlayer_Active_Var = getdefault.Use_VanishCMD_TPlayer_Active_Var;
+
+            if (Use_OnUpdate_Func == null) Use_OnUpdate_Func = getdefault.Use_OnUpdate_Func;
+
+            if (DetectAllPlayerInv == null) DetectAllPlayerInv = getdefault.DetectAllPlayerInv;
 
             if (Save_Inventory_Log == null) Save_Inventory_Log = getdefault.Save_Inventory_Log;
             if (Save_InvLog_Max == null) Save_InvLog_Max = getdefault.Save_InvLog_Max;
@@ -676,6 +729,7 @@ namespace MKLP
         public bool? AllowTheTwins = true;
         public bool? AllowTheDestroyer = true;
         public bool? AllowSkeletronPrime = true;
+        public bool? AllowMechdusa = true;
         public bool? AllowPlantera = true;
         public bool? AllowGolem = true;
         public bool? AllowDukeFishron = true;
@@ -683,9 +737,28 @@ namespace MKLP
         public bool? AllowLunaticCultist = true;
         public bool? AllowMoonLord = true;
 
+        public int? KingSlime_RequiredPlayersforBoss = 1;
+        public int? EyeOfCthulhu_RequiredPlayersforBoss = 1;
+        public int? BrainOfCthulhu_RequiredPlayersforBoss = 1;
+        public int? EaterOfWorlds_RequiredPlayersforBoss = 1;
+        public int? QueenBee_RequiredPlayersforBoss = 1;
+        public int? Skeletron_RequiredPlayersforBoss = 1;
+        public int? Deerclops_RequiredPlayersforBoss = 1;
+        public int? WallOfFlesh_RequiredPlayersforBoss = 1;
+        public int? QueenSlime_RequiredPlayersforBoss = 1;
+        public int? TheTwins_RequiredPlayersforBoss = 1;
+        public int? TheDestroyer_RequiredPlayersforBoss = 1;
+        public int? SkeletronPrime_RequiredPlayersforBoss = 1;
+        public int? Mechdusa_RequiredPlayersforBoss = 1;
+        public int? Plantera_RequiredPlayersforBoss = 1;
+        public int? Golem_RequiredPlayersforBoss = 1;
+        public int? DukeFishron_RequiredPlayersforBoss = 1;
+        public int? EmpressOfLight_RequiredPlayersforBoss = 1;
+        public int? LunaticCultist_RequiredPlayersforBoss = 1;
+        public int? MoonLord_RequiredPlayersforBoss = 1;
+
         public bool? AllowJoinDuringBoss = true;
         public bool? PreventIllegalBoss = true;
-        public int? RequiredPlayersforBoss = 2;
         
         public CONFIG_BOSSES() { }
 
@@ -762,9 +835,27 @@ namespace MKLP
             if (AllowLunaticCultist == null) AllowLunaticCultist = getdefault.AllowLunaticCultist;
             if (AllowMoonLord == null) AllowMoonLord = getdefault.AllowMoonLord;
 
+            if (KingSlime_RequiredPlayersforBoss == null) KingSlime_RequiredPlayersforBoss = getdefault.KingSlime_RequiredPlayersforBoss;
+            if (EyeOfCthulhu_RequiredPlayersforBoss == null) EyeOfCthulhu_RequiredPlayersforBoss = getdefault.EyeOfCthulhu_RequiredPlayersforBoss;
+            if (EaterOfWorlds_RequiredPlayersforBoss == null) EaterOfWorlds_RequiredPlayersforBoss = getdefault.EaterOfWorlds_RequiredPlayersforBoss;
+            if (BrainOfCthulhu_RequiredPlayersforBoss == null) BrainOfCthulhu_RequiredPlayersforBoss = getdefault.BrainOfCthulhu_RequiredPlayersforBoss;
+            if (QueenBee_RequiredPlayersforBoss == null) QueenBee_RequiredPlayersforBoss = getdefault.QueenBee_RequiredPlayersforBoss;
+            if (Skeletron_RequiredPlayersforBoss == null) Skeletron_RequiredPlayersforBoss = getdefault.Skeletron_RequiredPlayersforBoss;
+            if (Deerclops_RequiredPlayersforBoss == null) Deerclops_RequiredPlayersforBoss = getdefault.Deerclops_RequiredPlayersforBoss;
+            if (WallOfFlesh_RequiredPlayersforBoss == null) WallOfFlesh_RequiredPlayersforBoss = getdefault.WallOfFlesh_RequiredPlayersforBoss;
+            if (QueenSlime_RequiredPlayersforBoss == null) QueenSlime_RequiredPlayersforBoss = getdefault.QueenSlime_RequiredPlayersforBoss;
+            if (TheTwins_RequiredPlayersforBoss == null) TheTwins_RequiredPlayersforBoss = getdefault.TheTwins_RequiredPlayersforBoss;
+            if (TheDestroyer_RequiredPlayersforBoss == null) TheDestroyer_RequiredPlayersforBoss = getdefault.TheDestroyer_RequiredPlayersforBoss;
+            if (SkeletronPrime_RequiredPlayersforBoss == null) SkeletronPrime_RequiredPlayersforBoss = getdefault.SkeletronPrime_RequiredPlayersforBoss;
+            if (Plantera_RequiredPlayersforBoss == null) Plantera_RequiredPlayersforBoss = getdefault.Plantera_RequiredPlayersforBoss;
+            if (Golem_RequiredPlayersforBoss == null) Golem_RequiredPlayersforBoss = getdefault.Golem_RequiredPlayersforBoss;
+            if (DukeFishron_RequiredPlayersforBoss == null) DukeFishron_RequiredPlayersforBoss = getdefault.DukeFishron_RequiredPlayersforBoss;
+            if (EmpressOfLight_RequiredPlayersforBoss == null) EmpressOfLight_RequiredPlayersforBoss = getdefault.EmpressOfLight_RequiredPlayersforBoss;
+            if (LunaticCultist_RequiredPlayersforBoss == null) LunaticCultist_RequiredPlayersforBoss = getdefault.LunaticCultist_RequiredPlayersforBoss;
+            if (MoonLord_RequiredPlayersforBoss == null) MoonLord_RequiredPlayersforBoss = getdefault.MoonLord_RequiredPlayersforBoss;
+
             if (AllowJoinDuringBoss == null) AllowJoinDuringBoss = getdefault.AllowJoinDuringBoss;
             if (PreventIllegalBoss == null) PreventIllegalBoss = getdefault.PreventIllegalBoss;
-            if (RequiredPlayersforBoss == null) RequiredPlayersforBoss = getdefault.RequiredPlayersforBoss;
 
         }
     }
@@ -812,5 +903,27 @@ namespace MKLP
             if (Custom_Get_UserID_From_AccountName == null) Custom_Get_UserID_From_AccountName = getdefault.Custom_Get_UserID_From_AccountName;
         }
     }
+
+    public class CONFIG_UNRELEASE_FEATURE
+    {
+        public string InfoText = "This is a beta stage! ( do not use it )";
+        public bool? Detect_ItemPlayerSpawn = false;
+
+        public CONFIG_UNRELEASE_FEATURE()
+        {
+            InfoText = "This is a beta stage! ( do not use it )";
+        }
+
+        public void FixNull()
+        {
+            CONFIG_UNRELEASE_FEATURE getdefault = new();
+
+            InfoText = "This is a beta stage! ( do not use it )";
+
+            if (Detect_ItemPlayerSpawn == null) Detect_ItemPlayerSpawn = getdefault.Detect_ItemPlayerSpawn;
+        }
+    }
     #endregion
+
+
 }
