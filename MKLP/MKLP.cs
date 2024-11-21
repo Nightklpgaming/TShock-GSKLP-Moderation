@@ -5,11 +5,14 @@ using IL.Terraria.Graphics;
 using Microsoft.Data.Sqlite;
 using Microsoft.Xna.Framework;
 using MKLP.Modules;
+using Newtonsoft.Json;
 using NuGet.Protocol;
 using NuGet.Protocol.Plugins;
 using Org.BouncyCastle.Asn1.X509;
 using Steamworks;
 using System;
+using System.Collections.Generic;
+
 
 
 
@@ -172,6 +175,19 @@ namespace MKLP
             {
                 HelpText = "Sends a message in staff chat"
             });
+
+            if ((bool)Config.Main.Replace_AccountInfo_TShockCommand)
+            {
+                Command VarMCMD_AccountInfo = new(MCMD_AccountInfo, "accountinfo", "ai") { HelpText = "Shows information about a user." };
+                Commands.ChatCommands.RemoveAll(cmd => cmd.Names.Exists(alias => VarMCMD_AccountInfo.Names.Contains(alias)));
+                Commands.ChatCommands.Add(VarMCMD_AccountInfo);
+            } else
+            {
+                Commands.ChatCommands.Add(new Command(Permissions.checkaccountinfo, MCMD_AccountInfo, "klpaccountinfo")
+                {
+                    HelpText = "Shows information about a user."
+                });
+            }
 
             #endregion
 
@@ -6936,6 +6952,110 @@ namespace MKLP
         #endregion
 
         #region [ Modified Commands ]
+
+        private void MCMD_AccountInfo(CommandArgs args)
+        {
+            #region code
+            
+            if (args.Parameters.Count == 0)
+            {
+                if ((bool)Config.Main.Replace_AccountInfo_TShockCommand)
+                {
+                    args.Player.SendErrorMessage($"Proper Usage: {Commands.Specifier}accountinfo <account name>");
+                } else
+                {
+                    args.Player.SendErrorMessage($"Proper Usage: {Commands.Specifier}klpaccountinfo <account name>");
+                }
+                return;
+            }
+
+            UserAccount targetaccount = TShock.UserAccounts.GetUserAccountByName(args.Parameters[0]);
+
+            if (targetaccount == null)
+            {
+                args.Player.SendErrorMessage("Invalid Account!");
+                return;
+            }
+
+            sendinfo(targetaccount);
+
+            /*
+            int targetaccid = -1;
+
+            if (int.TryParse(args.Parameters[0], out targetaccid))
+            {
+                UserAccount targetaccount = TShock.UserAccounts.GetUserAccountByID(targetaccid);
+
+                if (targetaccount == null)
+                {
+                    args.Player.SendErrorMessage("Invalid Account!");
+                    return;
+                }
+
+                sendinfo(targetaccount);
+            } else
+            {
+                
+            }
+
+            */
+
+            void sendinfo(UserAccount account)
+            {
+                ulong userid = 0;
+
+                try
+                {
+                    userid = LinkAccountManager.GetUserID(account.Name);
+                } catch { }
+
+
+                List<string> iplist = JsonConvert.DeserializeObject<List<string>>(account.KnownIps?.ToString() ?? string.Empty);
+                string lastknownip = iplist?[iplist.Count - 1] ?? "N/A";
+
+                string UTC = TimeZone.CurrentTimeZone.GetUtcOffset(DateTime.Now).Hours.ToString("+#;-#");
+
+                args.Player.SendMessage(
+                    $"== Account Info ==\n" +
+                    $"Name: [c/ffffff:{account.Name}]\n" +
+                    $"Account ID: [c/ffffff:{account.ID}]\n" +
+                    $"group: [c/ffffff:{account.Group}]\n" +
+                    $"\n{(userid != 0 ? $"Discord UserID: {userid}\n\n" : "")}" +
+                    $"Last  known IP: [c/ffffff:{lastknownip}]\n" +
+                    $"Last accessed: [c/ffffff:{account.LastAccessed} UTC{UTC}] [c/82ff91:{GetSince(DateTime.Parse(account.LastAccessed))}]\n" +
+                    $"Registered Since: [c/ffffff:{account.Registered} UTC{UTC}] [c/82ff91:{GetSince(DateTime.Parse(account.Registered))}]\n",
+                    Color.Gray);
+            }
+
+            string GetSince(DateTime Since)
+            {
+                TimeSpan getresult = (DateTime.UtcNow - Since);
+
+                if (getresult.TotalDays >= 1)
+                {
+                    return $"{Math.Floor(getresult.TotalDays)}{(getresult.TotalDays >= 2 ? "Days" : "Day")} ago";
+                }
+                if (getresult.TotalHours >= 1)
+                {
+                    return $"{Math.Floor(getresult.TotalHours)}{(getresult.TotalHours >= 2 ? "Hours" : "Hour")} ago";
+                }
+                if (getresult.TotalMinutes >= 1)
+                {
+                    return $"{Math.Floor(getresult.TotalMinutes)}{(getresult.TotalMinutes >= 2 ? "Minutes" : "Minute")} ago";
+                }
+                if (getresult.TotalSeconds >= 1)
+                {
+                    return $"{Math.Floor(getresult.TotalSeconds)}{(getresult.TotalSeconds >= 2 ? "Seconds" : "Second")} ago";
+                }
+                if (getresult.TotalMilliseconds >= 1)
+                {
+                    return $"{Math.Floor(getresult.TotalMilliseconds)}{(getresult.TotalMilliseconds >= 2 ? "Milliseconds" : "Millisecond")} ago";
+                }
+                return $"Time {Math.Floor(getresult.TotalSeconds)}{(getresult.TotalSeconds >= 2 ? "Seconds" : "Second")}";
+            }
+
+            #endregion
+        }
 
         private void MCMD_Playing(CommandArgs args)
         {

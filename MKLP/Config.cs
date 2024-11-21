@@ -234,6 +234,7 @@ namespace MKLP
         public bool? Replace_Ban_TShockCommand = false;
         public bool? Replace_Mute_TShockCommand = false;
         public bool? Replace_Who_TShockCommand = true;
+        public bool? Replace_AccountInfo_TShockCommand = true;
 
         public bool? Using_AntiGrief_Infection = false;
         public string Message_AntiGrief_Infection = "You Cannot Use those infection blocks!";
@@ -345,6 +346,7 @@ namespace MKLP
             if (Replace_Ban_TShockCommand == null) Replace_Ban_TShockCommand = getdefault.Replace_Ban_TShockCommand;
             if (Replace_Mute_TShockCommand == null) Replace_Mute_TShockCommand = getdefault.Replace_Mute_TShockCommand;
             if (Replace_Who_TShockCommand == null) Replace_Who_TShockCommand = getdefault.Replace_Who_TShockCommand;
+            if (Replace_AccountInfo_TShockCommand == null) Replace_AccountInfo_TShockCommand = getdefault.Replace_AccountInfo_TShockCommand;
 
             if (Using_AntiGrief_Infection == null) Using_AntiGrief_Infection = getdefault.Using_AntiGrief_Infection;
             if (Message_AntiGrief_Infection == null) Message_AntiGrief_Infection = getdefault.Message_AntiGrief_Infection;
