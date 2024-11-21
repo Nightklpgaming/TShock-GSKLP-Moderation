@@ -4617,6 +4617,18 @@ namespace MKLP
                             case "the destroyer":
                             case "destroyer":
                                 {
+                                    if (Main.zenithWorld)
+                                    {
+                                        if (!(bool)Config.BossManager.AllowMechdusa)
+                                        {
+                                            args.Player.SendErrorMessage("Mechdusa is already Enabled!");
+                                            return;
+                                        }
+
+                                        Config.BossManager.AllowMechdusa = false;
+                                        args.Player.SendInfoMessage("Mechdusa is now enabled");
+                                        break;
+                                    }
                                     if ((bool)Config.BossManager.AllowTheDestroyer)
                                     {
                                         args.Player.SendErrorMessage("The Destroyer is already Enabled!");
@@ -4632,6 +4644,18 @@ namespace MKLP
                             case "the twins":
                             case "twins":
                                 {
+                                    if (Main.zenithWorld)
+                                    {
+                                        if (!(bool)Config.BossManager.AllowMechdusa)
+                                        {
+                                            args.Player.SendErrorMessage("Mechdusa is already Enabled!");
+                                            return;
+                                        }
+
+                                        Config.BossManager.AllowMechdusa = false;
+                                        args.Player.SendInfoMessage("Mechdusa is now enabled");
+                                        break;
+                                    }
                                     if ((bool)Config.BossManager.AllowTheTwins)
                                     {
                                         args.Player.SendErrorMessage("The Twins is already Enabled!");
@@ -4647,6 +4671,18 @@ namespace MKLP
                             case "skeletron prime":
                             case "prime":
                                 {
+                                    if (Main.zenithWorld)
+                                    {
+                                        if (!(bool)Config.BossManager.AllowMechdusa)
+                                        {
+                                            args.Player.SendErrorMessage("Mechdusa is already Enabled!");
+                                            return;
+                                        }
+
+                                        Config.BossManager.AllowMechdusa = false;
+                                        args.Player.SendInfoMessage("Mechdusa is now enabled");
+                                        break;
+                                    }
                                     if ((bool)Config.BossManager.AllowSkeletronPrime)
                                     {
                                         args.Player.SendErrorMessage("Skeletron Prime is already Enabled!");
@@ -4655,6 +4691,24 @@ namespace MKLP
 
                                     Config.BossManager.AllowSkeletronPrime = true;
                                     args.Player.SendInfoMessage("Skeletron Prime is now enabled");
+                                    break;
+                                }
+                            case "mechdusa":
+                                {
+                                    if (!Main.zenithWorld)
+                                    {
+                                        args.Player.SendErrorMessage("Mechdusa is only available on zenith seed!");
+                                        return;
+                                    }
+
+                                    if (!(bool)Config.BossManager.AllowMechdusa)
+                                    {
+                                        args.Player.SendErrorMessage("Mechdusa is already Enabled!");
+                                        return;
+                                    }
+
+                                    Config.BossManager.AllowMechdusa = false;
+                                    args.Player.SendInfoMessage("Mechdusa is now enabled");
                                     break;
                                 }
                             case "plantera":
@@ -4905,6 +4959,18 @@ namespace MKLP
                             case "the destroyer":
                             case "destroyer":
                                 {
+                                    if (Main.zenithWorld)
+                                    {
+                                        if (!(bool)Config.BossManager.AllowMechdusa)
+                                        {
+                                            args.Player.SendErrorMessage("Mechdusa is already Disabled!");
+                                            return;
+                                        }
+
+                                        Config.BossManager.AllowMechdusa = false;
+                                        args.Player.SendInfoMessage("Mechdusa is now disabled");
+                                        break;
+                                    }
                                     if (!(bool)Config.BossManager.AllowTheDestroyer)
                                     {
                                         args.Player.SendErrorMessage("The Destroyer is already Disabled!");
@@ -4920,6 +4986,18 @@ namespace MKLP
                             case "the twins":
                             case "twins":
                                 {
+                                    if (Main.zenithWorld)
+                                    {
+                                        if (!(bool)Config.BossManager.AllowMechdusa)
+                                        {
+                                            args.Player.SendErrorMessage("Mechdusa is already Disabled!");
+                                            return;
+                                        }
+
+                                        Config.BossManager.AllowMechdusa = false;
+                                        args.Player.SendInfoMessage("Mechdusa is now disabled");
+                                        break;
+                                    }
                                     if (!(bool)Config.BossManager.AllowTheTwins)
                                     {
                                         args.Player.SendErrorMessage("The Twins is already Disabled!");
@@ -4935,6 +5013,18 @@ namespace MKLP
                             case "skeletron prime":
                             case "prime":
                                 {
+                                    if (Main.zenithWorld)
+                                    {
+                                        if (!(bool)Config.BossManager.AllowMechdusa)
+                                        {
+                                            args.Player.SendErrorMessage("Mechdusa is already Disabled!");
+                                            return;
+                                        }
+
+                                        Config.BossManager.AllowMechdusa = false;
+                                        args.Player.SendInfoMessage("Mechdusa is now disabled");
+                                        break;
+                                    }
                                     if (!(bool)Config.BossManager.AllowSkeletronPrime)
                                     {
                                         args.Player.SendErrorMessage("Skeletron Prime is already Disabled!");
@@ -4943,6 +5033,24 @@ namespace MKLP
 
                                     Config.BossManager.AllowSkeletronPrime = false;
                                     args.Player.SendInfoMessage("Skeletron Prime is now disabled");
+                                    break;
+                                }
+                            case "mechdusa":
+                                {
+                                    if (!Main.zenithWorld)
+                                    {
+                                        args.Player.SendErrorMessage("Mechdusa is only available on zenith seed!");
+                                        return;
+                                    }
+
+                                    if (!(bool)Config.BossManager.AllowMechdusa)
+                                    {
+                                        args.Player.SendErrorMessage("Mechdusa is already Disabled!");
+                                        return;
+                                    }
+
+                                    Config.BossManager.AllowMechdusa = false;
+                                    args.Player.SendInfoMessage("Mechdusa is now disabled");
                                     break;
                                 }
                             case "plantera":
@@ -5055,6 +5163,7 @@ namespace MKLP
                         Config.BossManager.AllowTheTwins = true;
                         Config.BossManager.AllowTheDestroyer = true;
                         Config.BossManager.AllowSkeletronPrime = true;
+                        Config.BossManager.AllowMechdusa = true;
                         Config.BossManager.AllowDukeFishron = true;
                         Config.BossManager.AllowPlantera = true;
                         Config.BossManager.AllowEmpressOfLight = true;
@@ -5083,6 +5192,7 @@ namespace MKLP
                         Config.BossManager.AllowTheTwins = false;
                         Config.BossManager.AllowTheDestroyer = false;
                         Config.BossManager.AllowSkeletronPrime = false;
+                        Config.BossManager.AllowMechdusa = false;
                         Config.BossManager.AllowDukeFishron = false;
                         Config.BossManager.AllowPlantera = false;
                         Config.BossManager.AllowEmpressOfLight = false;
@@ -5397,6 +5507,13 @@ namespace MKLP
                             case "the destroyer":
                             case "destroyer":
                                 {
+                                    if (Main.zenithWorld)
+                                    {
+                                        Config.BossManager.ScheduleAllowMechdusa = schedule;
+                                        args.Player.SendInfoMessage("set Mechdusa Schedule" +
+                                            $"\n{stringsched}");
+                                        break;
+                                    }
                                     Config.BossManager.ScheduleAllowTheDestroyer = schedule;
                                     args.Player.SendInfoMessage("set the Destroyer Schedule" +
                                         $"\n{stringsched}");
@@ -5407,6 +5524,13 @@ namespace MKLP
                             case "the twins":
                             case "twins":
                                 {
+                                    if (Main.zenithWorld)
+                                    {
+                                        Config.BossManager.ScheduleAllowMechdusa = schedule;
+                                        args.Player.SendInfoMessage("set Mechdusa Schedule" +
+                                            $"\n{stringsched}");
+                                        break;
+                                    }
                                     Config.BossManager.ScheduleAllowTheTwins = schedule;
                                     args.Player.SendInfoMessage("set The Twins Schedule" +
                                         $"\n{stringsched}");
@@ -5417,8 +5541,27 @@ namespace MKLP
                             case "skeletron prime":
                             case "prime":
                                 {
+                                    if (Main.zenithWorld)
+                                    {
+                                        Config.BossManager.ScheduleAllowMechdusa = schedule;
+                                        args.Player.SendInfoMessage("set Mechdusa Schedule" +
+                                            $"\n{stringsched}");
+                                        break;
+                                    }
                                     Config.BossManager.ScheduleAllowSkeletronPrime = schedule;
                                     args.Player.SendInfoMessage("set Skeletron Prime Schedule" +
+                                        $"\n{stringsched}");
+                                    break;
+                                }
+                            case "mechdusa":
+                                {
+                                    if (!Main.zenithWorld)
+                                    {
+                                        args.Player.SendErrorMessage("Mechdusa is only available on zenith seed!");
+                                        return;
+                                    }
+                                    Config.BossManager.ScheduleAllowMechdusa = schedule;
+                                    args.Player.SendInfoMessage("set Mechdusa Schedule" +
                                         $"\n{stringsched}");
                                     break;
                                 }
@@ -5580,6 +5723,12 @@ namespace MKLP
                             case "the destroyer":
                             case "destroyer":
                                 {
+                                    if (Main.zenithWorld)
+                                    {
+                                        Config.BossManager.ScheduleAllowMechdusa = DateTime.MaxValue;
+                                        args.Player.SendInfoMessage("Canceled Mechdusa Schedule");
+                                        break;
+                                    }
                                     Config.BossManager.ScheduleAllowTheDestroyer = DateTime.MaxValue;
                                     args.Player.SendInfoMessage("Canceled the Destroyer Schedule");
                                     break;
@@ -5589,6 +5738,12 @@ namespace MKLP
                             case "the twins":
                             case "twins":
                                 {
+                                    if (Main.zenithWorld)
+                                    {
+                                        Config.BossManager.ScheduleAllowMechdusa = DateTime.MaxValue;
+                                        args.Player.SendInfoMessage("Canceled Mechdusa Schedule");
+                                        break;
+                                    }
                                     Config.BossManager.ScheduleAllowTheTwins = DateTime.MaxValue;
                                     args.Player.SendInfoMessage("Canceled The Twins Schedule");
                                     break;
@@ -5598,8 +5753,26 @@ namespace MKLP
                             case "skeletron prime":
                             case "prime":
                                 {
+                                    if (Main.zenithWorld)
+                                    {
+                                        Config.BossManager.ScheduleAllowMechdusa = DateTime.MaxValue;
+                                        args.Player.SendInfoMessage("Canceled Mechdusa Schedule");
+                                        break;
+                                    }
                                     Config.BossManager.ScheduleAllowSkeletronPrime = DateTime.MaxValue;
                                     args.Player.SendInfoMessage("Canceled Skeletron Prime Schedule");
+                                    break;
+                                }
+                            case "mechdusa":
+                                {
+                                    if (!Main.zenithWorld)
+                                    {
+                                        args.Player.SendErrorMessage("Mechdusa is only available on zenith seed!");
+                                        return;
+                                    }
+
+                                    Config.BossManager.ScheduleAllowMechdusa = DateTime.MaxValue;
+                                    args.Player.SendInfoMessage("Canceled Mechdusa Schedule");
                                     break;
                                 }
                             case "plantera":
@@ -5677,6 +5850,7 @@ namespace MKLP
                         Config.BossManager.ScheduleAllowTheDestroyer = DateTime.MaxValue;
                         Config.BossManager.ScheduleAllowTheTwins = DateTime.MaxValue;
                         Config.BossManager.ScheduleAllowSkeletronPrime = DateTime.MaxValue;
+                        Config.BossManager.ScheduleAllowMechdusa = DateTime.MaxValue;
                         Config.BossManager.ScheduleAllowPlantera = DateTime.MaxValue;
                         Config.BossManager.ScheduleAllowGolem = DateTime.MaxValue;
                         Config.BossManager.ScheduleAllowDukeFishron = DateTime.MaxValue;
@@ -5691,7 +5865,7 @@ namespace MKLP
                         return;
                     }
                 #endregion
-                #region ( Type : DisableSchedall )
+                #region ( Type : usingschedule )
                 case "usingschedule":
                 case "usingsched":
                     {
@@ -5751,6 +5925,7 @@ namespace MKLP
                         Config.BossManager.ScheduleAllowTheDestroyer = today.AddDays((double)Config.BossManager.Default_ScheduleDay_AllowTheDestroyer);
                         Config.BossManager.ScheduleAllowTheTwins = today.AddDays((double)Config.BossManager.Default_ScheduleDay_AllowTheTwins);
                         Config.BossManager.ScheduleAllowSkeletronPrime = today.AddDays((double)Config.BossManager.Default_ScheduleDay_AllowSkeletronPrime);
+                        Config.BossManager.ScheduleAllowMechdusa = today.AddDays((double)Config.BossManager.Default_ScheduleDay_AllowMechdusa);
                         Config.BossManager.ScheduleAllowPlantera = today.AddDays((double)Config.BossManager.Default_ScheduleDay_AllowPlantera);
                         Config.BossManager.ScheduleAllowGolem = today.AddDays((double)Config.BossManager.Default_ScheduleDay_AllowGolem);
                         Config.BossManager.ScheduleAllowDukeFishron = today.AddDays((double)Config.BossManager.Default_ScheduleDay_AllowDukeFishron);
