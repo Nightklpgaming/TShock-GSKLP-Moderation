@@ -1442,7 +1442,7 @@ namespace MKLP.Modules
                                         case "Ban":
                                             #region ( Type: Ban )
                                             {
-                                                if (AccountHasPermission(executer, MKLP.Config.Permissions.CMD_Ban))
+                                                if (!AccountHasPermission(executer, MKLP.Config.Permissions.CMD_Ban))
                                                 {
                                                     await message.RespondAsync("You do not have permission to Ban a player!", ephemeral: true);
                                                     return;
@@ -1462,7 +1462,7 @@ namespace MKLP.Modules
                                         case "QBan":
                                             #region ( Type: QBan )
                                             {
-                                                if (AccountHasPermission(executer, MKLP.Config.Permissions.CMD_Ban))
+                                                if (!AccountHasPermission(executer, MKLP.Config.Permissions.CMD_Ban))
                                                 {
                                                     await message.RespondAsync("You do not have permission to Ban a player!", ephemeral: true);
                                                     return;
@@ -1500,7 +1500,7 @@ namespace MKLP.Modules
                                                         return;
                                                     }
 
-                                                    if (AccountHasPermission(executer, MKLP.Config.Permissions.CMD_OfflineBan))
+                                                    if (!AccountHasPermission(executer, MKLP.Config.Permissions.CMD_OfflineBan))
                                                     {
                                                         await message.RespondAsync("You do not have permission to Offline Ban a player!", ephemeral: true);
                                                         return;
@@ -1522,7 +1522,7 @@ namespace MKLP.Modules
                                         case "Disable":
                                             #region ( Type: Disable )
                                             {
-                                                if (AccountHasPermission(executer, MKLP.Config.Permissions.CMD_Disable))
+                                                if (!AccountHasPermission(executer, MKLP.Config.Permissions.CMD_Disable))
                                                 {
                                                     await message.RespondAsync("You do not have permission to Disable a player!", ephemeral: true);
                                                     return;
@@ -1540,7 +1540,7 @@ namespace MKLP.Modules
                                         case "Undisable":
                                             #region ( Type: Undisable )
                                             {
-                                                if (AccountHasPermission(executer, MKLP.Config.Permissions.CMD_Disable))
+                                                if (!AccountHasPermission(executer, MKLP.Config.Permissions.CMD_Disable))
                                                 {
                                                     await message.RespondAsync("You do not have permission to Enable a player!", ephemeral: true);
                                                     return;
@@ -1576,7 +1576,7 @@ namespace MKLP.Modules
                                         case "Mute":
                                             #region ( Type: Mute )
                                             {
-                                                if (AccountHasPermission(executer, MKLP.Config.Permissions.CMD_Mute))
+                                                if (!AccountHasPermission(executer, MKLP.Config.Permissions.CMD_Mute))
                                                 {
                                                     await message.RespondAsync("You do not have permission to Mute a player!", ephemeral: true);
                                                     return;
@@ -1596,7 +1596,7 @@ namespace MKLP.Modules
                                         case "UnMute":
                                             #region ( Type: UnMute )
                                             {
-                                                if (AccountHasPermission(executer, MKLP.Config.Permissions.CMD_UnMute))
+                                                if (!AccountHasPermission(executer, MKLP.Config.Permissions.CMD_UnMute))
                                                 {
                                                     await message.RespondAsync("You do not have permission to UnMute a player!", ephemeral: true);
                                                     return;
@@ -1635,7 +1635,7 @@ namespace MKLP.Modules
                                                         return;
                                                     }
 
-                                                    if (AccountHasPermission(executer, MKLP.Config.Permissions.CMD_OfflineUnMute))
+                                                    if (!AccountHasPermission(executer, MKLP.Config.Permissions.CMD_OfflineUnMute))
                                                     {
                                                         await message.RespondAsync("You do not have permission to Offline UnMute a player!", ephemeral: true);
                                                         return;
@@ -1654,6 +1654,55 @@ namespace MKLP.Modules
                                                 return;
                                             }
                                             #endregion
+                                    }
+
+                                    return;
+                                }
+                                #endregion
+                        }
+
+                        return;
+                    }
+                    #endregion
+                case "Discord":
+                    #region ( Type | Discord )
+                    {
+
+                        switch (message.Data.CustomId.Split(S_)[2])
+                        {
+                            case "GiveRole":
+                                #region ( Type => GiveRole )
+                                {
+
+                                    try
+                                    {
+                                        ulong roleid = 0;
+
+                                        if (!ulong.TryParse(message.Data.CustomId.Split(S_)[3], out roleid))
+                                        {
+                                            await message.RespondAsync("Error: Unable to add/remove this role from you!" +
+                                                "\n-# Contact any administrator to resolve this issue", ephemeral: true);
+                                            return;
+                                        }
+
+                                        var role = _client.GetGuild((ulong)MKLP.Config.Discord.MainGuildID).GetRole(roleid);
+                                        if (_client.GetGuild((ulong)MKLP.Config.Discord.MainGuildID).GetUser(message.User.Id).Roles.Any( r => r == role))
+                                        {
+                                            await _client.GetGuild((ulong)MKLP.Config.Discord.MainGuildID).GetUser(message.User.Id).RemoveRoleAsync(roleid);
+
+                                            await message.RespondAsync($"{role.Mention} is removed on you!", ephemeral: true);
+                                        } else
+                                        {
+                                            await _client.GetGuild((ulong)MKLP.Config.Discord.MainGuildID).GetUser(message.User.Id).AddRoleAsync(roleid);
+
+                                            await message.RespondAsync($"{role.Mention} is added on you!", ephemeral: true);
+                                        }
+
+                                    } catch
+                                    {
+                                        await message.RespondAsync("Error: Unable to add/remove this role from you!" +
+                                                "\n-# Contact any administrator to resolve this issue", ephemeral: true);
+                                        return;
                                     }
 
                                     return;
@@ -1701,7 +1750,7 @@ namespace MKLP.Modules
                                         case "Ban":
                                             #region ( Type: Ban )
                                             {
-                                                if (AccountHasPermission(executer, MKLP.Config.Permissions.CMD_Ban))
+                                                if (!AccountHasPermission(executer, MKLP.Config.Permissions.CMD_Ban))
                                                 {
                                                     await modal.RespondAsync("You do not have permission to Ban a player!", ephemeral: true);
                                                     return;
@@ -1753,7 +1802,7 @@ namespace MKLP.Modules
                                                         return;
                                                     }
 
-                                                    if (AccountHasPermission(executer, MKLP.Config.Permissions.CMD_OfflineBan))
+                                                    if (!AccountHasPermission(executer, MKLP.Config.Permissions.CMD_OfflineBan))
                                                     {
                                                         await modal.RespondAsync("You do not have permission to Mute a player!", ephemeral: true);
                                                         return;
@@ -1777,7 +1826,7 @@ namespace MKLP.Modules
                                         case "Disable":
                                             #region ( Type: Disable )
                                             {
-                                                if (AccountHasPermission(executer, MKLP.Config.Permissions.CMD_Disable))
+                                                if (!AccountHasPermission(executer, MKLP.Config.Permissions.CMD_Disable))
                                                 {
                                                     await modal.RespondAsync("You do not have permission to Disable a player!", ephemeral: true);
                                                     return;
@@ -1817,7 +1866,7 @@ namespace MKLP.Modules
                                         case "Mute":
                                             #region ( Type: Mute )
                                             {
-                                                if (AccountHasPermission(executer, MKLP.Config.Permissions.CMD_Mute))
+                                                if (!AccountHasPermission(executer, MKLP.Config.Permissions.CMD_Mute))
                                                 {
                                                     await modal.RespondAsync("You do not have permission to Mute a player!", ephemeral: true);
                                                     return;
@@ -1869,7 +1918,7 @@ namespace MKLP.Modules
                                                         return;
                                                     }
 
-                                                    if (AccountHasPermission(executer, MKLP.Config.Permissions.CMD_OfflineMute))
+                                                    if (!AccountHasPermission(executer, MKLP.Config.Permissions.CMD_OfflineMute))
                                                     {
                                                         await modal.RespondAsync("You do not have permission to Offline Mute a player!", ephemeral: true);
                                                         return;
@@ -2835,8 +2884,8 @@ namespace MKLP.Modules
             if (message is IUserMessage userMessage && !userMessage.Author.IsBot)
             {
                 string messagecontent = message.Content;
-                if (MKLP.Config.Discord.MainChannelID == null) return Task.CompletedTask;
-                if (userMessage.Channel.Id == (ulong)MKLP.Config.Discord.MainChannelID)
+                if (MKLP.Config.Discord.StaffChannel == null) return Task.CompletedTask;
+                if (userMessage.Channel.Id == (ulong)MKLP.Config.Discord.StaffChannel)
                 {
 
                     if (messagecontent == "" || messagecontent == null)
@@ -2909,23 +2958,98 @@ namespace MKLP.Modules
         /*
         public async void KLPBotSendMessage(ulong channel, string message)
         {
+            if (channel == 0) return;
 
-            var targetchannel = _client.GetChannel(channel);
+            try
+            {
+                var targetchannel = _client.GetChannel(channel);
 
-            await ((SocketTextChannel)targetchannel).SendMessageAsync(TitleLog + message);
-            return;
-
+                await ((SocketTextChannel)targetchannel).SendMessageAsync(message);
+                return;
+            }
+            catch (Exception e)
+            {
+                MKLP_Console.SendLog_Message_DiscordBot(e, "=[Log Exception]=", ConsoleColor.Red, ConsoleColor.DarkRed);
+            }
         }
         */
         public async void KLPBotSendMessageMain(string message)
         {
-            if ((ulong)MKLP.Config.Discord.MainChannelID == 0) return;
-            if ((ulong)MKLP.Config.Discord.MainChannelID == null) return;
+            if (MKLP.Config.Discord.StaffChannel == null) return;
+            if ((ulong)MKLP.Config.Discord.StaffChannel == 0) return;
 
-            var targetchannel = _client.GetChannel((ulong)MKLP.Config.Discord.MainChannelID);
+            var targetchannel = _client.GetChannel((ulong)MKLP.Config.Discord.StaffChannel);
 
             await ((SocketTextChannel)targetchannel).SendMessageAsync(message);
             return;
+        }
+
+        public async void KLPBotSendMessage_BossEnabled(string bossname)
+        {
+            if (MKLP.Config.BossManager.Discord_BossEnableChannel == null) return;
+            if ((ulong)MKLP.Config.BossManager.Discord_BossEnableChannel == 0) return;
+
+            string message = MKLP.Config.BossManager.Discord_BossEnableMessage;
+
+            message = message.Replace("%bossname%", bossname);
+
+            try
+            {
+                var targetchannel = _client.GetChannel((ulong)MKLP.Config.BossManager.Discord_BossEnableChannel);
+                try
+                {
+                    var role = _client.GetGuild((ulong)MKLP.Config.Discord.MainGuildID).GetRole((ulong)MKLP.Config.BossManager.Discord_BossEnableRole);
+
+                    var buttons = new ComponentBuilder()
+                        .WithButton("Get Notify", $"MKLP_Discord_GiveRole_{role.Id}".Replace('_', S_), ButtonStyle.Secondary);
+
+                    message = message.Replace("%notification%", role.Mention);
+                    await ((SocketTextChannel)targetchannel).SendMessageAsync(message, components: buttons.Build());
+                } catch
+                {
+                    message = message.Replace("%notification%", "`@notifity`");
+                    await ((SocketTextChannel)targetchannel).SendMessageAsync(message);
+                }
+                return;
+            }
+            catch (Exception e)
+            {
+                MKLP_Console.SendLog_Message_DiscordBot(e, "=[Log Exception]=", ConsoleColor.Red, ConsoleColor.DarkRed);
+            }
+        }
+        public async void KLPBotSendMessage_BossEnabled(string bossname, string playername)
+        {
+            if (MKLP.Config.BossManager.Discord_BossEnableChannel == null) return;
+            if ((ulong)MKLP.Config.BossManager.Discord_BossEnableChannel == 0) return;
+
+            string message = MKLP.Config.BossManager.Discord_BossEnableMessage;
+
+            message = message.Replace("%bossname%", bossname);
+            message = message.Replace("%playername%", playername);
+
+            try
+            {
+                var targetchannel = _client.GetChannel((ulong)MKLP.Config.BossManager.Discord_BossEnableChannel);
+                try
+                {
+                    var role = _client.GetGuild((ulong)MKLP.Config.Discord.MainGuildID).GetRole((ulong)MKLP.Config.BossManager.Discord_BossEnableRole);
+
+                    var buttons = new ComponentBuilder()
+                        .WithButton("Get Notify", $"MKLP_Discord_GiveRole_{role.Id}".Replace('_', S_), ButtonStyle.Secondary);
+
+                    message = message.Replace("%notification%", role.Mention);
+                    await ((SocketTextChannel)targetchannel).SendMessageAsync(message, components: buttons.Build());
+                } catch
+                {
+                    message = message.Replace("%notification%", "`@notifity`");
+                    await ((SocketTextChannel)targetchannel).SendMessageAsync(message);
+                }
+                return;
+            }
+            catch (Exception e)
+            {
+                MKLP_Console.SendLog_Message_DiscordBot(e, "=[Log Exception]=", ConsoleColor.Red, ConsoleColor.DarkRed);
+            }
         }
 
         string TitleLog = "⚙️ **[ MKLP ] :** ";
@@ -2949,8 +3073,8 @@ namespace MKLP.Modules
 
         public async void KLPBotSendMessageMainLog(string message)
         {
+            if (MKLP.Config.Discord.MainChannelLog == null) return;
             if ((ulong)MKLP.Config.Discord.MainChannelLog == 0) return;
-            if ((ulong)MKLP.Config.Discord.MainChannelLog == null) return;
 
             try
             {
@@ -2969,8 +3093,8 @@ namespace MKLP.Modules
         {
             try
             {
+                if (MKLP.Config.Discord.MainChannelLog == null) return;
                 if ((ulong)MKLP.Config.Discord.MainChannelLog == 0) return;
-                if ((ulong)MKLP.Config.Discord.MainChannelLog == null) return;
 
                 var targetchannel = _client.GetChannel((ulong)MKLP.Config.Discord.MainChannelLog);
 
@@ -2990,8 +3114,8 @@ namespace MKLP.Modules
 
         public async void KLPBotSendMessage_Report(int ID, string reporter, string target, string message, DateTime Since, string location, string playerlist)
         {
+            if (MKLP.Config.Discord.MainChannelLog == null) return;
             if ((ulong)MKLP.Config.Discord.MainChannelLog == 0) return;
-            if ((ulong)MKLP.Config.Discord.MainChannelLog == null) return;
             try
             {
                 var targetchannel = _client.GetChannel((ulong)MKLP.Config.Discord.MainChannelLog);
@@ -3008,10 +3132,11 @@ namespace MKLP.Modules
 
                     await ((SocketTextChannel)targetchannel).SendMessageAsync(TitleLog + $"New report from **{reporter}** {TimestampTag.FormatFromDateTime(Since, TimestampTagStyles.Relative)}" +
                         $"\n> **ID:** `{ID}`" +
-                        $"\n> **Target:** `{target}`" +
                         $"\n> **Location:** `{location}`" +
                         $"\n> **Players Online:** `{playerlist}`" +
-                        $"\n\n> **Message:** `{message}`",
+                        $"\n" +
+                        $"\n> **Target:** `{target}`" +
+                        $"\n> **Message:** `{message}`",
                         components: buttons.Build());
                 }
                 else
@@ -3036,8 +3161,8 @@ namespace MKLP.Modules
 
         public async void KLPBotSendMessage_Warning(string message, string playername = "none", string reason = "No Reason Provided")
         {
+            if (MKLP.Config.Discord.MainChannelLog == null) return;
             if ((ulong)MKLP.Config.Discord.MainChannelLog == 0) return;
-            if ((ulong)MKLP.Config.Discord.MainChannelLog == null) return;
 
             try
             {

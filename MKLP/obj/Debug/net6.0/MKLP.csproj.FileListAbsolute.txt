@@ -37,3 +37,16 @@ D:\Nightklp_KLP\my_Terraria_Plugins\For my Server\MKLP\MKLP\obj\Debug\net6.0\MKL
 D:\Nightklp_KLP\my_Terraria_Plugins\For my Server\MKLP\MKLP\obj\Debug\net6.0\refint\MKLP.dll
 D:\Nightklp_KLP\my_Terraria_Plugins\For my Server\MKLP\MKLP\obj\Debug\net6.0\MKLP.pdb
 D:\Nightklp_KLP\my_Terraria_Plugins\For my Server\MKLP\MKLP\obj\Debug\net6.0\ref\MKLP.dll
+D:\Nightklp_KLP\my_Terraria_Plugins\GSKLP\MKLP\MKLP\bin\Debug\net6.0\HttpServer.dll
+D:\Nightklp_KLP\my_Terraria_Plugins\GSKLP\MKLP\MKLP\bin\Debug\net6.0\MKLP.deps.json
+D:\Nightklp_KLP\my_Terraria_Plugins\GSKLP\MKLP\MKLP\bin\Debug\net6.0\MKLP.dll
+D:\Nightklp_KLP\my_Terraria_Plugins\GSKLP\MKLP\MKLP\bin\Debug\net6.0\MKLP.pdb
+D:\Nightklp_KLP\my_Terraria_Plugins\GSKLP\MKLP\MKLP\obj\Debug\net6.0\MKLP.csproj.AssemblyReference.cache
+D:\Nightklp_KLP\my_Terraria_Plugins\GSKLP\MKLP\MKLP\obj\Debug\net6.0\MKLP.GeneratedMSBuildEditorConfig.editorconfig
+D:\Nightklp_KLP\my_Terraria_Plugins\GSKLP\MKLP\MKLP\obj\Debug\net6.0\MKLP.AssemblyInfoInputs.cache
+D:\Nightklp_KLP\my_Terraria_Plugins\GSKLP\MKLP\MKLP\obj\Debug\net6.0\MKLP.AssemblyInfo.cs
+D:\Nightklp_KLP\my_Terraria_Plugins\GSKLP\MKLP\MKLP\obj\Debug\net6.0\MKLP.csproj.CoreCompileInputs.cache
+D:\Nightklp_KLP\my_Terraria_Plugins\GSKLP\MKLP\MKLP\obj\Debug\net6.0\MKLP.dll
+D:\Nightklp_KLP\my_Terraria_Plugins\GSKLP\MKLP\MKLP\obj\Debug\net6.0\refint\MKLP.dll
+D:\Nightklp_KLP\my_Terraria_Plugins\GSKLP\MKLP\MKLP\obj\Debug\net6.0\MKLP.pdb
+D:\Nightklp_KLP\my_Terraria_Plugins\GSKLP\MKLP\MKLP\obj\Debug\net6.0\ref\MKLP.dll

@@ -15,6 +15,7 @@ namespace MKLP
         public CONFIG_HELPTEXT Guide;
         public CONFIG_MAIN Main;
         public CONFIG_CHATMODERATION ChatMod;
+        public CONFIG_MANAGEPACKET ManagePackets;
         public CONFIG_PROGRESSION Progression;
         public CONFIG_PERMISSIONS Permissions;
         public CONFIG_DISCORD Discord;
@@ -44,6 +45,9 @@ namespace MKLP
 
             if (args.ChatMod == null) args.ChatMod = new();
             args.ChatMod.FixNull();
+
+            if (args.ManagePackets == null) args.ManagePackets = new();
+            args.ManagePackets.FixNull();
 
             if (args.Progression == null) args.Progression = new();
             args.Progression.FixNull();
@@ -218,6 +222,9 @@ namespace MKLP
         public bool? Allow_PlayerName_Symbols = true;
         public bool? Allow_PlayerName_InappropriateWords = false;
 
+        public bool? Target_UserMatchUUIDAndIP = false;
+        public bool? Allow_User_JoinMatchUUID = true;
+
         public string StaffChat_Message_discordacclinkedicon = "[i:3124]";
         public string StaffChat_Message_ingamelinkedicon = "💳";
 
@@ -327,6 +334,9 @@ namespace MKLP
             if (IllegalNames == null) IllegalNames = getdefault.IllegalNames;
             if (Allow_PlayerName_Symbols == null) Allow_PlayerName_Symbols = getdefault.Allow_PlayerName_Symbols;
             if (Allow_PlayerName_InappropriateWords == null) Allow_PlayerName_InappropriateWords = getdefault.Allow_PlayerName_InappropriateWords;
+
+            if (Target_UserMatchUUIDAndIP == null) Target_UserMatchUUIDAndIP = getdefault.Target_UserMatchUUIDAndIP;
+            if (Allow_User_JoinMatchUUID == null) Allow_User_JoinMatchUUID = getdefault.Allow_User_JoinMatchUUID;
 
             if (StaffChat_Message_discordacclinkedicon == null) StaffChat_Message_discordacclinkedicon = getdefault.StaffChat_Message_discordacclinkedicon;
             if (StaffChat_Message_ingamelinkedicon == null) StaffChat_Message_ingamelinkedicon = getdefault.StaffChat_Message_ingamelinkedicon;
@@ -488,6 +498,22 @@ namespace MKLP
             return;
         }
     }
+    public class CONFIG_MANAGEPACKET
+    {
+        public bool? Disable_Packet85_QuickStackChest = false;
+        public bool? Disable_Packet92_MobPickupCoin = false;
+        public CONFIG_MANAGEPACKET() { }
+
+        public void FixNull()
+        {
+            CONFIG_MANAGEPACKET getdefault = new();
+
+            if (Disable_Packet85_QuickStackChest == null) Disable_Packet85_QuickStackChest = getdefault.Disable_Packet85_QuickStackChest;
+            if (Disable_Packet92_MobPickupCoin == null) Disable_Packet92_MobPickupCoin = getdefault.Disable_Packet92_MobPickupCoin;
+
+            return;
+        }
+    }
 
     public class CONFIG_PROGRESSION
     {
@@ -514,7 +540,7 @@ namespace MKLP
     {
         public string BotToken = "NONE";
         public ulong? MainGuildID = 0;
-        public ulong? MainChannelID = 0;
+        public ulong? StaffChannel = 0;
         public ulong? MainChannelLog = 0;
         public ulong? ReportChannel = 0;
         public ulong? CommandLogChannel = 0;
@@ -528,7 +554,7 @@ namespace MKLP
 
             if (BotToken == null) BotToken = getdefault.BotToken;
             if (MainGuildID == null) MainGuildID = getdefault.MainGuildID;
-            if (MainChannelID == null) MainChannelID = getdefault.MainChannelID;
+            if (StaffChannel == null) StaffChannel = getdefault.StaffChannel;
             if (MainChannelLog == null) MainChannelLog = getdefault.MainChannelLog;
             if (ReportChannel == null) ReportChannel = getdefault.ReportChannel;
             if (CommandLogChannel == null) CommandLogChannel = getdefault.CommandLogChannel;
@@ -570,6 +596,7 @@ namespace MKLP
         //inspect
         public string CMD_InventoryView = "MKLP.staff.Inventory.view";
         public string CMD_Spy = "MKLP.spy";
+        public string CMD_UUIDMatch = "MKLP.uuidmatch";
 
         //manager
         public string CMD_MKLPDiscord = "MKLP.manager.discordlink";
@@ -635,6 +662,7 @@ namespace MKLP
 
             if (CMD_InventoryView == null) CMD_InventoryView = getdefault.CMD_InventoryView;
             if (CMD_Spy == null) CMD_Spy = getdefault.CMD_Spy;
+            if (CMD_UUIDMatch == null) CMD_UUIDMatch = getdefault.CMD_UUIDMatch;
 
             if (CMD_MKLPDiscord == null) CMD_MKLPDiscord = getdefault.CMD_MKLPDiscord;
 
@@ -717,6 +745,8 @@ namespace MKLP
         public int? Default_ScheduleDay_AllowLunaticCultist = 14;
         public int? Default_ScheduleDay_AllowMoonLord = 14;
 
+        public int? Default_ScheduleDay_Hour = 0;
+
         public bool? UseBossSchedule = false;
 
         public bool? AllowKingSlime = true;
@@ -761,7 +791,10 @@ namespace MKLP
 
         public bool? AllowJoinDuringBoss = true;
         public bool? PreventIllegalBoss = true;
-        
+
+        public ulong? Discord_BossEnableChannel = 0;
+        public ulong? Discord_BossEnableRole = 0;
+        public string Discord_BossEnableMessage = "%notification% **%bossname%** has been Enabled!";
         public CONFIG_BOSSES() { }
 
         public void FixNull()
@@ -816,6 +849,8 @@ namespace MKLP
             if (Default_ScheduleDay_AllowLunaticCultist == null) Default_ScheduleDay_AllowLunaticCultist = getdefault.Default_ScheduleDay_AllowLunaticCultist;
             if (Default_ScheduleDay_AllowMoonLord == null) Default_ScheduleDay_AllowMoonLord = getdefault.Default_ScheduleDay_AllowMoonLord;
 
+            if (Default_ScheduleDay_Hour == null) Default_ScheduleDay_Hour = getdefault.Default_ScheduleDay_Hour;
+
             if (UseBossSchedule == null) UseBossSchedule = getdefault.UseBossSchedule;
 
             if (AllowKingSlime == null) AllowKingSlime = getdefault.AllowKingSlime;
@@ -859,6 +894,10 @@ namespace MKLP
             if (AllowJoinDuringBoss == null) AllowJoinDuringBoss = getdefault.AllowJoinDuringBoss;
             if (PreventIllegalBoss == null) PreventIllegalBoss = getdefault.PreventIllegalBoss;
 
+
+            if (Discord_BossEnableChannel == null) Discord_BossEnableChannel = getdefault.Discord_BossEnableChannel;
+            if (Discord_BossEnableRole == null) Discord_BossEnableRole = getdefault.Discord_BossEnableRole;
+            if (Discord_BossEnableMessage == null) Discord_BossEnableMessage = getdefault.Discord_BossEnableMessage;
         }
     }
 

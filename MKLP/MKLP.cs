@@ -37,6 +37,7 @@ using Terraria.Localization;
 using TerrariaApi.Server;
 //TShock
 using TShockAPI;
+using TShockAPI.Configuration;
 using TShockAPI.DB;
 using TShockAPI.Hooks;
 using static System.Net.Mime.MediaTypeNames;
@@ -99,7 +100,7 @@ namespace MKLP
             PlayerHooks.PlayerCommand += OnPlayerCommand;
 
             PlayerHooks.PlayerChat += OnPlayerChat;
-            
+
             //=====================game=====================
             ServerApi.Hooks.NetGetData.Register(this, OnGetData);
 
@@ -301,6 +302,11 @@ namespace MKLP
                 HelpText = "allows you to stalk a player"
             });
 
+            Commands.ChatCommands.Add(new Command(Config.Permissions.CMD_UUIDMatch, CMD_uuidmatch, "uuidmatch")
+            {
+                HelpText = "check useraccounts with following match uuid accounts"
+            });
+
             #endregion
 
             #region [ Manager ]
@@ -423,6 +429,23 @@ namespace MKLP
                 return;
 
             var player = TShock.Players[args.Msg.whoAmI];
+
+            if (args.MsgID == PacketTypes.ForceItemIntoNearestChest)
+            {
+                if ((bool)Config.ManagePackets.Disable_Packet85_QuickStackChest)
+                {
+                    args.Handled = true;
+                }
+            }
+
+            if (args.MsgID == PacketTypes.SyncExtraValue)
+            {
+                if ((bool)Config.ManagePackets.Disable_Packet92_MobPickupCoin)
+                {
+                    args.Handled = true;
+                }
+            }
+
             #region [ latency ]
             if (args.MsgID == PacketTypes.ItemOwner)
             {
@@ -532,6 +555,8 @@ namespace MKLP
                 if (player.HasPermission(Permissions.item) ||
                     player.HasPermission(Permissions.give)) return;
 
+                if ((bool)Config.Main.Use_OnUpdate_Func) return;
+
                 if ((bool)Config.Main.DetectAllPlayerInv)
                 {
                     if (player.ContainsData("MKLP_PrevInventory") &&
@@ -547,7 +572,10 @@ namespace MKLP
                             player.GetData<Item[]>("MKLP_PrevDefenderForge"),
                             player.GetData<Item[]>("MKLP_PrevVoidVault"));
 
-                        if (player.ActiveChest != -1) player.SetData("MKLP_PrevChestOpen", Main.chest[player.ActiveChest].item.Clone());
+                        if (Main.chest[player.ActiveChest] != null)
+                        {
+                            if (player.ActiveChest != -1) player.SetData("MKLP_PrevChestOpen", Main.chest[player.ActiveChest].item.Clone());
+                        }
                         player.SetData("MKLP_PrevInventory", player.TPlayer.inventory.Clone());
                         player.SetData("MKLP_PrevPiggyBank", player.TPlayer.bank.item.Clone());
                         player.SetData("MKLP_PrevSafe", player.TPlayer.bank2.item.Clone());
@@ -556,7 +584,10 @@ namespace MKLP
                     }
                     else
                     {
-                        if (player.ActiveChest != -1) player.SetData("MKLP_PrevChestOpen", Main.chest[player.ActiveChest].item.Clone());
+                        if (Main.chest[player.ActiveChest] != null)
+                        {
+                            if (player.ActiveChest != -1) player.SetData("MKLP_PrevChestOpen", Main.chest[player.ActiveChest].item.Clone());
+                        }
                         player.SetData("MKLP_PrevInventory", player.TPlayer.inventory.Clone());
                         player.SetData("MKLP_PrevPiggyBank", player.TPlayer.bank.item.Clone());
                         player.SetData("MKLP_PrevSafe", player.TPlayer.bank2.item.Clone());
@@ -569,11 +600,7 @@ namespace MKLP
                     {
 
                         ManagePlayer.CheckPlayerInventory(player,
-                            player.GetData<Item[]>("MKLP_PrevInventory"),
-                            null,
-                            null,
-                            null,
-                            null);
+                            player.GetData<Item[]>("MKLP_PrevInventory"));
 
                         player.SetData("MKLP_PrevInventory", player.TPlayer.inventory.Clone());
                     }
@@ -706,6 +733,71 @@ namespace MKLP
 
                 }
             }
+
+            #region inventory checking
+            foreach (var player in TShock.Players)
+            {
+                if (player == null) continue;
+                if ((bool)Config.Main.DetectAllPlayerInv)
+                {
+                    if (player.ContainsData("MKLP_PrevInventory") &&
+                    player.ContainsData("MKLP_PrevPiggyBank") &&
+                    player.ContainsData("MKLP_PrevSafe") &&
+                    player.ContainsData("MKLP_PrevDefenderForge") &&
+                    player.ContainsData("MKLP_PrevVoidVault"))
+                    {
+                        ManagePlayer.CheckPlayerInventory(player,
+                            player.GetData<Item[]>("MKLP_PrevInventory"),
+                            player.GetData<Item[]>("MKLP_PrevPiggyBank"),
+                            player.GetData<Item[]>("MKLP_PrevSafe"),
+                            player.GetData<Item[]>("MKLP_PrevDefenderForge"),
+                            player.GetData<Item[]>("MKLP_PrevVoidVault"));
+
+                        if (Main.chest[player.ActiveChest] != null)
+                        {
+                            if (player.ActiveChest != -1) player.SetData("MKLP_PrevChestOpen", Main.chest[player.ActiveChest].item.Clone());
+                        }
+                        player.SetData("MKLP_PrevInventory", player.TPlayer.inventory.Clone());
+                        player.SetData("MKLP_PrevPiggyBank", player.TPlayer.bank.item.Clone());
+                        player.SetData("MKLP_PrevSafe", player.TPlayer.bank2.item.Clone());
+                        player.SetData("MKLP_PrevDefenderForge", player.TPlayer.bank3.item.Clone());
+                        player.SetData("MKLP_PrevVoidVault", player.TPlayer.bank4.item.Clone());
+                    }
+                    else
+                    {
+                        if (Main.chest[player.ActiveChest] != null)
+                        {
+                            if (player.ActiveChest != -1) player.SetData("MKLP_PrevChestOpen", Main.chest[player.ActiveChest].item.Clone());
+                        }
+                        player.SetData("MKLP_PrevInventory", player.TPlayer.inventory.Clone());
+                        player.SetData("MKLP_PrevPiggyBank", player.TPlayer.bank.item.Clone());
+                        player.SetData("MKLP_PrevSafe", player.TPlayer.bank2.item.Clone());
+                        player.SetData("MKLP_PrevDefenderForge", player.TPlayer.bank3.item.Clone());
+                        player.SetData("MKLP_PrevVoidVault", player.TPlayer.bank4.item.Clone());
+                    }
+                }
+                else
+                {
+                    if (player.ContainsData("MKLP_PrevInventory"))
+                    {
+
+                        ManagePlayer.CheckPlayerInventory(player,
+                            player.GetData<Item[]>("MKLP_PrevInventory"),
+                            null,
+                            null,
+                            null,
+                            null);
+
+                        player.SetData("MKLP_PrevInventory", player.TPlayer.inventory.Clone());
+                    }
+                    else
+                    {
+                        player.SetData("MKLP_PrevInventory", player.TPlayer.inventory.Clone());
+                    }
+                }
+            }
+
+            #endregion
         }
 
         #endregion
@@ -825,6 +917,44 @@ namespace MKLP
                 }
                 #endregion
 
+                #region Boss Is Present
+
+                for (int i = 0; i < Main.maxNPCs; i++)
+                {
+                    if (!(bool)Config.BossManager.AllowJoinDuringBoss && Main.npc[i].active && Main.npc[i].boss)
+                    {
+                        player.Disconnect("The current in-game players must defeat the current boss\nBefore you can join.");
+                        return;
+                    }
+                }
+
+                #endregion
+
+                #region UUID Match
+
+                var getuuidmatch = GetMatchUUID_UserAccount(player.UUID);
+
+                if (getuuidmatch.Count != 0 && !(bool)Config.Main.Allow_User_JoinMatchUUID)
+                {
+                    if ((bool)Config.Main.Target_UserMatchUUIDAndIP)
+                    {
+                        foreach (UserAccount get in getuuidmatch)
+                        {
+                            if (JsonConvert.DeserializeObject<List<string>>(get.KnownIps).Contains(player.IP))
+                            {
+                                player.Disconnect("Your UUID And IP matches with other accounts");
+                                return;
+                            }
+                        }
+                    } else
+                    {
+                        player.Disconnect("Your UUID matches with other accounts");
+                        return;
+                    }
+                }
+
+                #endregion
+
                 foreach (var check in DisabledKey)
                 {
                     if (check.Key == Identifier.Name + player.Name ||
@@ -923,6 +1053,9 @@ namespace MKLP
 
             Command command = args.CommandList.FirstOrDefault();
 
+            if (command == null)
+                return;
+
             if (!args.Player.RealPlayer)
             {
                 if (command.Name == "register" ||
@@ -935,27 +1068,32 @@ namespace MKLP
                 if (Config.Discord.CommandLogChannel == null) return;
                 if (command.CanRun(args.Player))
                 {
-                    Discordklp.KLPBotSendMessageLog((ulong)Config.Discord.CommandLogChannel, $"(Not in a Server) Named **{args.Player.Account.Name}** ✅Executed" +
+                    /*
+                    Discordklp.KLPBotSendMessageLog((ulong)Config.Discord.CommandLogChannel, $"(Not in a Server) Named **{args.Player.Name}** ✅Executed" +
                         $" `/{command.Name}{((string.Join(" ", args.Parameters.ToArray(), 0, args.Parameters.Count) == "") ? "" : " ")}{string.Join(" ", args.Parameters.ToArray(), 0, args.Parameters.Count)}`");
+                    */
+                    Discordklp.KLPBotSendMessageLog((ulong)Config.Discord.CommandLogChannel, $"(Not in a Server) Named **{args.Player.Name}** ✅Executed" +
+                        $" `{args.CommandPrefix}{args.CommandText}`");
                 }
                 else
                 {
-                    Discordklp.KLPBotSendMessageLog((ulong)Config.Discord.CommandLogChannel, $"(Not in a Server) Named **{args.Player.Account.Name}** ⛔Tried" +
+                    /*
+                    Discordklp.KLPBotSendMessageLog((ulong)Config.Discord.CommandLogChannel, $"(Not in a Server) Named **{args.Player.Name}** ⛔Tried" +
                         $" `/{command.Name}{((string.Join(" ", args.Parameters.ToArray(), 0, args.Parameters.Count) == "") ? "" : " ")}{string.Join(" ", args.Parameters.ToArray(), 0, args.Parameters.Count)}`");
+                    */
+                    Discordklp.KLPBotSendMessageLog((ulong)Config.Discord.CommandLogChannel, $"(Not in a Server) Named **{args.Player.Name}** ⛔Tried" +
+                        $" `{args.CommandPrefix}{args.CommandText}`");
                 }
                 return;
             }
 
-            if (command == null)
-                return;
 
             if (DisabledKey.ContainsKey(Identifier.Name + args.Player.Name) ||
                 DisabledKey.ContainsKey(Identifier.IP + args.Player.IP) ||
                 DisabledKey.ContainsKey(Identifier.UUID + args.Player.UUID))
             {
                 if (command.Name == "register" ||
-                    command.Name == "login" ||
-                    command.Name == "guesttalk")
+                    command.Name == "login")
                 {
                     args.Player.SendErrorMessage("You're currently Disabled!" +
                     "\n you cannot perform this command");
@@ -977,16 +1115,49 @@ namespace MKLP
             {
                 return;
             }
-
+            
             if (Config.Discord.CommandLogChannel == null) return;
-            if (command.CanRun(args.Player))
+            if (args.Player.IsLoggedIn)
             {
-                Discordklp.KLPBotSendMessageLog((ulong)Config.Discord.CommandLogChannel, $"Player **{args.Player.Account.Name}** ✅Executed" +
-                    $" `/{command.Name}{((string.Join(" ", args.Parameters.ToArray(), 0, args.Parameters.Count) == "") ? "" : " ")}{string.Join(" ", args.Parameters.ToArray(), 0, args.Parameters.Count)}`");
+                if (command.CanRun(args.Player))
+                {
+                    /*
+                    Discordklp.KLPBotSendMessageLog((ulong)Config.Discord.CommandLogChannel, $"Player **{args.Player.Account.Name}** ✅Executed" +
+                        $" `/{command.Name}{((string.Join(" ", args.Parameters.ToArray(), 0, args.Parameters.Count) == "") ? "" : " ")}{string.Join(" ", args.Parameters.ToArray(), 0, args.Parameters.Count)}`");
+                    */
+                    Discordklp.KLPBotSendMessageLog((ulong)Config.Discord.CommandLogChannel, $"Player **{args.Player.Account.Name}** ✅Executed" +
+                        $" `{args.CommandPrefix}{args.CommandText}`");
+                }
+                else
+                {
+                    /*
+                    Discordklp.KLPBotSendMessageLog((ulong)Config.Discord.CommandLogChannel, $"Player **{args.Player.Account.Name}** ⛔Tried" +
+                        $" `/{command.Name}{((string.Join(" ", args.Parameters.ToArray(), 0, args.Parameters.Count) == "") ? "" : " ")}{string.Join(" ", args.Parameters.ToArray(), 0, args.Parameters.Count)}`");
+                    */
+                    Discordklp.KLPBotSendMessageLog((ulong)Config.Discord.CommandLogChannel, $"Player **{args.Player.Account.Name}** ⛔Tried" +
+                        $" `{args.CommandPrefix}{args.CommandText}`");
+                }
             } else
             {
-                Discordklp.KLPBotSendMessageLog((ulong)Config.Discord.CommandLogChannel, $"Player **{args.Player.Account.Name}** ⛔Tried" +
-                    $" `/{command.Name}{((string.Join(" ", args.Parameters.ToArray(), 0, args.Parameters.Count) == "") ? "" : " ")}{string.Join(" ", args.Parameters.ToArray(), 0, args.Parameters.Count)}`");
+
+                if (command.CanRun(args.Player))
+                {
+                    /*
+                    Discordklp.KLPBotSendMessageLog((ulong)Config.Discord.CommandLogChannel, $"Player **{args.Player.Account.Name}** ✅Executed" +
+                        $" `/{command.Name}{((string.Join(" ", args.Parameters.ToArray(), 0, args.Parameters.Count) == "") ? "" : " ")}{string.Join(" ", args.Parameters.ToArray(), 0, args.Parameters.Count)}`");
+                    */
+                    Discordklp.KLPBotSendMessageLog((ulong)Config.Discord.CommandLogChannel, $"(Not Logged In) Player **{args.Player.Name}** ✅Executed" +
+                        $" `{args.CommandPrefix}{args.CommandText}`");
+                }
+                else
+                {
+                    /*
+                    Discordklp.KLPBotSendMessageLog((ulong)Config.Discord.CommandLogChannel, $"Player **{args.Player.Account.Name}** ⛔Tried" +
+                        $" `/{command.Name}{((string.Join(" ", args.Parameters.ToArray(), 0, args.Parameters.Count) == "") ? "" : " ")}{string.Join(" ", args.Parameters.ToArray(), 0, args.Parameters.Count)}`");
+                    */
+                    Discordklp.KLPBotSendMessageLog((ulong)Config.Discord.CommandLogChannel, $"(Not Logged In) Player **{args.Player.Name}** ⛔Tried" +
+                        $" `{args.CommandPrefix}{args.CommandText}`");
+                }
             }
             #endregion
         }
@@ -2097,10 +2268,12 @@ namespace MKLP
                     if (!(bool)Config.BossManager.AllowKingSlime)
                     {
                         DespawnNPC();
+                        TShock.Utils.Broadcast("King Slime isn't allowed yet!", Color.MediumPurple);
                     }
                     if (TShock.Utils.GetActivePlayerCount() < (int)Config.BossManager.KingSlime_RequiredPlayersforBoss)
                     {
                         DespawnNPC();
+                        TShock.Utils.Broadcast("There aren't enough players to fight King Slime!", Color.MediumPurple);
                     }
                 }
 
@@ -2109,10 +2282,12 @@ namespace MKLP
                     if (!(bool)Config.BossManager.AllowEyeOfCthulhu)
                     {
                         DespawnNPC();
+                        TShock.Utils.Broadcast("Eye of Cthulhu isn't allowed yet!", Color.MediumPurple);
                     }
                     if (TShock.Utils.GetActivePlayerCount() < (int)Config.BossManager.EyeOfCthulhu_RequiredPlayersforBoss)
                     {
                         DespawnNPC();
+                        TShock.Utils.Broadcast("There aren't enough players to fight Eye of Cthulhu!", Color.MediumPurple);
                     }
                 }
 
@@ -2121,10 +2296,12 @@ namespace MKLP
                     if (!(bool)Config.BossManager.AllowEaterOfWorlds)
                     {
                         DespawnNPC();
+                        TShock.Utils.Broadcast("Eater of Worlds isn't allowed yet!", Color.MediumPurple);
                     }
                     if (TShock.Utils.GetActivePlayerCount() < (int)Config.BossManager.EaterOfWorlds_RequiredPlayersforBoss)
                     {
                         DespawnNPC();
+                        TShock.Utils.Broadcast("There aren't enough players to fight Eater of Worlds!", Color.MediumPurple);
                     }
                 }
 
@@ -2133,10 +2310,12 @@ namespace MKLP
                     if (!(bool)Config.BossManager.AllowBrainOfCthulhu)
                     {
                         DespawnNPC();
+                        TShock.Utils.Broadcast("Brain of Cthulhu isn't allowed yet!", Color.MediumPurple);
                     }
                     if (TShock.Utils.GetActivePlayerCount() < (int)Config.BossManager.BrainOfCthulhu_RequiredPlayersforBoss)
                     {
                         DespawnNPC();
+                        TShock.Utils.Broadcast("There aren't enough players to fight Brain of Cthulhu!", Color.MediumPurple);
                     }
                 }
 
@@ -2145,10 +2324,12 @@ namespace MKLP
                     if (!(bool)Config.BossManager.AllowQueenBee)
                     {
                         DespawnNPC();
+                        TShock.Utils.Broadcast("Queen Bee isn't allowed yet!", Color.MediumPurple);
                     }
                     if (TShock.Utils.GetActivePlayerCount() < (int)Config.BossManager.QueenBee_RequiredPlayersforBoss)
                     {
                         DespawnNPC();
+                        TShock.Utils.Broadcast("There aren't enough players to fight Queen Bee!", Color.MediumPurple);
                     }
                 }
 
@@ -2157,10 +2338,12 @@ namespace MKLP
                     if (!(bool)Config.BossManager.AllowSkeletron)
                     {
                         DespawnNPC();
+                        TShock.Utils.Broadcast("Skeletron isn't allowed yet!", Color.MediumPurple);
                     }
                     if (TShock.Utils.GetActivePlayerCount() < (int)Config.BossManager.Skeletron_RequiredPlayersforBoss)
                     {
                         DespawnNPC();
+                        TShock.Utils.Broadcast("There aren't enough players to fight Skeletron!", Color.MediumPurple);
                     }
                 }
 
@@ -2169,10 +2352,12 @@ namespace MKLP
                     if (!(bool)Config.BossManager.AllowDeerclops)
                     {
                         DespawnNPC();
+                        TShock.Utils.Broadcast("Deerclops isn't allowed yet!", Color.MediumPurple);
                     }
                     if (TShock.Utils.GetActivePlayerCount() < (int)Config.BossManager.Deerclops_RequiredPlayersforBoss)
                     {
                         DespawnNPC();
+                        TShock.Utils.Broadcast("There aren't enough players to fight Deerclops!", Color.MediumPurple);
                     }
                 }
 
@@ -2181,10 +2366,12 @@ namespace MKLP
                     if (!(bool)Config.BossManager.AllowWallOfFlesh)
                     {
                         DespawnNPC();
+                        TShock.Utils.Broadcast("Wall of Flesh isn't allowed yet!", Color.MediumPurple);
                     }
                     if (TShock.Utils.GetActivePlayerCount() < (int)Config.BossManager.WallOfFlesh_RequiredPlayersforBoss)
                     {
                         DespawnNPC();
+                        TShock.Utils.Broadcast("There aren't enough players to fight Wall of Flesh!", Color.MediumPurple);
                     }
                 }
 
@@ -2193,10 +2380,12 @@ namespace MKLP
                     if (!(bool)Config.BossManager.AllowQueenSlime)
                     {
                         DespawnNPC();
+                        TShock.Utils.Broadcast("Queen Slime isn't allowed yet!", Color.MediumPurple);
                     }
                     if (TShock.Utils.GetActivePlayerCount() < (int)Config.BossManager.QueenSlime_RequiredPlayersforBoss)
                     {
                         DespawnNPC();
+                        TShock.Utils.Broadcast("There aren't enough players to fight Queen Slime!", Color.MediumPurple);
                     }
                 }
 
@@ -2209,10 +2398,12 @@ namespace MKLP
                         if (!(bool)Config.BossManager.AllowMechdusa)
                         {
                             DespawnNPC();
+                            TShock.Utils.Broadcast("Mechdusa isn't allowed yet!", Color.MediumPurple);
                         }
                         if (TShock.Utils.GetActivePlayerCount() < (int)Config.BossManager.Mechdusa_RequiredPlayersforBoss)
                         {
                             DespawnNPC();
+                            TShock.Utils.Broadcast("There aren't enough players to fight Mechdusa!", Color.MediumPurple);
                         }
                     }
                 } else
@@ -2222,10 +2413,12 @@ namespace MKLP
                         if (!(bool)Config.BossManager.AllowTheTwins)
                         {
                             DespawnNPC();
+                            TShock.Utils.Broadcast("The Twins isn't allowed yet!", Color.MediumPurple);
                         }
                         if (TShock.Utils.GetActivePlayerCount() < (int)Config.BossManager.TheTwins_RequiredPlayersforBoss)
                         {
                             DespawnNPC();
+                            TShock.Utils.Broadcast("There aren't enough players to fight The Twins!", Color.MediumPurple);
                         }
                     }
 
@@ -2234,10 +2427,12 @@ namespace MKLP
                         if (!(bool)Config.BossManager.AllowTheDestroyer)
                         {
                             DespawnNPC();
+                            TShock.Utils.Broadcast("The Destroyer isn't allowed yet!", Color.MediumPurple);
                         }
                         if (TShock.Utils.GetActivePlayerCount() < (int)Config.BossManager.TheDestroyer_RequiredPlayersforBoss)
                         {
                             DespawnNPC();
+                            TShock.Utils.Broadcast("There aren't enough players to fight The Destroyer!", Color.MediumPurple);
                         }
                     }
 
@@ -2246,10 +2441,12 @@ namespace MKLP
                         if (!(bool)Config.BossManager.AllowSkeletronPrime)
                         {
                             DespawnNPC();
+                            TShock.Utils.Broadcast("Skeletron Prime isn't allowed yet!", Color.MediumPurple);
                         }
                         if (TShock.Utils.GetActivePlayerCount() < (int)Config.BossManager.SkeletronPrime_RequiredPlayersforBoss)
                         {
                             DespawnNPC();
+                            TShock.Utils.Broadcast("There aren't enough players to fight Skeletron Prime!", Color.MediumPurple);
                         }
                     }
                 }
@@ -2261,10 +2458,12 @@ namespace MKLP
                     if (!(bool)Config.BossManager.AllowPlantera)
                     {
                         DespawnNPC();
+                        TShock.Utils.Broadcast("Plantera isn't allowed yet!", Color.MediumPurple);
                     }
                     if (TShock.Utils.GetActivePlayerCount() < (int)Config.BossManager.Plantera_RequiredPlayersforBoss)
                     {
                         DespawnNPC();
+                        TShock.Utils.Broadcast("There aren't enough players to fight Plantera!", Color.MediumPurple);
                     }
                 }
 
@@ -2273,10 +2472,12 @@ namespace MKLP
                     if (!(bool)Config.BossManager.AllowGolem)
                     {
                         DespawnNPC();
+                        TShock.Utils.Broadcast("Golem isn't allowed yet!", Color.MediumPurple);
                     }
                     if (TShock.Utils.GetActivePlayerCount() < (int)Config.BossManager.Golem_RequiredPlayersforBoss)
                     {
                         DespawnNPC();
+                        TShock.Utils.Broadcast("There aren't enough players to fight Golem!", Color.MediumPurple);
                     }
                 }
 
@@ -2285,10 +2486,12 @@ namespace MKLP
                     if (!(bool)Config.BossManager.AllowDukeFishron)
                     {
                         DespawnNPC();
+                        TShock.Utils.Broadcast("Duke Fishron isn't allowed yet!", Color.MediumPurple);
                     }
                     if (TShock.Utils.GetActivePlayerCount() < (int)Config.BossManager.DukeFishron_RequiredPlayersforBoss)
                     {
                         DespawnNPC();
+                        TShock.Utils.Broadcast("There aren't enough players to fight Duke Fishron!", Color.MediumPurple);
                     }
                 }
 
@@ -2297,10 +2500,12 @@ namespace MKLP
                     if (!(bool)Config.BossManager.AllowEmpressOfLight)
                     {
                         DespawnNPC();
+                        TShock.Utils.Broadcast("Empress of Light isn't allowed yet!", Color.MediumPurple);
                     }
                     if (TShock.Utils.GetActivePlayerCount() < (int)Config.BossManager.EmpressOfLight_RequiredPlayersforBoss)
                     {
                         DespawnNPC();
+                        TShock.Utils.Broadcast("There aren't enough players to fight Empress of Light!", Color.MediumPurple);
                     }
                 }
 
@@ -2309,10 +2514,12 @@ namespace MKLP
                     if (!(bool)Config.BossManager.AllowLunaticCultist)
                     {
                         DespawnNPC();
+                        TShock.Utils.Broadcast("Lunatic Cultist isn't allowed yet!", Color.MediumPurple);
                     }
                     if (TShock.Utils.GetActivePlayerCount() < (int)Config.BossManager.LunaticCultist_RequiredPlayersforBoss)
                     {
                         DespawnNPC();
+                        TShock.Utils.Broadcast("There aren't enough players to fight Lunatic Cultist!", Color.MediumPurple);
                     }
                 }
 
@@ -2321,10 +2528,12 @@ namespace MKLP
                     if (!(bool)Config.BossManager.AllowMoonLord)
                     {
                         DespawnNPC();
+                        TShock.Utils.Broadcast("Moon Lord isn't allowed yet!", Color.MediumPurple);
                     }
                     if (TShock.Utils.GetActivePlayerCount() < (int)Config.BossManager.MoonLord_RequiredPlayersforBoss)
                     {
                         DespawnNPC();
+                        TShock.Utils.Broadcast("There aren't enough players to fight Moon Lord!", Color.MediumPurple);
                     }
                 }
 
@@ -2911,46 +3120,55 @@ namespace MKLP
             {
                 Config.BossManager.AllowKingSlime = true;
                 changed = true;
+                Discordklp.KLPBotSendMessage_BossEnabled("King Slime");
             }
             if (DateTime.UtcNow > (DateTime)Config.BossManager.ScheduleAllowEyeOfCthulhu && !(bool)Config.BossManager.AllowEyeOfCthulhu)
             {
                 Config.BossManager.AllowEyeOfCthulhu = true;
                 changed = true;
+                Discordklp.KLPBotSendMessage_BossEnabled("Eye of Cthulhu");
             }
             if (DateTime.UtcNow > (DateTime)Config.BossManager.ScheduleAllowEaterOfWorlds && !(bool)Config.BossManager.AllowEaterOfWorlds)
             {
                 Config.BossManager.AllowEaterOfWorlds = true;
                 changed = true;
+                Discordklp.KLPBotSendMessage_BossEnabled("Eater of Worlds");
             }
             if (DateTime.UtcNow > (DateTime)Config.BossManager.ScheduleAllowBrainOfCthulhu && !(bool)Config.BossManager.AllowBrainOfCthulhu)
             {
                 Config.BossManager.AllowBrainOfCthulhu = true;
                 changed = true;
+                Discordklp.KLPBotSendMessage_BossEnabled("Brain of Cthulhu");
             }
             if (DateTime.UtcNow > (DateTime)Config.BossManager.ScheduleAllowQueenBee && !(bool)Config.BossManager.AllowQueenBee)
             {
                 Config.BossManager.AllowQueenBee = true;
                 changed = true;
+                Discordklp.KLPBotSendMessage_BossEnabled("Queen Bee");
             }
             if (DateTime.UtcNow > (DateTime)Config.BossManager.ScheduleAllowSkeletron && !(bool)Config.BossManager.AllowSkeletron)
             {
                 Config.BossManager.AllowSkeletron = true;
                 changed = true;
+                Discordklp.KLPBotSendMessage_BossEnabled("Skeletron");
             }
             if (DateTime.UtcNow > (DateTime)Config.BossManager.ScheduleAllowDeerclops && !(bool)Config.BossManager.AllowDeerclops)
             {
                 Config.BossManager.AllowDeerclops = true;
                 changed = true;
+                Discordklp.KLPBotSendMessage_BossEnabled("Deerclops");
             }
             if (DateTime.UtcNow > (DateTime)Config.BossManager.ScheduleAllowWallOfFlesh && !(bool)Config.BossManager.AllowWallOfFlesh)
             {
                 Config.BossManager.AllowWallOfFlesh = true;
                 changed = true;
+                Discordklp.KLPBotSendMessage_BossEnabled("Wall of Flesh");
             }
             if (DateTime.UtcNow > (DateTime)Config.BossManager.ScheduleAllowQueenSlime && !(bool)Config.BossManager.AllowQueenSlime)
             {
                 Config.BossManager.AllowQueenSlime = true;
                 changed = true;
+                Discordklp.KLPBotSendMessage_BossEnabled("Queen Slime");
             }
 
             //mechanical boss
@@ -2968,6 +3186,7 @@ namespace MKLP
                     Config.BossManager.AllowTheDestroyer = true;
                     Config.BossManager.AllowSkeletronPrime = true;
                     changed = true;
+                    Discordklp.KLPBotSendMessage_BossEnabled("Mechdusa");
                 }
             } else
             {
@@ -2975,16 +3194,19 @@ namespace MKLP
                 {
                     Config.BossManager.AllowTheTwins = true;
                     changed = true;
+                    Discordklp.KLPBotSendMessage_BossEnabled("The Twins");
                 }
                 if (DateTime.UtcNow > (DateTime)Config.BossManager.ScheduleAllowTheDestroyer && !(bool)Config.BossManager.AllowTheDestroyer)
                 {
                     Config.BossManager.AllowTheDestroyer = true;
                     changed = true;
+                    Discordklp.KLPBotSendMessage_BossEnabled("The Destroyer");
                 }
                 if (DateTime.UtcNow > (DateTime)Config.BossManager.ScheduleAllowSkeletronPrime && !(bool)Config.BossManager.AllowSkeletronPrime)
                 {
                     Config.BossManager.AllowSkeletronPrime = true;
                     changed = true;
+                    Discordklp.KLPBotSendMessage_BossEnabled("Skeletron Prime");
                 }
             }
 
@@ -2992,33 +3214,39 @@ namespace MKLP
             {
                 Config.BossManager.AllowPlantera = true;
                 changed = true;
+                Discordklp.KLPBotSendMessage_BossEnabled("Plantera");
             }
             if (DateTime.UtcNow > (DateTime)Config.BossManager.ScheduleAllowGolem && !(bool)Config.BossManager.AllowGolem)
             {
                 Config.BossManager.AllowGolem = true;
                 changed = true;
+                Discordklp.KLPBotSendMessage_BossEnabled("Golem");
             }
 
             if (DateTime.UtcNow > (DateTime)Config.BossManager.ScheduleAllowDukeFishron && !(bool)Config.BossManager.AllowDukeFishron)
             {
                 Config.BossManager.AllowDukeFishron = true;
                 changed = true;
+                Discordklp.KLPBotSendMessage_BossEnabled("Duke Fishron");
             }
             if (DateTime.UtcNow > (DateTime)Config.BossManager.ScheduleAllowEmpressOfLight && !(bool)Config.BossManager.AllowEmpressOfLight)
             {
                 Config.BossManager.AllowEmpressOfLight = true;
                 changed = true;
+                Discordklp.KLPBotSendMessage_BossEnabled("Empress of Light");
             }
 
             if (DateTime.UtcNow > (DateTime)Config.BossManager.ScheduleAllowLunaticCultist && !(bool)Config.BossManager.AllowLunaticCultist)
             {
                 Config.BossManager.AllowLunaticCultist = true;
                 changed = true;
+                Discordklp.KLPBotSendMessage_BossEnabled("Lunatic Cultist");
             }
             if (DateTime.UtcNow > (DateTime)Config.BossManager.ScheduleAllowMoonLord && !(bool)Config.BossManager.AllowMoonLord)
             {
                 Config.BossManager.AllowMoonLord = true;
                 changed = true;
+                Discordklp.KLPBotSendMessage_BossEnabled("MoonLord");
             }
 
             if (changed)
@@ -3078,6 +3306,7 @@ namespace MKLP
         {
             #region code
 
+            check_bosssched();
 
             #region { stringdefeatedbosses }
             /*
@@ -3754,7 +3983,7 @@ namespace MKLP
 
                 DateTime nextsched = DateTime.MaxValue;
 
-                if (!(bool)Config.BossManager.AllowKingSlime && NPC.downedSlimeKing)
+                if (!(bool)Config.BossManager.AllowKingSlime && !NPC.downedSlimeKing)
                 {
                     if (nextsched > (DateTime)Config.BossManager.ScheduleAllowKingSlime)
                     {
@@ -3763,7 +3992,7 @@ namespace MKLP
                     }
                 }
 
-                if (!(bool)Config.BossManager.AllowEyeOfCthulhu && NPC.downedBoss1)
+                if (!(bool)Config.BossManager.AllowEyeOfCthulhu && !NPC.downedBoss1)
                 {
                     if (nextsched > (DateTime)Config.BossManager.ScheduleAllowEyeOfCthulhu)
                     {
@@ -3772,7 +4001,7 @@ namespace MKLP
                     }
                 }
 
-                if (!(bool)Config.BossManager.AllowEaterOfWorlds && NPC.downedBoss2)
+                if (!(bool)Config.BossManager.AllowEaterOfWorlds && !NPC.downedBoss2)
                 {
                     if (nextsched > (DateTime)Config.BossManager.ScheduleAllowEaterOfWorlds)
                     {
@@ -3781,7 +4010,7 @@ namespace MKLP
                     }
                 }
 
-                if (!(bool)Config.BossManager.AllowDeerclops && NPC.downedDeerclops)
+                if (!(bool)Config.BossManager.AllowDeerclops && !NPC.downedDeerclops)
                 {
                     if (nextsched > (DateTime)Config.BossManager.ScheduleAllowDeerclops)
                     {
@@ -3790,7 +4019,7 @@ namespace MKLP
                     }
                 }
 
-                if (!(bool)Config.BossManager.AllowQueenBee && NPC.downedQueenBee)
+                if (!(bool)Config.BossManager.AllowQueenBee && !NPC.downedQueenBee)
                 {
                     if (nextsched > (DateTime)Config.BossManager.ScheduleAllowQueenBee)
                     {
@@ -3799,7 +4028,7 @@ namespace MKLP
                     }
                 }
 
-                if (!(bool)Config.BossManager.AllowSkeletron && NPC.downedBoss3)
+                if (!(bool)Config.BossManager.AllowSkeletron && !NPC.downedBoss3)
                 {
                     if (nextsched > (DateTime)Config.BossManager.ScheduleAllowSkeletron)
                     {
@@ -3808,7 +4037,7 @@ namespace MKLP
                     }
                 }
 
-                if (!(bool)Config.BossManager.AllowWallOfFlesh && Main.hardMode)
+                if (!(bool)Config.BossManager.AllowWallOfFlesh && !Main.hardMode)
                 {
                     if (nextsched > (DateTime)Config.BossManager.ScheduleAllowWallOfFlesh)
                     {
@@ -3817,7 +4046,7 @@ namespace MKLP
                     }
                 }
 
-                if (!(bool)Config.BossManager.AllowQueenSlime && NPC.downedQueenSlime)
+                if (!(bool)Config.BossManager.AllowQueenSlime && !NPC.downedQueenSlime)
                 {
                     if (nextsched > (DateTime)Config.BossManager.ScheduleAllowQueenSlime)
                     {
@@ -3826,7 +4055,7 @@ namespace MKLP
                     }
                 }
 
-                if (!(bool)Config.BossManager.AllowTheDestroyer && NPC.downedMechBoss1)
+                if (!(bool)Config.BossManager.AllowTheDestroyer && !NPC.downedMechBoss1)
                 {
                     if (nextsched > (DateTime)Config.BossManager.ScheduleAllowTheDestroyer)
                     {
@@ -3835,7 +4064,7 @@ namespace MKLP
                     }
                 }
 
-                if (!(bool)Config.BossManager.AllowTheTwins && NPC.downedMechBoss2)
+                if (!(bool)Config.BossManager.AllowTheTwins && !NPC.downedMechBoss2)
                 {
                     if (nextsched > (DateTime)Config.BossManager.ScheduleAllowTheTwins)
                     {
@@ -3844,7 +4073,7 @@ namespace MKLP
                     }
                 }
 
-                if (!(bool)Config.BossManager.AllowSkeletronPrime && NPC.downedMechBoss3)
+                if (!(bool)Config.BossManager.AllowSkeletronPrime && !NPC.downedMechBoss3)
                 {
                     if (nextsched > (DateTime)Config.BossManager.ScheduleAllowSkeletronPrime)
                     {
@@ -3853,7 +4082,7 @@ namespace MKLP
                     }
                 }
 
-                if (!(bool)Config.BossManager.AllowDukeFishron && NPC.downedFishron)
+                if (!(bool)Config.BossManager.AllowDukeFishron && !NPC.downedFishron)
                 {
                     if (nextsched > (DateTime)Config.BossManager.ScheduleAllowDukeFishron)
                     {
@@ -3862,7 +4091,7 @@ namespace MKLP
                     }
                 }
 
-                if (!(bool)Config.BossManager.AllowPlantera && NPC.downedPlantBoss)
+                if (!(bool)Config.BossManager.AllowPlantera && !NPC.downedPlantBoss)
                 {
                     if (nextsched > (DateTime)Config.BossManager.ScheduleAllowPlantera)
                     {
@@ -3871,7 +4100,7 @@ namespace MKLP
                     }
                 }
 
-                if (!(bool)Config.BossManager.AllowEmpressOfLight && NPC.downedEmpressOfLight)
+                if (!(bool)Config.BossManager.AllowEmpressOfLight && !NPC.downedEmpressOfLight)
                 {
                     if (nextsched > (DateTime)Config.BossManager.ScheduleAllowEmpressOfLight)
                     {
@@ -3880,7 +4109,7 @@ namespace MKLP
                     }
                 }
 
-                if (!(bool)Config.BossManager.AllowGolem && NPC.downedGolemBoss)
+                if (!(bool)Config.BossManager.AllowGolem && !NPC.downedGolemBoss)
                 {
                     if (nextsched > (DateTime)Config.BossManager.ScheduleAllowGolem)
                     {
@@ -3889,7 +4118,7 @@ namespace MKLP
                     }
                 }
 
-                if (!(bool)Config.BossManager.AllowLunaticCultist && NPC.downedAncientCultist)
+                if (!(bool)Config.BossManager.AllowLunaticCultist && !NPC.downedAncientCultist)
                 {
                     if (nextsched > (DateTime)Config.BossManager.ScheduleAllowLunaticCultist)
                     {
@@ -3898,7 +4127,7 @@ namespace MKLP
                     }
                 }
 
-                if (!(bool)Config.BossManager.AllowMoonLord && NPC.downedMoonlord)
+                if (!(bool)Config.BossManager.AllowMoonLord && !NPC.downedMoonlord)
                 {
                     if (nextsched > (DateTime)Config.BossManager.ScheduleAllowMoonLord)
                     {
@@ -3911,7 +4140,7 @@ namespace MKLP
 
                 string GetTimeString(DateTime datetime)
                 {
-                    TimeSpan getresult = (DateTime.UtcNow - datetime);
+                    TimeSpan getresult = (datetime - DateTime.UtcNow);
 
                     if (getresult.TotalDays >= 1)
                     {
@@ -4482,6 +4711,7 @@ namespace MKLP
 
                                     Config.BossManager.AllowKingSlime = true;
                                     args.Player.SendInfoMessage("King Slime is now enabled");
+                                    Discordklp.KLPBotSendMessage_BossEnabled("King Slime", args.Player.Name);
                                     break;
                                 }
                             case "eyeofcthulhu":
@@ -4497,6 +4727,7 @@ namespace MKLP
 
                                     Config.BossManager.AllowEyeOfCthulhu = true;
                                     args.Player.SendInfoMessage("Eye Of Cthulhu is now enabled");
+                                    Discordklp.KLPBotSendMessage_BossEnabled("Eye of Cthulhu", args.Player.Name);
                                     break;
                                 }
                             case "evilboss":
@@ -4511,6 +4742,7 @@ namespace MKLP
                                     Config.BossManager.AllowEaterOfWorlds = true;
                                     Config.BossManager.AllowBrainOfCthulhu = true;
                                     args.Player.SendInfoMessage("Eater Of Worlds & Brain Of Cthulhu is now enabled");
+                                    Discordklp.KLPBotSendMessage_BossEnabled("Eater of Worlds & Brain of Cthulhu", args.Player.Name);
                                     break;
                                 }
                             case "eow":
@@ -4526,6 +4758,7 @@ namespace MKLP
 
                                     Config.BossManager.AllowEaterOfWorlds = true;
                                     args.Player.SendInfoMessage("Eater Of Worlds is now enabled");
+                                    Discordklp.KLPBotSendMessage_BossEnabled("Eater of Worlds", args.Player.Name);
                                     break;
                                 }
                             case "boc":
@@ -4541,6 +4774,7 @@ namespace MKLP
 
                                     Config.BossManager.AllowBrainOfCthulhu = true;
                                     args.Player.SendInfoMessage("Brain Of Cthulhu is now enabled");
+                                    Discordklp.KLPBotSendMessage_BossEnabled("Brain of Cthulhu", args.Player.Name);
                                     break;
                                 }
                             case "skeletron":
@@ -4554,6 +4788,7 @@ namespace MKLP
 
                                     Config.BossManager.AllowSkeletron = true;
                                     args.Player.SendInfoMessage("Skeletron is now enabled");
+                                    Discordklp.KLPBotSendMessage_BossEnabled("Skeletron", args.Player.Name);
                                     break;
                                 }
                             case "queenbee":
@@ -4568,6 +4803,7 @@ namespace MKLP
 
                                     Config.BossManager.AllowQueenBee = true;
                                     args.Player.SendInfoMessage("Queen Bee is now enabled");
+                                    Discordklp.KLPBotSendMessage_BossEnabled("Queen Bee", args.Player.Name);
                                     break;
                                 }
                             case "deerclops":
@@ -4582,6 +4818,7 @@ namespace MKLP
 
                                     Config.BossManager.AllowDeerclops = true;
                                     args.Player.SendInfoMessage("Deerclops is now enabled");
+                                    Discordklp.KLPBotSendMessage_BossEnabled("Deerclops", args.Player.Name);
                                     break;
                                 }
                             case "wall of flesh":
@@ -4596,6 +4833,7 @@ namespace MKLP
 
                                     Config.BossManager.AllowWallOfFlesh = true;
                                     args.Player.SendInfoMessage("Wall Of Flesh is now enabled");
+                                    Discordklp.KLPBotSendMessage_BossEnabled("Wall of Flesh", args.Player.Name);
                                     break;
                                 }
                             case "queenslime":
@@ -4610,6 +4848,7 @@ namespace MKLP
 
                                     Config.BossManager.AllowQueenSlime = true;
                                     args.Player.SendInfoMessage("Queen Slime is now enabled");
+                                    Discordklp.KLPBotSendMessage_BossEnabled("Queen Slime", args.Player.Name);
                                     break;
                                 }
                             case "mech1":
@@ -4619,7 +4858,7 @@ namespace MKLP
                                 {
                                     if (Main.zenithWorld)
                                     {
-                                        if (!(bool)Config.BossManager.AllowMechdusa)
+                                        if ((bool)Config.BossManager.AllowMechdusa)
                                         {
                                             args.Player.SendErrorMessage("Mechdusa is already Enabled!");
                                             return;
@@ -4627,6 +4866,7 @@ namespace MKLP
 
                                         Config.BossManager.AllowMechdusa = false;
                                         args.Player.SendInfoMessage("Mechdusa is now enabled");
+                                        Discordklp.KLPBotSendMessage_BossEnabled("Mechdusa", args.Player.Name);
                                         break;
                                     }
                                     if ((bool)Config.BossManager.AllowTheDestroyer)
@@ -4637,6 +4877,7 @@ namespace MKLP
 
                                     Config.BossManager.AllowTheDestroyer = true;
                                     args.Player.SendInfoMessage("The Destroyer is now enabled");
+                                    Discordklp.KLPBotSendMessage_BossEnabled("Destroyer", args.Player.Name);
                                     break;
                                 }
                             case "mech2":
@@ -4646,7 +4887,7 @@ namespace MKLP
                                 {
                                     if (Main.zenithWorld)
                                     {
-                                        if (!(bool)Config.BossManager.AllowMechdusa)
+                                        if ((bool)Config.BossManager.AllowMechdusa)
                                         {
                                             args.Player.SendErrorMessage("Mechdusa is already Enabled!");
                                             return;
@@ -4654,6 +4895,7 @@ namespace MKLP
 
                                         Config.BossManager.AllowMechdusa = false;
                                         args.Player.SendInfoMessage("Mechdusa is now enabled");
+                                        Discordklp.KLPBotSendMessage_BossEnabled("Mechdusa", args.Player.Name);
                                         break;
                                     }
                                     if ((bool)Config.BossManager.AllowTheTwins)
@@ -4664,6 +4906,7 @@ namespace MKLP
 
                                     Config.BossManager.AllowTheTwins = true;
                                     args.Player.SendInfoMessage("The Twins is now enabled");
+                                    Discordklp.KLPBotSendMessage_BossEnabled("The Twins", args.Player.Name);
                                     break;
                                 }
                             case "mech3":
@@ -4673,7 +4916,7 @@ namespace MKLP
                                 {
                                     if (Main.zenithWorld)
                                     {
-                                        if (!(bool)Config.BossManager.AllowMechdusa)
+                                        if ((bool)Config.BossManager.AllowMechdusa)
                                         {
                                             args.Player.SendErrorMessage("Mechdusa is already Enabled!");
                                             return;
@@ -4681,6 +4924,7 @@ namespace MKLP
 
                                         Config.BossManager.AllowMechdusa = false;
                                         args.Player.SendInfoMessage("Mechdusa is now enabled");
+                                        Discordklp.KLPBotSendMessage_BossEnabled("Mechdusa", args.Player.Name);
                                         break;
                                     }
                                     if ((bool)Config.BossManager.AllowSkeletronPrime)
@@ -4691,6 +4935,7 @@ namespace MKLP
 
                                     Config.BossManager.AllowSkeletronPrime = true;
                                     args.Player.SendInfoMessage("Skeletron Prime is now enabled");
+                                    Discordklp.KLPBotSendMessage_BossEnabled("Skeletron Prime", args.Player.Name);
                                     break;
                                 }
                             case "mechdusa":
@@ -4701,7 +4946,7 @@ namespace MKLP
                                         return;
                                     }
 
-                                    if (!(bool)Config.BossManager.AllowMechdusa)
+                                    if ((bool)Config.BossManager.AllowMechdusa)
                                     {
                                         args.Player.SendErrorMessage("Mechdusa is already Enabled!");
                                         return;
@@ -4709,6 +4954,7 @@ namespace MKLP
 
                                     Config.BossManager.AllowMechdusa = false;
                                     args.Player.SendInfoMessage("Mechdusa is now enabled");
+                                    Discordklp.KLPBotSendMessage_BossEnabled("Mechdusa", args.Player.Name);
                                     break;
                                 }
                             case "plantera":
@@ -4721,6 +4967,7 @@ namespace MKLP
 
                                     Config.BossManager.AllowPlantera = true;
                                     args.Player.SendInfoMessage("Plantera is now enabled");
+                                    Discordklp.KLPBotSendMessage_BossEnabled("Plantera", args.Player.Name);
                                     break;
                                 }
                             case "golem":
@@ -4733,6 +4980,7 @@ namespace MKLP
 
                                     Config.BossManager.AllowGolem = true;
                                     args.Player.SendInfoMessage("Golem is now enabled");
+                                    Discordklp.KLPBotSendMessage_BossEnabled("Golem", args.Player.Name);
                                     break;
                                 }
                             case "duke":
@@ -4742,12 +4990,13 @@ namespace MKLP
                                 {
                                     if ((bool)Config.BossManager.AllowDukeFishron)
                                     {
-                                        args.Player.SendErrorMessage("Duke Fish is already Enabled!");
+                                        args.Player.SendErrorMessage("Duke Fishron is already Enabled!");
                                         return;
                                     }
 
                                     Config.BossManager.AllowDukeFishron = true;
-                                    args.Player.SendInfoMessage("Duke Fish is now enabled");
+                                    args.Player.SendInfoMessage("Duke Fishron is now enabled");
+                                    Discordklp.KLPBotSendMessage_BossEnabled("Duke Fishron", args.Player.Name);
                                     break;
                                 }
                             case "cultist":
@@ -4763,6 +5012,7 @@ namespace MKLP
 
                                     Config.BossManager.AllowLunaticCultist = true;
                                     args.Player.SendInfoMessage("Lunatic Cultist is now enabled");
+                                    Discordklp.KLPBotSendMessage_BossEnabled("Lunatic Cultist", args.Player.Name);
                                     break;
                                 }
 
@@ -4779,6 +5029,7 @@ namespace MKLP
 
                                     Config.BossManager.AllowEmpressOfLight = true;
                                     args.Player.SendInfoMessage("Empress Of Light is now enabled");
+                                    Discordklp.KLPBotSendMessage_BossEnabled("Empress of Light", args.Player.Name);
                                     break;
                                 }
                             case "moonlord":
@@ -4793,6 +5044,7 @@ namespace MKLP
 
                                     Config.BossManager.AllowMoonLord = true;
                                     args.Player.SendInfoMessage("Moon Lord is now enabled");
+                                    Discordklp.KLPBotSendMessage_BossEnabled("Moon Lord", args.Player.Name);
                                     break;
                                 }
                             default:
@@ -5172,6 +5424,7 @@ namespace MKLP
                         Config.BossManager.AllowMoonLord = true;
 
                         args.Player.SendInfoMessage("All Bosses are enabled");
+                        Discordklp.KLPBotSendMessage_BossEnabled("All Bosses", args.Player.Name);
                         Config.Changeall();
                         Config.Read();
                         return;
@@ -5200,7 +5453,7 @@ namespace MKLP
                         Config.BossManager.AllowLunaticCultist = false;
                         Config.BossManager.AllowMoonLord = false;
 
-                        args.Player.SendInfoMessage("All Bosses are enabled");
+                        args.Player.SendInfoMessage("All Bosses are disabled!");
                         Config.Changeall();
                         Config.Read();
                         return;
@@ -5912,7 +6165,10 @@ namespace MKLP
                 case "resetschedule":
                 case "resetsched":
                     {
-                        DateTime today = DateTime.Parse($"{DateTime.UtcNow.Month}/{DateTime.UtcNow.Day}/{DateTime.UtcNow.Year}");
+                        DateTime today = new(DateTime.UtcNow.Year, DateTime.UtcNow.Month, DateTime.UtcNow.Day, (int)Config.BossManager.Default_ScheduleDay_Hour, 0, 0);
+
+                        //DateTime today = DateTime.Parse($"{DateTime.UtcNow.Month}/{DateTime.UtcNow.Day}/{DateTime.UtcNow.Year}");
+
                         Config.BossManager.ScheduleAllowKingSlime = today.AddDays((double)Config.BossManager.Default_ScheduleDay_AllowKingSlime);
                         Config.BossManager.ScheduleAllowEyeOfCthulhu = today.AddDays((double)Config.BossManager.Default_ScheduleDay_AllowEyeOfCthulhu);
                         Config.BossManager.ScheduleAllowEaterOfWorlds = today.AddDays((double)Config.BossManager.Default_ScheduleDay_AllowEaterOfWorlds);
@@ -6234,7 +6490,6 @@ namespace MKLP
             bool altban = args.Parameters.Any(p => p == "-alt");
             bool accountban = args.Parameters.Any(p => p == "-account");
             bool accountidban = args.Parameters.Any(p => p == "-accountid");
-
 
             bool uuidip = true;
 
@@ -6891,6 +7146,43 @@ namespace MKLP
             args.Player.SendInfoMessage($"Spying {player.Name}");
             return;
 
+            #endregion
+        }
+
+        private void CMD_uuidmatch(CommandArgs args)
+        {
+            #region code
+            if (args.Parameters.Count == 0)
+            {
+                args.Player.SendErrorMessage($"Proper Usage: {Commands.Specifier}uuidmatch <accountname>");
+                return;
+            }
+
+            UserAccount getuser = TShock.UserAccounts.GetUserAccountByName(string.Join(" ", args.Parameters.ToArray(), 0, args.Parameters.Count));
+
+            if (getuser == null)
+            {
+                args.Player.SendErrorMessage("Invalid Player");
+                return;
+            }
+
+            var getresult = GetMatchUUID_UserAccount(getuser.UUID);
+
+            if (getresult.Count == 0)
+            {
+                args.Player.SendWarningMessage("No Accounts Match");
+            } else
+            {
+                string result = "";
+
+                foreach (var get in getresult)
+                {
+                    result += get.ID + " : " + get.Name + "\n";
+                }
+
+                args.Player.SendMessage("Following Users match their UUID:" +
+                    "\n" + result, Color.Gray);
+            }
             #endregion
         }
 
@@ -7623,6 +7915,96 @@ namespace MKLP
                     }
                 }
             }
+            #endregion
+        }
+
+        public void Check_SentryAndSummons()
+        {
+            #region code
+            /*
+            short[] SentryID =
+            {
+                ProjectileID.FrostHydra,
+                ProjectileID.SpiderHiver,
+                ProjectileID.HoundiusShootius,
+            };
+
+            short[] SummonID =
+            {
+                ProjectileID.Pygmy,
+                ProjectileID.Pygmy2,
+                ProjectileID.Pygmy3,
+                ProjectileID.Pygmy4,
+                ProjectileID.BabySlime,
+                ProjectileID.Raven,
+                ProjectileID.Hornet,
+                ProjectileID.FlyingImp,
+                ProjectileID.Retanimini,
+                ProjectileID.Spazmamini,
+                ProjectileID.VenomSpider,
+                ProjectileID.JumperSpider,
+                ProjectileID.DangerousSpider,
+                ProjectileID.OneEyedPirate,
+                ProjectileID.SoulscourgePirate,
+                ProjectileID.PirateCaptain,
+                ProjectileID.UFOMinion,
+                ProjectileID.DeadlySphere,
+                ProjectileID.StardustDragon2,
+                ProjectileID.StardustDragon3,
+                ProjectileID.BatOfLight,
+                ProjectileID.VampireFrog,
+                ProjectileID.BabyBird,
+                ProjectileID.FlinxMinion,
+
+            };
+
+            short[] OOASentryID =
+            {
+                ProjectileID.DD2FlameBurstTowerT1,
+                ProjectileID.DD2FlameBurstTowerT2,
+                ProjectileID.DD2FlameBurstTowerT3,
+                ProjectileID.DD2BallistraTowerT1,
+                ProjectileID.DD2BallistraTowerT2,
+                ProjectileID.DD2BallistraTowerT3,
+                ProjectileID.DD2LightningAuraT1,
+                ProjectileID.DD2LightningAuraT2,
+                ProjectileID.DD2LightningAuraT3,
+                ProjectileID.DD2ExplosiveTrapT1,
+                ProjectileID.DD2ExplosiveTrapT2,
+                ProjectileID.DD2ExplosiveTrapT3,
+            };
+            */
+            //desert tiger & Abigail stack
+            /*
+            foreach (var player in TShock.Players)
+            {
+                player.TPlayer.numMinions
+            }
+            */
+            #endregion
+        }
+
+        public List<UserAccount> GetMatchUUID_UserAccount(string UUID)
+        {
+            #region code
+            using var reader = TShock.DB.QueryReader("SELECT * FROM Users WHERE UUID = @0", UUID);
+
+            List<UserAccount> result = new();
+
+            while (reader.Read())
+            {
+                result.Add(new UserAccount{
+                    ID = reader.Get<int>("ID"),
+                    Group = reader.Get<string>("Usergroup"),
+                    UUID = reader.Get<string>("UUID"),
+                    Name = reader.Get<string>("Username"),
+                    Registered = reader.Get<string>("Registered"),
+                    LastAccessed = reader.Get<string>("LastAccessed"),
+                    KnownIps = reader.Get<string>("KnownIps")
+                });
+            }
+
+            return result;
             #endregion
         }
 

@@ -3,6 +3,7 @@ using Discord;
 using Discord.Rest;
 using IL.Terraria.Graphics;
 using IL.Terraria.ID;
+using IL.Terraria.UI;
 using Microsoft.Data.Sqlite;
 using Microsoft.Xna.Framework;
 using MKLP.Modules;
@@ -32,11 +33,11 @@ namespace MKLP.Modules
     {
 
         public static void CheckPlayerInventory(TSPlayer tsplayer,
-             Item[] previnv,
-             Item[] prevpig,
-             Item[] prevsafe,
-             Item[] prevforge,
-             Item[] prevvault)
+             Item[] previnv = null,
+             Item[] prevpig = null,
+             Item[] prevsafe = null,
+             Item[] prevforge = null,
+             Item[] prevvault = null)
         {
             if (!tsplayer.IsLoggedIn) return;
 
@@ -52,6 +53,24 @@ namespace MKLP.Modules
             //Item[] prevsafe = tsplayer.GetData<Item[]>("MKLP_PrevsSafe");
             //Item[] prevforge = tsplayer.GetData<Item[]>("MKLP_PrevDefenderForge");
             //Item[] prevvault = tsplayer.GetData<Item[]>("MKLP_PrevVoidVault");
+
+            for (int armori = 0; armori < tsplayer.TPlayer.armor.Length; armori++)
+            {
+                for (int armorii = 0; armorii < tsplayer.TPlayer.armor.Length; armorii++)
+                {
+                    if (armorii == armori) continue;
+                    if (tsplayer.TPlayer.armor[armorii].IsAir || tsplayer.TPlayer.armor[armorii].netID == 0) continue;
+
+                    if (tsplayer.TPlayer.armor[armorii].netID == tsplayer.TPlayer.armor[armori].netID)
+                    {
+
+                        tsplayer.GiveItem(tsplayer.TPlayer.armor[armori].netID, tsplayer.TPlayer.armor[armori].stack, tsplayer.TPlayer.armor[armori].prefix);
+                        tsplayer.TPlayer.armor[armori].SetDefaults();
+                        NetMessage.SendData((int)PacketTypes.PlayerSlot, -1, -1, Terraria.Localization.NetworkText.Empty, tsplayer.Index, NetItem.InventorySlots + armori, 0f, 0f, 0);
+
+                    }
+                }
+            }
 
             Dictionary<int, string> illegalitems = MKLP.IllegalItemProgression;
 

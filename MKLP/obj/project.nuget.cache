@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "dgSpecHash": "kIjJLvpTGwg=",
+  "dgSpecHash": "DdL7RM7FMXw=",
   "success": true,
-  "projectFilePath": "D:\\Nightklp_KLP\\my_Terraria_Plugins\\For my Server\\MKLP\\MKLP\\MKLP.csproj",
+  "projectFilePath": "D:\\Nightklp_KLP\\my_Terraria_Plugins\\GSKLP\\MKLP\\MKLP\\MKLP.csproj",
   "expectedPackageFiles": [
     "C:\\Users\\Rock\\.nuget\\packages\\bcrypt.net-next\\4.0.3\\bcrypt.net-next.4.0.3.nupkg.sha512",
     "C:\\Users\\Rock\\.nuget\\packages\\discord.net\\3.13.0\\discord.net.3.13.0.nupkg.sha512",
@@ -93,5 +93,16 @@
     "C:\\Users\\Rock\\.nuget\\packages\\tsapi\\5.2.0\\tsapi.5.2.0.nupkg.sha512",
     "C:\\Users\\Rock\\.nuget\\packages\\tshock\\5.2.0\\tshock.5.2.0.nupkg.sha512"
   ],
-  "logs": []
+  "logs": [
+    {
+      "code": "NU1903",
+      "level": "Warning",
+      "warningLevel": 1,
+      "message": "Package 'TShock' 5.2.0 has a known high severity vulnerability, https://github.com/advisories/GHSA-hvm9-wc8j-mgrc",
+      "libraryId": "TShock",
+      "targetGraphs": [
+        "net6.0"
+      ]
+    }
+  ]
 }
