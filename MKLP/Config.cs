@@ -293,9 +293,11 @@ namespace MKLP
         public PunishmentType? Default_Code_PunishmentType = PunishmentType.Kick;
 
         public bool? Using_Main_Code1 = false;
+        public bool? AutoClear_IllegalItemDrops_MainCode1 = true;
         public bool? Using_Main_Code2 = false;
 
         public bool? Using_Survival_Code1 = false;
+        public bool? AutoClear_IllegalItemDrops_SurvivalCode1 = true;
         public int[]? WhiteList_Survival_Code1 = { 1 };
         public bool? Using_Survival_Code2 = false;
         public short[]? WhiteList_Survival_Code2 = { 1 };
@@ -409,9 +411,11 @@ namespace MKLP
             if (Default_Code_PunishmentType == null) Default_Code_PunishmentType = getdefault.Default_Code_PunishmentType;
 
             if (Using_Main_Code1 == null) Using_Main_Code1 = getdefault.Using_Main_Code1;
+            if (AutoClear_IllegalItemDrops_MainCode1 == null) AutoClear_IllegalItemDrops_MainCode1 = getdefault.AutoClear_IllegalItemDrops_MainCode1;
             if (Using_Main_Code2 == null) Using_Main_Code2 = getdefault.Using_Main_Code2;
 
             if (Using_Survival_Code1 == null) Using_Survival_Code1 = getdefault.Using_Survival_Code1;
+            if (AutoClear_IllegalItemDrops_SurvivalCode1 == null) AutoClear_IllegalItemDrops_SurvivalCode1 = getdefault.AutoClear_IllegalItemDrops_SurvivalCode1;
             if (WhiteList_Survival_Code1 == null) WhiteList_Survival_Code1 = getdefault.WhiteList_Survival_Code1;
             if (Using_Survival_Code2 == null) Using_Survival_Code2 = getdefault.Using_Survival_Code2;
             if (WhiteList_Survival_Code2 == null) WhiteList_Survival_Code2 = getdefault.WhiteList_Survival_Code2;

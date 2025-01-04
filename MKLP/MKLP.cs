@@ -5,6 +5,7 @@ using IL.Terraria.Graphics;
 using Microsoft.Data.Sqlite;
 using Microsoft.Xna.Framework;
 using MKLP.Modules;
+using MySqlX.XDevAPI.Relational;
 using Newtonsoft.Json;
 using NuGet.Protocol;
 using NuGet.Protocol.Plugins;
@@ -708,6 +709,30 @@ namespace MKLP
                 } else
                 {
                     newitemDrops[index] = TItem;
+                }
+            }
+
+            int maxvalue = 10;
+
+            if (Main.hardMode) maxvalue = 100;
+
+            if ((bool)Config.Main.AutoClear_IllegalItemDrops_SurvivalCode1 || (bool)Config.Main.AutoClear_IllegalItemDrops_MainCode1)
+            {
+                for (int i = 0; i < Main.maxItems; i++)
+                {
+                    if (IllegalItemProgression.ContainsKey(Main.item[i].netID) &&
+                        (bool)MKLP.Config.Main.Using_Survival_Code1 && (bool)Config.Main.AutoClear_IllegalItemDrops_SurvivalCode1 && Main.item[i].active)
+                    {
+                        Main.item[i].active = false;
+                        TSPlayer.All.SendData(PacketTypes.ItemDrop, "", i);
+                    }
+                    if ((Main.item[i].value * Main.item[i].stack) / 5000000 >= maxvalue &&
+                        Main.item[i].netID != 74
+                        && (bool)MKLP.Config.Main.Using_Main_Code1 && (bool)Config.Main.AutoClear_IllegalItemDrops_MainCode1 && Main.item[i].active)
+                    {
+                        Main.item[i].active = false;
+                        TSPlayer.All.SendData(PacketTypes.ItemDrop, "", i);
+                    }
                 }
             }
 
