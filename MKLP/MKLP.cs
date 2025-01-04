@@ -53,7 +53,7 @@ namespace MKLP
         public override string Author => "Nightklp";
         public override string Description => "Makes Moderating a bit easy";
         public override string Name => "MKLP";
-        public override System.Version Version => new System.Version(1, 3);
+        public override System.Version Version => new System.Version(1, 4);
         #endregion
 
         #region [ Variables ]
@@ -571,11 +571,12 @@ namespace MKLP
                             player.GetData<Item[]>("MKLP_PrevSafe"),
                             player.GetData<Item[]>("MKLP_PrevDefenderForge"),
                             player.GetData<Item[]>("MKLP_PrevVoidVault"));
-
+                        /*
                         if (Main.chest[player.ActiveChest] != null)
                         {
                             if (player.ActiveChest != -1) player.SetData("MKLP_PrevChestOpen", Main.chest[player.ActiveChest].item.Clone());
                         }
+                        */
                         player.SetData("MKLP_PrevInventory", player.TPlayer.inventory.Clone());
                         player.SetData("MKLP_PrevPiggyBank", player.TPlayer.bank.item.Clone());
                         player.SetData("MKLP_PrevSafe", player.TPlayer.bank2.item.Clone());
@@ -584,10 +585,12 @@ namespace MKLP
                     }
                     else
                     {
+                        /*
                         if (Main.chest[player.ActiveChest] != null)
                         {
                             if (player.ActiveChest != -1) player.SetData("MKLP_PrevChestOpen", Main.chest[player.ActiveChest].item.Clone());
                         }
+                        */
                         player.SetData("MKLP_PrevInventory", player.TPlayer.inventory.Clone());
                         player.SetData("MKLP_PrevPiggyBank", player.TPlayer.bank.item.Clone());
                         player.SetData("MKLP_PrevSafe", player.TPlayer.bank2.item.Clone());
@@ -752,11 +755,23 @@ namespace MKLP
                             player.GetData<Item[]>("MKLP_PrevSafe"),
                             player.GetData<Item[]>("MKLP_PrevDefenderForge"),
                             player.GetData<Item[]>("MKLP_PrevVoidVault"));
-
-                        if (Main.chest[player.ActiveChest] != null)
+                        /*
+                        if (player.ActiveChest != -1)
                         {
-                            if (player.ActiveChest != -1) player.SetData("MKLP_PrevChestOpen", Main.chest[player.ActiveChest].item.Clone());
+                            try
+                            {
+                                List<Item> chestitem = new();
+
+                                foreach (Item item in Main.chest[player.ActiveChest].item)
+                                {
+                                    chestitem.Add(item);
+                                }
+                                //player.SetData("MKLP_PrevChestOpen", Main.chest[player.ActiveChest].item);
+                                player.SetData("MKLP_PrevChestOpen", chestitem.ToArray());
+                            }
+                            catch { }
                         }
+                        */
                         player.SetData("MKLP_PrevInventory", player.TPlayer.inventory.Clone());
                         player.SetData("MKLP_PrevPiggyBank", player.TPlayer.bank.item.Clone());
                         player.SetData("MKLP_PrevSafe", player.TPlayer.bank2.item.Clone());
@@ -765,10 +780,22 @@ namespace MKLP
                     }
                     else
                     {
-                        if (Main.chest[player.ActiveChest] != null)
+                        /*
+                        if (player.ActiveChest != -1)
                         {
-                            if (player.ActiveChest != -1) player.SetData("MKLP_PrevChestOpen", Main.chest[player.ActiveChest].item.Clone());
+                            try
+                            {
+                                List<Item> chestitem = new();
+
+                                foreach (Item item in Main.chest[player.ActiveChest].item)
+                                {
+                                    chestitem.Add(item);
+                                }
+                                //player.SetData("MKLP_PrevChestOpen", Main.chest[player.ActiveChest].item);
+                                player.SetData("MKLP_PrevChestOpen", chestitem.ToArray());
+                            } catch { }
                         }
+                        */
                         player.SetData("MKLP_PrevInventory", player.TPlayer.inventory.Clone());
                         player.SetData("MKLP_PrevPiggyBank", player.TPlayer.bank.item.Clone());
                         player.SetData("MKLP_PrevSafe", player.TPlayer.bank2.item.Clone());
@@ -932,11 +959,23 @@ namespace MKLP
 
                 #region UUID Match
 
-                var getuuidmatch = GetMatchUUID_UserAccount(player.UUID);
-
-                if (getuuidmatch.Count != 0 && !(bool)Config.Main.Allow_User_JoinMatchUUID)
+                var getuuidmatch = GetMatchUUID_UserAccount(player.Name, player.UUID);
+                UserAccount useraccount = TShock.UserAccounts.GetUserAccountByName(player.Name);
+                if (getuuidmatch.Count != 0 && !(bool)Config.Main.Allow_User_JoinMatchUUID && useraccount == null)
                 {
-                    if ((bool)Config.Main.Target_UserMatchUUIDAndIP)
+                    bool whitelisted = false;
+                    try
+                    {
+                        foreach (var check in (WhiteListAlt[])Config.Main.WhiteList_User_JoinMatchUUID)
+                        {
+                            if (check.MainName == player.Name || check.AltNames.Contains(player.Name))
+                            {
+                                whitelisted = true;
+                            }
+                        }
+                    } catch { }
+
+                    if ((bool)Config.Main.Target_UserMatchUUIDAndIP && !whitelisted)
                     {
                         foreach (UserAccount get in getuuidmatch)
                         {
@@ -946,7 +985,7 @@ namespace MKLP
                                 return;
                             }
                         }
-                    } else
+                    } else if (!whitelisted)
                     {
                         player.Disconnect("Your UUID matches with other accounts");
                         return;
@@ -988,6 +1027,10 @@ namespace MKLP
 
             bool HasSymbols(string Name)
             {
+                foreach (char remove in Config.Main.WhiteList_PlayerName_Symbols)
+                {
+                    Name.Replace($"{remove}", "");
+                }
                 return Regex.IsMatch(Name, @"^[A-Za-z0-9\s@]*$");
             }
 
@@ -1178,7 +1221,7 @@ namespace MKLP
         {
             #region code
 
-            if ((bool)Config.ChatMod.Using_Chat_AutoMod) return;
+            if (!(bool)Config.ChatMod.Using_Chat_AutoMod) return;
 
             foreach (string banned in Config.ChatMod.Ban_MessageContains)
             {
@@ -1907,8 +1950,9 @@ namespace MKLP
             {
                 if ((
                     !args.Player.HasPermission(Config.Permissions.Ignore_IllegalWireProgression) &&
-                    !args.Player.HasPermission("tshock.item") &&
-                    !args.Player.HasPermission("tshock.item.*")
+                    !args.Player.HasPermission(TShockAPI.Permissions.item) &&
+                    !args.Player.HasPermission(TShockAPI.Permissions.give) &&
+                    !args.Player.HasPermission(TShockAPI.Permissions.manageitem)
                     ) && (bool)Config.Main.Prevent_IllegalWire_Progression
                     )
                 {
@@ -2231,6 +2275,8 @@ namespace MKLP
         private void OnNPCSpawn(NpcSpawnEventArgs args)
         {
             #region code
+            
+
             for (int i = 0; i < Main.maxNPCs; i++)
             {
                 NPC npc = Main.npc[i];
@@ -2273,7 +2319,8 @@ namespace MKLP
                     if (TShock.Utils.GetActivePlayerCount() < (int)Config.BossManager.KingSlime_RequiredPlayersforBoss)
                     {
                         DespawnNPC();
-                        TShock.Utils.Broadcast("There aren't enough players to fight King Slime!", Color.MediumPurple);
+                        TShock.Utils.Broadcast("There aren't enough players to fight King Slime!" +
+                            $"\nPlayers Needed: {(int)Config.BossManager.KingSlime_RequiredPlayersforBoss}", Color.MediumPurple);
                     }
                 }
 
@@ -2287,7 +2334,8 @@ namespace MKLP
                     if (TShock.Utils.GetActivePlayerCount() < (int)Config.BossManager.EyeOfCthulhu_RequiredPlayersforBoss)
                     {
                         DespawnNPC();
-                        TShock.Utils.Broadcast("There aren't enough players to fight Eye of Cthulhu!", Color.MediumPurple);
+                        TShock.Utils.Broadcast("There aren't enough players to fight Eye of Cthulhu!" +
+                            $"\nPlayers Needed: {(int)Config.BossManager.EyeOfCthulhu_RequiredPlayersforBoss}", Color.MediumPurple);
                     }
                 }
 
@@ -2301,7 +2349,8 @@ namespace MKLP
                     if (TShock.Utils.GetActivePlayerCount() < (int)Config.BossManager.EaterOfWorlds_RequiredPlayersforBoss)
                     {
                         DespawnNPC();
-                        TShock.Utils.Broadcast("There aren't enough players to fight Eater of Worlds!", Color.MediumPurple);
+                        TShock.Utils.Broadcast("There aren't enough players to fight Eater of Worlds!" +
+                            $"\nPlayers Needed: {(int)Config.BossManager.EaterOfWorlds_RequiredPlayersforBoss}", Color.MediumPurple);
                     }
                 }
 
@@ -2315,7 +2364,8 @@ namespace MKLP
                     if (TShock.Utils.GetActivePlayerCount() < (int)Config.BossManager.BrainOfCthulhu_RequiredPlayersforBoss)
                     {
                         DespawnNPC();
-                        TShock.Utils.Broadcast("There aren't enough players to fight Brain of Cthulhu!", Color.MediumPurple);
+                        TShock.Utils.Broadcast("There aren't enough players to fight Brain of Cthulhu!" +
+                            $"\nPlayers Needed: {(int)Config.BossManager.BrainOfCthulhu_RequiredPlayersforBoss}", Color.MediumPurple);
                     }
                 }
 
@@ -2329,7 +2379,8 @@ namespace MKLP
                     if (TShock.Utils.GetActivePlayerCount() < (int)Config.BossManager.QueenBee_RequiredPlayersforBoss)
                     {
                         DespawnNPC();
-                        TShock.Utils.Broadcast("There aren't enough players to fight Queen Bee!", Color.MediumPurple);
+                        TShock.Utils.Broadcast("There aren't enough players to fight Queen Bee!" +
+                            $"\nPlayers Needed: {(int)Config.BossManager.QueenBee_RequiredPlayersforBoss}", Color.MediumPurple);
                     }
                 }
 
@@ -2343,7 +2394,8 @@ namespace MKLP
                     if (TShock.Utils.GetActivePlayerCount() < (int)Config.BossManager.Skeletron_RequiredPlayersforBoss)
                     {
                         DespawnNPC();
-                        TShock.Utils.Broadcast("There aren't enough players to fight Skeletron!", Color.MediumPurple);
+                        TShock.Utils.Broadcast("There aren't enough players to fight Skeletron!" +
+                            $"\nPlayers Needed: {(int)Config.BossManager.Skeletron_RequiredPlayersforBoss}", Color.MediumPurple);
                     }
                 }
 
@@ -2357,7 +2409,8 @@ namespace MKLP
                     if (TShock.Utils.GetActivePlayerCount() < (int)Config.BossManager.Deerclops_RequiredPlayersforBoss)
                     {
                         DespawnNPC();
-                        TShock.Utils.Broadcast("There aren't enough players to fight Deerclops!", Color.MediumPurple);
+                        TShock.Utils.Broadcast("There aren't enough players to fight Deerclops!" +
+                            $"\nPlayers Needed: {(int)Config.BossManager.Deerclops_RequiredPlayersforBoss}", Color.MediumPurple);
                     }
                 }
 
@@ -2371,7 +2424,8 @@ namespace MKLP
                     if (TShock.Utils.GetActivePlayerCount() < (int)Config.BossManager.WallOfFlesh_RequiredPlayersforBoss)
                     {
                         DespawnNPC();
-                        TShock.Utils.Broadcast("There aren't enough players to fight Wall of Flesh!", Color.MediumPurple);
+                        TShock.Utils.Broadcast("There aren't enough players to fight Wall of Flesh!" +
+                            $"\nPlayers Needed: {(int)Config.BossManager.WallOfFlesh_RequiredPlayersforBoss}", Color.MediumPurple);
                     }
                 }
 
@@ -2385,7 +2439,8 @@ namespace MKLP
                     if (TShock.Utils.GetActivePlayerCount() < (int)Config.BossManager.QueenSlime_RequiredPlayersforBoss)
                     {
                         DespawnNPC();
-                        TShock.Utils.Broadcast("There aren't enough players to fight Queen Slime!", Color.MediumPurple);
+                        TShock.Utils.Broadcast("There aren't enough players to fight Queen Slime!" +
+                            $"\nPlayers Needed: {(int)Config.BossManager.QueenSlime_RequiredPlayersforBoss}", Color.MediumPurple);
                     }
                 }
 
@@ -2403,7 +2458,8 @@ namespace MKLP
                         if (TShock.Utils.GetActivePlayerCount() < (int)Config.BossManager.Mechdusa_RequiredPlayersforBoss)
                         {
                             DespawnNPC();
-                            TShock.Utils.Broadcast("There aren't enough players to fight Mechdusa!", Color.MediumPurple);
+                            TShock.Utils.Broadcast("There aren't enough players to fight Mechdusa!" +
+                            $"\nPlayers Needed: {(int)Config.BossManager.Mechdusa_RequiredPlayersforBoss}", Color.MediumPurple);
                         }
                     }
                 } else
@@ -2418,7 +2474,8 @@ namespace MKLP
                         if (TShock.Utils.GetActivePlayerCount() < (int)Config.BossManager.TheTwins_RequiredPlayersforBoss)
                         {
                             DespawnNPC();
-                            TShock.Utils.Broadcast("There aren't enough players to fight The Twins!", Color.MediumPurple);
+                            TShock.Utils.Broadcast("There aren't enough players to fight The Twins!" +
+                            $"\nPlayers Needed: {(int)Config.BossManager.TheTwins_RequiredPlayersforBoss}", Color.MediumPurple);
                         }
                     }
 
@@ -2432,7 +2489,8 @@ namespace MKLP
                         if (TShock.Utils.GetActivePlayerCount() < (int)Config.BossManager.TheDestroyer_RequiredPlayersforBoss)
                         {
                             DespawnNPC();
-                            TShock.Utils.Broadcast("There aren't enough players to fight The Destroyer!", Color.MediumPurple);
+                            TShock.Utils.Broadcast("There aren't enough players to fight The Destroyer!" +
+                            $"\nPlayers Needed: {(int)Config.BossManager.TheDestroyer_RequiredPlayersforBoss}", Color.MediumPurple);
                         }
                     }
 
@@ -2446,7 +2504,8 @@ namespace MKLP
                         if (TShock.Utils.GetActivePlayerCount() < (int)Config.BossManager.SkeletronPrime_RequiredPlayersforBoss)
                         {
                             DespawnNPC();
-                            TShock.Utils.Broadcast("There aren't enough players to fight Skeletron Prime!", Color.MediumPurple);
+                            TShock.Utils.Broadcast("There aren't enough players to fight Skeletron Prime!" +
+                            $"\nPlayers Needed: {(int)Config.BossManager.SkeletronPrime_RequiredPlayersforBoss}", Color.MediumPurple);
                         }
                     }
                 }
@@ -2463,7 +2522,8 @@ namespace MKLP
                     if (TShock.Utils.GetActivePlayerCount() < (int)Config.BossManager.Plantera_RequiredPlayersforBoss)
                     {
                         DespawnNPC();
-                        TShock.Utils.Broadcast("There aren't enough players to fight Plantera!", Color.MediumPurple);
+                        TShock.Utils.Broadcast("There aren't enough players to fight Plantera!" +
+                            $"\nPlayers Needed: {(int)Config.BossManager.Plantera_RequiredPlayersforBoss}", Color.MediumPurple);
                     }
                 }
 
@@ -2477,7 +2537,8 @@ namespace MKLP
                     if (TShock.Utils.GetActivePlayerCount() < (int)Config.BossManager.Golem_RequiredPlayersforBoss)
                     {
                         DespawnNPC();
-                        TShock.Utils.Broadcast("There aren't enough players to fight Golem!", Color.MediumPurple);
+                        TShock.Utils.Broadcast("There aren't enough players to fight Golem!" +
+                            $"\nPlayers Needed: {(int)Config.BossManager.Golem_RequiredPlayersforBoss}", Color.MediumPurple);
                     }
                 }
 
@@ -2491,7 +2552,8 @@ namespace MKLP
                     if (TShock.Utils.GetActivePlayerCount() < (int)Config.BossManager.DukeFishron_RequiredPlayersforBoss)
                     {
                         DespawnNPC();
-                        TShock.Utils.Broadcast("There aren't enough players to fight Duke Fishron!", Color.MediumPurple);
+                        TShock.Utils.Broadcast("There aren't enough players to fight Duke Fishron!" +
+                            $"\nPlayers Needed: {(int)Config.BossManager.DukeFishron_RequiredPlayersforBoss}", Color.MediumPurple);
                     }
                 }
 
@@ -2505,7 +2567,8 @@ namespace MKLP
                     if (TShock.Utils.GetActivePlayerCount() < (int)Config.BossManager.EmpressOfLight_RequiredPlayersforBoss)
                     {
                         DespawnNPC();
-                        TShock.Utils.Broadcast("There aren't enough players to fight Empress of Light!", Color.MediumPurple);
+                        TShock.Utils.Broadcast("There aren't enough players to fight Empress of Light!" +
+                            $"\nPlayers Needed: {(int)Config.BossManager.EmpressOfLight_RequiredPlayersforBoss}", Color.MediumPurple);
                     }
                 }
 
@@ -2519,7 +2582,8 @@ namespace MKLP
                     if (TShock.Utils.GetActivePlayerCount() < (int)Config.BossManager.LunaticCultist_RequiredPlayersforBoss)
                     {
                         DespawnNPC();
-                        TShock.Utils.Broadcast("There aren't enough players to fight Lunatic Cultist!", Color.MediumPurple);
+                        TShock.Utils.Broadcast("There aren't enough players to fight Lunatic Cultist!" +
+                            $"\nPlayers Needed: {(int)Config.BossManager.LunaticCultist_RequiredPlayersforBoss}", Color.MediumPurple);
                     }
                 }
 
@@ -2533,7 +2597,8 @@ namespace MKLP
                     if (TShock.Utils.GetActivePlayerCount() < (int)Config.BossManager.MoonLord_RequiredPlayersforBoss)
                     {
                         DespawnNPC();
-                        TShock.Utils.Broadcast("There aren't enough players to fight Moon Lord!", Color.MediumPurple);
+                        TShock.Utils.Broadcast("There aren't enough players to fight Moon Lord!" +
+                            $"\nPlayers Needed: {(int)Config.BossManager.MoonLord_RequiredPlayersforBoss}", Color.MediumPurple);
                     }
                 }
 
@@ -2545,7 +2610,7 @@ namespace MKLP
                     TSPlayer.All.SendData(PacketTypes.NpcUpdate, "", i);
                 }
             }
-
+            
             #endregion
         }
 
@@ -2604,12 +2669,372 @@ namespace MKLP
             var isKnownBoss = thingType > 0 && thingType < Terraria.ID.NPCID.Count && NPCID.Sets.MPAllowedEnemies[thingType];
 
             NPC getnpc = new NPC();
-            
+            int npcid = 0;
 
             if (isKnownBoss)
             {
                 getnpc.SetDefaults(thingType);
+                npcid = getnpc.type;
             }
+
+            
+            if (npcid == -16)
+            {
+                if (!(bool)Config.BossManager.AllowMechdusa)
+                {
+                    TShock.Utils.Broadcast("Mechdusa isn't allowed yet!", Color.MediumPurple);
+                    return false;
+                }
+                if (TShock.Utils.GetActivePlayerCount() < (int)Config.BossManager.Mechdusa_RequiredPlayersforBoss)
+                {
+                    TShock.Utils.Broadcast("There aren't enough players to fight Mechdusa!" +
+                    $"\nPlayers Needed: {(int)Config.BossManager.Mechdusa_RequiredPlayersforBoss}", Color.MediumPurple);
+                    return false;
+                }
+            }
+            if (npcid == -8)
+            {
+                if (!(bool)Config.BossManager.AllowMoonLord)
+                {
+                    TShock.Utils.Broadcast("Moon Lord isn't allowed yet!", Color.MediumPurple);
+                    return false;
+                }
+                if (TShock.Utils.GetActivePlayerCount() < (int)Config.BossManager.MoonLord_RequiredPlayersforBoss)
+                {
+                    TShock.Utils.Broadcast("There aren't enough players to fight Moon Lord!" +
+                        $"\nPlayers Needed: {(int)Config.BossManager.MoonLord_RequiredPlayersforBoss}", Color.MediumPurple);
+                    return false;
+                }
+            }
+            #region bossmanager
+            
+            if ((bool)Config.BossManager.PreventIllegalBoss)
+            {
+                if (!Main.hardMode && (
+                    npcid == NPCID.QueenSlimeBoss ||
+                    npcid == NPCID.TheDestroyer ||
+                    npcid == NPCID.Retinazer ||
+                    npcid == NPCID.Spazmatism ||
+                    npcid == NPCID.SkeletronPrime ||
+                    npcid == NPCID.DukeFishron))
+                {
+                    //args.Player.SendErrorMessage("Illegal Boss Spawn!");
+                    return false;
+                }
+
+                if (!NPC.downedMechBoss1 && !NPC.downedMechBoss2 && !NPC.downedMechBoss3 && (npcid == NPCID.Plantera))
+                {
+                    //args.Player.SendErrorMessage("Illegal Boss Spawn!");
+                    return false;
+                }
+                if (!NPC.downedPlantBoss && (npcid == NPCID.HallowBoss || npcid == NPCID.EmpressButterfly || npcid == NPCID.Golem))
+                {
+                    //args.Player.SendErrorMessage("Illegal Boss Spawn!");
+                    return false;
+                }
+                if (!NPC.downedGolemBoss && (npcid == NPCID.CultistBoss || npcid == NPCID.MoonLordCore || npcid == -8))
+                {
+                    //args.Player.SendErrorMessage("Illegal Boss Spawn!");
+                    return false;
+                }
+            }
+
+
+            if (!NPC.downedSlimeKing && npcid == NPCID.KingSlime) // King Slime
+            {
+                if (!(bool)Config.BossManager.AllowKingSlime)
+                {
+                    //TShock.Utils.Broadcast("King Slime isn't allowed yet!", Color.MediumPurple);
+                    return false;
+                }
+                if (TShock.Utils.GetActivePlayerCount() < (int)Config.BossManager.KingSlime_RequiredPlayersforBoss)
+                {
+                    //TShock.Utils.Broadcast("There aren't enough players to fight King Slime!" +
+                    //    $"\nPlayers Needed: {(int)Config.BossManager.KingSlime_RequiredPlayersforBoss}", Color.MediumPurple);
+                    return false;
+                }
+            }
+
+            if (!NPC.downedBoss1 && npcid == NPCID.EyeofCthulhu) // Eye of Cthulhu
+            {
+                if (!(bool)Config.BossManager.AllowEyeOfCthulhu)
+                {
+                    //TShock.Utils.Broadcast("Eye of Cthulhu isn't allowed yet!", Color.MediumPurple);
+                    return false;
+                }
+                if (TShock.Utils.GetActivePlayerCount() < (int)Config.BossManager.EyeOfCthulhu_RequiredPlayersforBoss)
+                {
+                    //TShock.Utils.Broadcast("There aren't enough players to fight Eye of Cthulhu!" +
+                    //    $"\nPlayers Needed: {(int)Config.BossManager.EyeOfCthulhu_RequiredPlayersforBoss}", Color.MediumPurple);
+                    return false;
+                }
+            }
+
+            if (!NPC.downedBoss2 && npcid == NPCID.EaterofWorldsHead) // Eater of Worlds
+            {
+                if (!(bool)Config.BossManager.AllowEaterOfWorlds)
+                {
+                    //TShock.Utils.Broadcast("Eater of Worlds isn't allowed yet!", Color.MediumPurple);
+                    return false;
+                }
+                if (TShock.Utils.GetActivePlayerCount() < (int)Config.BossManager.EaterOfWorlds_RequiredPlayersforBoss)
+                {
+                    //TShock.Utils.Broadcast("There aren't enough players to fight Eater of Worlds!" +
+                    //    $"\nPlayers Needed: {(int)Config.BossManager.EaterOfWorlds_RequiredPlayersforBoss}", Color.MediumPurple);
+                    return false;
+                }
+            }
+
+            if (!NPC.downedBoss2 && npcid == NPCID.BrainofCthulhu) // Brain of Cthulhu
+            {
+                if (!(bool)Config.BossManager.AllowBrainOfCthulhu)
+                {
+                    //TShock.Utils.Broadcast("Brain of Cthulhu isn't allowed yet!", Color.MediumPurple);
+                    return false;
+                }
+                if (TShock.Utils.GetActivePlayerCount() < (int)Config.BossManager.BrainOfCthulhu_RequiredPlayersforBoss)
+                {
+                    //TShock.Utils.Broadcast("There aren't enough players to fight Brain of Cthulhu!" +
+                    //    $"\nPlayers Needed: {(int)Config.BossManager.BrainOfCthulhu_RequiredPlayersforBoss}", Color.MediumPurple);
+                    return false;
+                }
+            }
+
+            if (!NPC.downedQueenBee && npcid == NPCID.QueenBee) // Queen Bee
+            {
+                if (!(bool)Config.BossManager.AllowQueenBee)
+                {
+                    //TShock.Utils.Broadcast("Queen Bee isn't allowed yet!", Color.MediumPurple);
+                    return false;
+                }
+                if (TShock.Utils.GetActivePlayerCount() < (int)Config.BossManager.QueenBee_RequiredPlayersforBoss)
+                {
+                    //TShock.Utils.Broadcast("There aren't enough players to fight Queen Bee!" +
+                    //    $"\nPlayers Needed: {(int)Config.BossManager.QueenBee_RequiredPlayersforBoss}", Color.MediumPurple);
+                    return false;
+                }
+            }
+
+            if (!NPC.downedBoss3 && npcid == NPCID.SkeletronHead) // Skeletron
+            {
+                if (!(bool)Config.BossManager.AllowSkeletron)
+                {
+                    //TShock.Utils.Broadcast("Skeletron isn't allowed yet!", Color.MediumPurple);
+                    return false;
+                }
+                if (TShock.Utils.GetActivePlayerCount() < (int)Config.BossManager.Skeletron_RequiredPlayersforBoss)
+                {
+                    //TShock.Utils.Broadcast("There aren't enough players to fight Skeletron!" +
+                    //    $"\nPlayers Needed: {(int)Config.BossManager.Skeletron_RequiredPlayersforBoss}", Color.MediumPurple);
+                    return false;
+                }
+            }
+
+            if (!NPC.downedDeerclops && npcid == NPCID.Deerclops) // Deerclops
+            {
+                if (!(bool)Config.BossManager.AllowDeerclops)
+                {
+                    //TShock.Utils.Broadcast("Deerclops isn't allowed yet!", Color.MediumPurple);
+                    return false;
+                }
+                if (TShock.Utils.GetActivePlayerCount() < (int)Config.BossManager.Deerclops_RequiredPlayersforBoss)
+                {
+                    //TShock.Utils.Broadcast("There aren't enough players to fight Deerclops!" +
+                    //    $"\nPlayers Needed: {(int)Config.BossManager.Deerclops_RequiredPlayersforBoss}", Color.MediumPurple);
+                    return false;
+                }
+            }
+
+            if (!Main.hardMode && npcid == NPCID.WallofFlesh) // Wall of Flesh
+            {
+                if (!(bool)Config.BossManager.AllowWallOfFlesh)
+                {
+                    //TShock.Utils.Broadcast("Wall of Flesh isn't allowed yet!", Color.MediumPurple);
+                    return false;
+                }
+                if (TShock.Utils.GetActivePlayerCount() < (int)Config.BossManager.WallOfFlesh_RequiredPlayersforBoss)
+                {
+                    //TShock.Utils.Broadcast("There aren't enough players to fight Wall of Flesh!" +
+                    //    $"\nPlayers Needed: {(int)Config.BossManager.WallOfFlesh_RequiredPlayersforBoss}", Color.MediumPurple);
+                    return false;
+                }
+            }
+
+            if (!NPC.downedQueenSlime && npcid == NPCID.QueenSlimeBoss) // Queen Slime
+            {
+                if (!(bool)Config.BossManager.AllowQueenSlime)
+                {
+                    //TShock.Utils.Broadcast("Queen Slime isn't allowed yet!", Color.MediumPurple);
+                    return false;
+                }
+                if (TShock.Utils.GetActivePlayerCount() < (int)Config.BossManager.QueenSlime_RequiredPlayersforBoss)
+                {
+                    //TShock.Utils.Broadcast("There aren't enough players to fight Queen Slime!" +
+                    //    $"\nPlayers Needed: {(int)Config.BossManager.QueenSlime_RequiredPlayersforBoss}", Color.MediumPurple);
+                    return false;
+                }
+            }
+
+            if (Main.zenithWorld)
+            {
+                if ((!NPC.downedMechBoss1 && !NPC.downedMechBoss2 && !NPC.downedMechBoss1) &&
+                    (npcid == NPCID.Retinazer || npcid == NPCID.Spazmatism || npcid == NPCID.TheDestroyer || npcid == NPCID.SkeletronPrime)
+                    )
+                {
+                    if (!(bool)Config.BossManager.AllowMechdusa)
+                    {
+                        //TShock.Utils.Broadcast("Mechdusa isn't allowed yet!", Color.MediumPurple);
+                        return false;
+                    }
+                    if (TShock.Utils.GetActivePlayerCount() < (int)Config.BossManager.Mechdusa_RequiredPlayersforBoss)
+                    {
+                        //TShock.Utils.Broadcast("There aren't enough players to fight Mechdusa!" +
+                        //  $"\nPlayers Needed: {(int)Config.BossManager.Mechdusa_RequiredPlayersforBoss}", Color.MediumPurple);
+                        return false;
+                    }
+                }
+            }
+            else
+            {
+                if (!NPC.downedMechBoss2 && (npcid == NPCID.Retinazer || npcid == NPCID.Spazmatism)) // The Twins
+                {
+                    if (!(bool)Config.BossManager.AllowTheTwins)
+                    {
+                        //TShock.Utils.Broadcast("The Twins isn't allowed yet!", Color.MediumPurple);
+                        return false;
+                    }
+                    if (TShock.Utils.GetActivePlayerCount() < (int)Config.BossManager.TheTwins_RequiredPlayersforBoss)
+                    {
+                        //TShock.Utils.Broadcast("There aren't enough players to fight The Twins!" +
+                        //  $"\nPlayers Needed: {(int)Config.BossManager.TheTwins_RequiredPlayersforBoss}", Color.MediumPurple);
+                        return false;
+                    }
+                }
+
+                if (!NPC.downedMechBoss1 && npcid == NPCID.TheDestroyer) // The Destroyer
+                {
+                    if (!(bool)Config.BossManager.AllowTheDestroyer)
+                    {
+                        //TShock.Utils.Broadcast("The Destroyer isn't allowed yet!", Color.MediumPurple);
+                        return false;
+                    }
+                    if (TShock.Utils.GetActivePlayerCount() < (int)Config.BossManager.TheDestroyer_RequiredPlayersforBoss)
+                    {
+                        //TShock.Utils.Broadcast("There aren't enough players to fight The Destroyer!" +
+                        //  $"\nPlayers Needed: {(int)Config.BossManager.TheDestroyer_RequiredPlayersforBoss}", Color.MediumPurple);
+                        return false;
+                    }
+                }
+
+                if (!NPC.downedMechBoss3 && npcid == NPCID.SkeletronPrime) // Skeletron Prime
+                {
+                    if (!(bool)Config.BossManager.AllowSkeletronPrime)
+                    {
+                        //TShock.Utils.Broadcast("Skeletron Prime isn't allowed yet!", Color.MediumPurple);
+                        return false;
+                    }
+                    if (TShock.Utils.GetActivePlayerCount() < (int)Config.BossManager.SkeletronPrime_RequiredPlayersforBoss)
+                    {
+                        //TShock.Utils.Broadcast("There aren't enough players to fight Skeletron Prime!" +
+                        //  $"\nPlayers Needed: {(int)Config.BossManager.SkeletronPrime_RequiredPlayersforBoss}", Color.MediumPurple);
+                        return false;
+                    }
+                }
+            }
+
+
+
+            if (!NPC.downedPlantBoss && npcid == NPCID.Plantera) // Plantera
+            {
+                if (!(bool)Config.BossManager.AllowPlantera)
+                {
+                    //TShock.Utils.Broadcast("Plantera isn't allowed yet!", Color.MediumPurple);
+                    return false;
+                }
+                if (TShock.Utils.GetActivePlayerCount() < (int)Config.BossManager.Plantera_RequiredPlayersforBoss)
+                {
+                    //TShock.Utils.Broadcast("There aren't enough players to fight Plantera!" +
+                    //    $"\nPlayers Needed: {(int)Config.BossManager.Plantera_RequiredPlayersforBoss}", Color.MediumPurple);
+                    return false;
+                }
+            }
+
+            if (!NPC.downedGolemBoss && npcid == NPCID.Golem) // Golem
+            {
+                if (!(bool)Config.BossManager.AllowGolem)
+                {
+                    //TShock.Utils.Broadcast("Golem isn't allowed yet!", Color.MediumPurple);
+                    return false;
+                }
+                if (TShock.Utils.GetActivePlayerCount() < (int)Config.BossManager.Golem_RequiredPlayersforBoss)
+                {
+                    //TShock.Utils.Broadcast("There aren't enough players to fight Golem!" +
+                    //    $"\nPlayers Needed: {(int)Config.BossManager.Golem_RequiredPlayersforBoss}", Color.MediumPurple);
+                    return false;
+                }
+            }
+
+            if (!NPC.downedFishron && npcid == NPCID.DukeFishron) // Duke Fishron
+            {
+                if (!(bool)Config.BossManager.AllowDukeFishron)
+                {
+                    //TShock.Utils.Broadcast("Duke Fishron isn't allowed yet!", Color.MediumPurple);
+                    return false;
+                }
+                if (TShock.Utils.GetActivePlayerCount() < (int)Config.BossManager.DukeFishron_RequiredPlayersforBoss)
+                {
+                    //TShock.Utils.Broadcast("There aren't enough players to fight Duke Fishron!" +
+                    //    $"\nPlayers Needed: {(int)Config.BossManager.DukeFishron_RequiredPlayersforBoss}", Color.MediumPurple);
+                    return false;
+                }
+            }
+
+            if (!NPC.downedEmpressOfLight && npcid == NPCID.HallowBoss) // Empress of Light
+            {
+                if (!(bool)Config.BossManager.AllowEmpressOfLight)
+                {
+                    //TShock.Utils.Broadcast("Empress of Light isn't allowed yet!", Color.MediumPurple);
+                    return false;
+                }
+                if (TShock.Utils.GetActivePlayerCount() < (int)Config.BossManager.EmpressOfLight_RequiredPlayersforBoss)
+                {
+                    //TShock.Utils.Broadcast("There aren't enough players to fight Empress of Light!" +
+                    //    $"\nPlayers Needed: {(int)Config.BossManager.EmpressOfLight_RequiredPlayersforBoss}", Color.MediumPurple);
+                    return false;
+                }
+            }
+
+            if (!NPC.downedAncientCultist && npcid == NPCID.CultistBoss) // Lunatic Cultist
+            {
+                if (!(bool)Config.BossManager.AllowLunaticCultist)
+                {
+                    //TShock.Utils.Broadcast("Lunatic Cultist isn't allowed yet!", Color.MediumPurple);
+                    return false;
+                }
+                if (TShock.Utils.GetActivePlayerCount() < (int)Config.BossManager.LunaticCultist_RequiredPlayersforBoss)
+                {
+                    //TShock.Utils.Broadcast("There aren't enough players to fight Lunatic Cultist!" +
+                    //    $"\nPlayers Needed: {(int)Config.BossManager.LunaticCultist_RequiredPlayersforBoss}", Color.MediumPurple);
+                    return false;
+                }
+            }
+
+            if (!NPC.downedMoonlord && npcid == NPCID.MoonLordCore) // Moon Lord
+            {
+                if (!(bool)Config.BossManager.AllowMoonLord)
+                {
+                    //TShock.Utils.Broadcast("Moon Lord isn't allowed yet!", Color.MediumPurple);
+                    return false;
+                }
+                if (TShock.Utils.GetActivePlayerCount() < (int)Config.BossManager.MoonLord_RequiredPlayersforBoss)
+                {
+                    //TShock.Utils.Broadcast("There aren't enough players to fight Moon Lord!" +
+                    //    $"\nPlayers Needed: {(int)Config.BossManager.MoonLord_RequiredPlayersforBoss}", Color.MediumPurple);
+                    return false;
+                }
+            }
+            
+            #endregion
 
             if (plr != args.Player.Index)
                 return true;
@@ -7166,7 +7591,7 @@ namespace MKLP
                 return;
             }
 
-            var getresult = GetMatchUUID_UserAccount(getuser.UUID);
+            var getresult = GetMatchUUID_UserAccount(getuser.Name, getuser.UUID);
 
             if (getresult.Count == 0)
             {
@@ -7874,7 +8299,7 @@ namespace MKLP
                 Item[] prevforge = player.GetData<Item[]>("MKLP_PrevDefenderForge");
                 Item[] prevvault = player.GetData<Item[]>("MKLP_PrevVoidVault");
 
-                player.SetData("MKLP_Confirmed_InvRev", 2);
+                player.SetData("MKLP_Confirmed_InvRev", 1);
 
                 // Clear Main Inventory (slots 0–49)
                 for (int i = 0; i < NetItem.InventorySlots; i++)
@@ -7984,7 +8409,7 @@ namespace MKLP
             #endregion
         }
 
-        public List<UserAccount> GetMatchUUID_UserAccount(string UUID)
+        public List<UserAccount> GetMatchUUID_UserAccount(string playername, string UUID)
         {
             #region code
             using var reader = TShock.DB.QueryReader("SELECT * FROM Users WHERE UUID = @0", UUID);
@@ -7993,6 +8418,7 @@ namespace MKLP
 
             while (reader.Read())
             {
+                if (reader.Get<string>("Username") == playername) continue;
                 result.Add(new UserAccount{
                     ID = reader.Get<int>("ID"),
                     Group = reader.Get<string>("Usergroup"),

@@ -3022,7 +3022,7 @@ namespace MKLP.Modules
             if (MKLP.Config.BossManager.Discord_BossEnableChannel == null) return;
             if ((ulong)MKLP.Config.BossManager.Discord_BossEnableChannel == 0) return;
 
-            string message = MKLP.Config.BossManager.Discord_BossEnableMessage;
+            string message = MKLP.Config.BossManager.Discord_BossEnableCMDMessage;
 
             message = message.Replace("%bossname%", bossname);
             message = message.Replace("%playername%", playername);
@@ -3051,6 +3051,75 @@ namespace MKLP.Modules
                 MKLP_Console.SendLog_Message_DiscordBot(e, "=[Log Exception]=", ConsoleColor.Red, ConsoleColor.DarkRed);
             }
         }
+        /*
+        public async void KLPBotSendMessage_BossDisable(string bossname)
+        {
+            if (MKLP.Config.BossManager.Discord_BossEnableChannel == null) return;
+            if ((ulong)MKLP.Config.BossManager.Discord_BossEnableChannel == 0) return;
+
+            string message = MKLP.Config.BossManager.Discord_BossDisableMessage;
+
+            message = message.Replace("%bossname%", bossname);
+
+            try
+            {
+                var targetchannel = _client.GetChannel((ulong)MKLP.Config.BossManager.Discord_BossEnableChannel);
+                try
+                {
+                    var role = _client.GetGuild((ulong)MKLP.Config.Discord.MainGuildID).GetRole((ulong)MKLP.Config.BossManager.Discord_BossEnableRole);
+
+                    var buttons = new ComponentBuilder()
+                        .WithButton("Get Notify", $"MKLP_Discord_GiveRole_{role.Id}".Replace('_', S_), ButtonStyle.Secondary);
+
+                    message = message.Replace("%notification%", role.Mention);
+                    await ((SocketTextChannel)targetchannel).SendMessageAsync(message, components: buttons.Build());
+                } catch
+                {
+                    message = message.Replace("%notification%", "`@notifity`");
+                    await ((SocketTextChannel)targetchannel).SendMessageAsync(message);
+                }
+                return;
+            }
+            catch (Exception e)
+            {
+                MKLP_Console.SendLog_Message_DiscordBot(e, "=[Log Exception]=", ConsoleColor.Red, ConsoleColor.DarkRed);
+            }
+        }
+        public async void KLPBotSendMessage_BossDisable(string bossname, string playername)
+        {
+            if (MKLP.Config.BossManager.Discord_BossEnableChannel == null) return;
+            if ((ulong)MKLP.Config.BossManager.Discord_BossEnableChannel == 0) return;
+
+            string message = MKLP.Config.BossManager.Discord_BossEnableCMDMessage;
+
+            message = message.Replace("%bossname%", bossname);
+            message = message.Replace("%playername%", playername);
+
+            try
+            {
+                var targetchannel = _client.GetChannel((ulong)MKLP.Config.BossManager.Discord_BossEnableChannel);
+                try
+                {
+                    var role = _client.GetGuild((ulong)MKLP.Config.Discord.MainGuildID).GetRole((ulong)MKLP.Config.BossManager.Discord_BossEnableRole);
+
+                    var buttons = new ComponentBuilder()
+                        .WithButton("Get Notify", $"MKLP_Discord_GiveRole_{role.Id}".Replace('_', S_), ButtonStyle.Secondary);
+
+                    message = message.Replace("%notification%", role.Mention);
+                    await ((SocketTextChannel)targetchannel).SendMessageAsync(message, components: buttons.Build());
+                } catch
+                {
+                    message = message.Replace("%notification%", "`@notifity`");
+                    await ((SocketTextChannel)targetchannel).SendMessageAsync(message);
+                }
+                return;
+            }
+            catch (Exception e)
+            {
+                MKLP_Console.SendLog_Message_DiscordBot(e, "=[Log Exception]=", ConsoleColor.Red, ConsoleColor.DarkRed);
+            }
+        }
+        */
 
         string TitleLog = "⚙️ **[ MKLP ] :** ";
 

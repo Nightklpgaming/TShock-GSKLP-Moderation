@@ -1,4 +1,5 @@
-﻿using Newtonsoft.Json;
+﻿using IL.Terraria;
+using Newtonsoft.Json;
 using Steamworks;
 using System;
 using System.Collections.Generic;
@@ -200,6 +201,10 @@ namespace MKLP
         public string HelpText_Restart2 = "- modifying database/command require's server restart";
     }
 
+    static class Variables
+    {
+        public static string[] var1 = { "Alt Name 1", "Alt Name 2" };
+    }
     public struct CONFIG_COLOR_RBG
     {
         public float R;
@@ -212,6 +217,19 @@ namespace MKLP
             B = b;
         }
     }
+    public class WhiteListAlt
+    {
+        public string MainName;
+        public string[] AltNames;
+
+
+        public WhiteListAlt(string[] AltNames, string MainName = "Main Account Name")
+        {
+            this.MainName = MainName;
+            this.AltNames = AltNames;
+        }
+
+    }
     public class CONFIG_MAIN
     {
         public char Seperator = '¤';
@@ -220,10 +238,12 @@ namespace MKLP
         public string[] Ban_NameContains = { "fuck", "卍" };
         public string[] IllegalNames = { "ServerConsole", "Server" };
         public bool? Allow_PlayerName_Symbols = true;
+        public char[] WhiteList_PlayerName_Symbols = { '[', ':', ']' };
         public bool? Allow_PlayerName_InappropriateWords = false;
 
         public bool? Target_UserMatchUUIDAndIP = false;
         public bool? Allow_User_JoinMatchUUID = true;
+        public WhiteListAlt[]? WhiteList_User_JoinMatchUUID = { new WhiteListAlt(AltNames: Variables.var1), new WhiteListAlt(AltNames: Variables.var1) };
 
         public string StaffChat_Message_discordacclinkedicon = "[i:3124]";
         public string StaffChat_Message_ingamelinkedicon = "💳";
@@ -263,6 +283,8 @@ namespace MKLP
 
         public bool? Prevent_IllegalWire_Progression = false;
         public bool? ReceivedWarning_WirePlaceUnderground = false;
+
+        public bool? Allow_Players_StackSameAccessory = false;
 
         public bool? Prevent_Place_BastStatueNearDoor = true;
 
@@ -333,10 +355,12 @@ namespace MKLP
             if (Maximum_CharacterName == null) Maximum_CharacterName = getdefault.Maximum_CharacterName;
             if (IllegalNames == null) IllegalNames = getdefault.IllegalNames;
             if (Allow_PlayerName_Symbols == null) Allow_PlayerName_Symbols = getdefault.Allow_PlayerName_Symbols;
+            if (WhiteList_PlayerName_Symbols == null) WhiteList_PlayerName_Symbols = getdefault.WhiteList_PlayerName_Symbols;
             if (Allow_PlayerName_InappropriateWords == null) Allow_PlayerName_InappropriateWords = getdefault.Allow_PlayerName_InappropriateWords;
 
             if (Target_UserMatchUUIDAndIP == null) Target_UserMatchUUIDAndIP = getdefault.Target_UserMatchUUIDAndIP;
             if (Allow_User_JoinMatchUUID == null) Allow_User_JoinMatchUUID = getdefault.Allow_User_JoinMatchUUID;
+            if (WhiteList_User_JoinMatchUUID == null) WhiteList_User_JoinMatchUUID = getdefault.WhiteList_User_JoinMatchUUID;
 
             if (StaffChat_Message_discordacclinkedicon == null) StaffChat_Message_discordacclinkedicon = getdefault.StaffChat_Message_discordacclinkedicon;
             if (StaffChat_Message_ingamelinkedicon == null) StaffChat_Message_ingamelinkedicon = getdefault.StaffChat_Message_ingamelinkedicon;
@@ -375,6 +399,8 @@ namespace MKLP
 
             if (Prevent_IllegalWire_Progression == null) Prevent_IllegalWire_Progression = getdefault.Prevent_IllegalWire_Progression;
             if (ReceivedWarning_WirePlaceUnderground == null) ReceivedWarning_WirePlaceUnderground = getdefault.ReceivedWarning_WirePlaceUnderground;
+
+            if (Allow_Players_StackSameAccessory == null) Allow_Players_StackSameAccessory = getdefault.Allow_Players_StackSameAccessory;
 
             if (Prevent_Place_BastStatueNearDoor == null) Prevent_Place_BastStatueNearDoor = getdefault.Prevent_Place_BastStatueNearDoor;
 
@@ -795,6 +821,9 @@ namespace MKLP
         public ulong? Discord_BossEnableChannel = 0;
         public ulong? Discord_BossEnableRole = 0;
         public string Discord_BossEnableMessage = "%notification% **%bossname%** has been Enabled!";
+        public string Discord_BossEnableCMDMessage = "%notification% **%playername%** has Enabled **%bossname%!**";
+        //public string Discord_BossDisableMessage = "%notification% **%bossname%** has been Disabled!";
+        //public string Discord_BossDisableCMDMessage = "%notification% **%playername%** has Disabled **%bossname%!**";
         public CONFIG_BOSSES() { }
 
         public void FixNull()
@@ -898,6 +927,9 @@ namespace MKLP
             if (Discord_BossEnableChannel == null) Discord_BossEnableChannel = getdefault.Discord_BossEnableChannel;
             if (Discord_BossEnableRole == null) Discord_BossEnableRole = getdefault.Discord_BossEnableRole;
             if (Discord_BossEnableMessage == null) Discord_BossEnableMessage = getdefault.Discord_BossEnableMessage;
+            if (Discord_BossEnableCMDMessage == null) Discord_BossEnableCMDMessage = getdefault.Discord_BossEnableCMDMessage;
+            //if (Discord_BossDisableMessage == null) Discord_BossDisableMessage = getdefault.Discord_BossDisableMessage;
+            //if (Discord_BossDisableCMDMessage == null) Discord_BossDisableCMDMessage = getdefault.Discord_BossDisableCMDMessage;
         }
     }
 

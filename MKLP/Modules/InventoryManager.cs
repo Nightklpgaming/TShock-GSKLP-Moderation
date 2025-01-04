@@ -15,7 +15,7 @@ namespace MKLP.Modules
         public static List<string> InventoryLogs = new();
         static int InvLog_index = 0;
 
-        public static void TryAddInvLog(TSPlayer tsplayer, Item playerinv, Item prevplayerinv, int slot, string Type)
+        public static void TryAddInvLog(TSPlayer tsplayer, Item prevplayerinv, Item playerinv, int slot, string Type)
         {
             if (!(bool)MKLP.Config.Main.Save_Inventory_Log) return;
 
@@ -29,6 +29,28 @@ namespace MKLP.Modules
 
             string log = $"{tsplayer.Account.Name}{DiscordKLP.S_}{Type}{DiscordKLP.S_}{slot}{DiscordKLP.S_}" +
                 $"{prevplayerinv.netID},{prevplayerinv.stack},{prevplayerinv.prefix}" +
+                DiscordKLP.S_ +
+                $"{playerinv.netID},{playerinv.stack},{playerinv.prefix}|{InvLog_index}";
+
+            if (!InventoryLogs.Contains(log))
+            {
+                InventoryLogs.Add(log);
+            }
+        }
+        public static void TryAddInvLog(TSPlayer tsplayer, NetItem prevplayerinv, Item playerinv, int slot, string Type)
+        {
+            if (!(bool)MKLP.Config.Main.Save_Inventory_Log) return;
+
+            InvLog_index++;
+
+            if (InventoryLogs.Count >= (int)MKLP.Config.Main.Save_InvLog_Max)
+            {
+                InventoryLogs.RemoveRange(0, (int)MKLP.Config.Main.Remove_InvLog_IfMax);
+            }
+            //OutOfMemoryException
+
+            string log = $"{tsplayer.Account.Name}{DiscordKLP.S_}{Type}{DiscordKLP.S_}{slot}{DiscordKLP.S_}" +
+                $"{prevplayerinv.NetId},{prevplayerinv.Stack},{prevplayerinv.PrefixId}" +
                 DiscordKLP.S_ +
                 $"{playerinv.netID},{playerinv.stack},{playerinv.prefix}|{InvLog_index}";
 

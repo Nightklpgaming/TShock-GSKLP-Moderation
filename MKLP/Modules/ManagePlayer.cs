@@ -31,7 +31,7 @@ namespace MKLP.Modules
 {
     public static class ManagePlayer
     {
-
+        public static Dictionary<TSPlayer, NetItem[]> PreviousChestP = new();
         public static void CheckPlayerInventory(TSPlayer tsplayer,
              Item[] previnv = null,
              Item[] prevpig = null,
@@ -53,21 +53,23 @@ namespace MKLP.Modules
             //Item[] prevsafe = tsplayer.GetData<Item[]>("MKLP_PrevsSafe");
             //Item[] prevforge = tsplayer.GetData<Item[]>("MKLP_PrevDefenderForge");
             //Item[] prevvault = tsplayer.GetData<Item[]>("MKLP_PrevVoidVault");
-
-            for (int armori = 0; armori < tsplayer.TPlayer.armor.Length; armori++)
+            if (!(bool)MKLP.Config.Main.Allow_Players_StackSameAccessory)
             {
-                for (int armorii = 0; armorii < tsplayer.TPlayer.armor.Length; armorii++)
+                for (int armori = 0; armori < 10; armori++)
                 {
-                    if (armorii == armori) continue;
-                    if (tsplayer.TPlayer.armor[armorii].IsAir || tsplayer.TPlayer.armor[armorii].netID == 0) continue;
-
-                    if (tsplayer.TPlayer.armor[armorii].netID == tsplayer.TPlayer.armor[armori].netID)
+                    for (int armorii = 0; armorii < 10; armorii++)
                     {
+                        if (armorii == armori) continue;
+                        if (tsplayer.TPlayer.armor[armorii].IsAir || tsplayer.TPlayer.armor[armorii].netID == 0) continue;
 
-                        tsplayer.GiveItem(tsplayer.TPlayer.armor[armori].netID, tsplayer.TPlayer.armor[armori].stack, tsplayer.TPlayer.armor[armori].prefix);
-                        tsplayer.TPlayer.armor[armori].SetDefaults();
-                        NetMessage.SendData((int)PacketTypes.PlayerSlot, -1, -1, Terraria.Localization.NetworkText.Empty, tsplayer.Index, NetItem.InventorySlots + armori, 0f, 0f, 0);
+                        if (tsplayer.TPlayer.armor[armorii].netID == tsplayer.TPlayer.armor[armori].netID)
+                        {
 
+                            tsplayer.GiveItem(tsplayer.TPlayer.armor[armori].netID, tsplayer.TPlayer.armor[armori].stack, tsplayer.TPlayer.armor[armori].prefix);
+                            tsplayer.TPlayer.armor[armori].SetDefaults();
+                            NetMessage.SendData((int)PacketTypes.PlayerSlot, -1, -1, Terraria.Localization.NetworkText.Empty, tsplayer.Index, NetItem.InventorySlots + armori, 0f, 0f, 0);
+
+                        }
                     }
                 }
             }
@@ -504,25 +506,120 @@ namespace MKLP.Modules
                     }
                 }
 
+                bool dontrevertchest = (PunishmentType)MKLP.Config.Main.SuspiciousDupe_PunishmentType != PunishmentType.RevertAndLog &&
+                            (PunishmentType)MKLP.Config.Main.SuspiciousDupe_PunishmentType != PunishmentType.Revert;
                 if ((bool)MKLP.Config.Main.DetectAllPlayerInv)
                 {
-                    if (tsplayer.ActiveChest != -1 && tsplayer.ContainsData("MKLP_PrevChestOpen"))
+                    if (tsplayer.ActiveChest != -1)
                     {
-                        Item[] prevchestopen = tsplayer.GetData<Item[]>("MKLP_PrevChestOpen");
-
-                        for (int i = 0; i < Main.chest[tsplayer.ActiveChest].item.Count(); i++)
+                        try
                         {
-                            checkingifsus1("Chest", i, Main.chest[tsplayer.ActiveChest].item[i]);
+                            
+                            //NetItem[] prevchestopen = tsplayer.GetData<NetItem[]>("MKLP_PrevChestOpen");
+                            NetItem[] prevchestopencheck = PreviousChestP[tsplayer];
 
-                            if (Main.chest[tsplayer.ActiveChest].item[i].netID != prevchestopen[i].netID ||
-                                Main.chest[tsplayer.ActiveChest].item[i].stack != prevchestopen[i].stack ||
-                                Main.chest[tsplayer.ActiveChest].item[i].prefix != prevchestopen[i].prefix)
+                            int indexchestcheck = 0;
+
+                            foreach (var prevchestopen in PreviousChestP[tsplayer])
                             {
-                                InventoryManager.TryAddInvLog(tsplayer, prevchestopen[i], Main.chest[tsplayer.ActiveChest].item[i], i, "Chest");
+                                //checkingifsus1("Chest", i, Main.chest[tsplayer.ActiveChest].item[i]);
+                                if (checkingifsus1e1("Chest", indexchestcheck, Main.chest[tsplayer.ActiveChest].item[indexchestcheck]) || checkingifsus1e2("Chest", indexchestcheck, Main.chest[tsplayer.ActiveChest].item[indexchestcheck]))
+                                {
+                                    Main.chest[tsplayer.ActiveChest].item[indexchestcheck].SetDefaults();
+                                    tsplayer.SendData(PacketTypes.ChestItem, "", tsplayer.ActiveChest, indexchestcheck, 0, 0, 0);
+                                }
 
-                                checkingifsus2("Chest", i, prevchestopen[i], Main.chest[tsplayer.ActiveChest].item[i]);
+                                if (Main.chest[tsplayer.ActiveChest].item[indexchestcheck].netID != prevchestopen.NetId ||
+                                    Main.chest[tsplayer.ActiveChest].item[indexchestcheck].stack != prevchestopen.Stack ||
+                                    Main.chest[tsplayer.ActiveChest].item[indexchestcheck].prefix != prevchestopen.PrefixId)
+                                {
+                                    InventoryManager.TryAddInvLog(tsplayer, prevchestopen, Main.chest[tsplayer.ActiveChest].item[indexchestcheck], indexchestcheck, "Chest");
+
+                                    checkingifsus3("Chest", indexchestcheck, prevchestopen, Main.chest[tsplayer.ActiveChest].item[indexchestcheck]);
+                                }
+                                indexchestcheck++;
                             }
+                            
+                            //NetItem[] prevchestopen = tsplayer.GetData<Item>("MKLP_PrevChestOpen");
+
+                            /*
+                            int indexchestcheck = 0;
+
+                            foreach (var prevchestopen in tsplayer.GetData<Item[]>("MKLP_PrevChestOpen"))
+                            {
+                                //checkingifsus1("Chest", i, Main.chest[tsplayer.ActiveChest].item[i]);
+                                if (checkingifsus1e1("Chest", indexchestcheck, Main.chest[tsplayer.ActiveChest].item[indexchestcheck]) || checkingifsus1e2("Chest", indexchestcheck, Main.chest[tsplayer.ActiveChest].item[indexchestcheck]))
+                                {
+                                    Main.chest[tsplayer.ActiveChest].item[indexchestcheck].SetDefaults();
+                                    tsplayer.SendData(PacketTypes.ChestItem, "", tsplayer.ActiveChest, indexchestcheck, 0, 0, 0);
+                                }
+
+                                if (Main.chest[tsplayer.ActiveChest].item[indexchestcheck].netID != prevchestopen.netID ||
+                                    Main.chest[tsplayer.ActiveChest].item[indexchestcheck].stack != prevchestopen.stack ||
+                                    Main.chest[tsplayer.ActiveChest].item[indexchestcheck].prefix != prevchestopen.prefix)
+                                {
+                                    InventoryManager.TryAddInvLog(tsplayer, prevchestopen, Main.chest[tsplayer.ActiveChest].item[indexchestcheck], indexchestcheck, "Chest");
+
+                                    checkingifsus4("Chest", indexchestcheck, prevchestopen, Main.chest[tsplayer.ActiveChest].item[indexchestcheck]);
+                                }
+                                Console.WriteLine(prevchestopen.netID + "|" + prevchestopen.stack + "---" + Main.chest[tsplayer.ActiveChest].item[indexchestcheck].netID + "|" + Main.chest[tsplayer.ActiveChest].item[indexchestcheck].stack);
+                                indexchestcheck++;
+                                
+                            }
+                            */
                         }
+                        catch (Exception e)
+                        {
+                            //Console.WriteLine("\n\n" + e);
+                        }
+                    }
+                    try
+                    {
+                        
+                        List<NetItem> chestitem = new();
+                        foreach (Item item in Main.chest[tsplayer.ActiveChest].item)
+                        {
+                            if (item == null)
+                            {
+                                chestitem.Add(new NetItem(0, 0, 0));
+                                //Console.Write("0-");
+                                continue;
+                            }
+                            if (item.IsAir)
+                            {
+                                chestitem.Add(new NetItem(0, 0, 0));
+                                //Console.Write("0-");
+                                continue;
+                            }
+                            
+                            chestitem.Add(new NetItem(item.netID, item.stack, item.prefix));
+                            //Console.Write(item.netID + "-");
+
+                        }
+                        var result = chestitem.ToArray();
+                        //Console.WriteLine("\n");
+                        foreach (var e in result)
+                        {
+                            //Console.Write(e.NetId + "-");
+
+                        }
+                        if (PreviousChestP.ContainsKey(tsplayer))
+                        {
+                            PreviousChestP[tsplayer] = result;
+                        }
+                        else
+                        {
+                            PreviousChestP.Add(tsplayer, (NetItem[])result);
+                        }
+                        
+                        //Item[] chestitem = new Item[40];
+                        //chestitem = (Item[])Main.chest[tsplayer.ActiveChest].item.Clone();
+                        //tsplayer.SetData("MKLP_PrevChestOpen", Main.chest[tsplayer.ActiveChest].item.Clone());
+                        //tsplayer.SetData("MKLP_PrevChestOpen", result);
+                    }
+                    catch (Exception e)
+                    {
+                        //Console.WriteLine("\n\n" + e);
                     }
 
                     for (int i = 0; i < tsplayer.TPlayer.bank.item.Count(); i++)
@@ -582,17 +679,50 @@ namespace MKLP.Modules
                     }
                 }
 
-                void checkingifsus1(string type, int slot, Item now)
+                bool checkingifsus1(string type, int slot, Item now)
                 {
 
                     if (illegalitems.ContainsKey(now.netID) &&
                         (bool)MKLP.Config.Main.Using_Survival_Code1 &&
-                        !tsplayer.HasPermission(MKLP.Config.Permissions.IgnoreSurvivalCode_1)) MKLP.PunishPlayer(MKLP_CodeType.Survival, 1, tsplayer, $"{illegalitems[now.netID]} Item Progression", $"Player **{tsplayer.Name}** has a item that is illegal on this progression `Item: {now.Name}` **{illegalitems[now.netID]}**", true);
+                        !tsplayer.HasPermission(MKLP.Config.Permissions.IgnoreSurvivalCode_1))
+                    {
+                        MKLP.PunishPlayer(MKLP_CodeType.Survival, 1, tsplayer, $"{illegalitems[now.netID]} Item Progression", $"Player **{tsplayer.Name}** has a item that is illegal on this progression `Item: {now.Name}` **{illegalitems[now.netID]}**", true);
+                        return true;
+                    }
 
                     if ((now.value * now.stack) / 5000000 >= maxvalue &&
                         now.netID != 74
                         && (bool)MKLP.Config.Main.Using_Main_Code1 &&
-                        !tsplayer.HasPermission(MKLP.Config.Permissions.IgnoreMainCode_1)) MKLP.PunishPlayer(MKLP_CodeType.Main, 1, tsplayer, $"Abnormal Item [i/s{now.stack}:{now.netID}]", $"Player **{tsplayer.Name}** has High Value Item Stack `({now.stack}) {now.Name}`", true);
+                        !tsplayer.HasPermission(MKLP.Config.Permissions.IgnoreMainCode_1))
+                    {
+                        MKLP.PunishPlayer(MKLP_CodeType.Main, 1, tsplayer, $"Abnormal Item [i/s{now.stack}:{now.netID}]", $"Player **{tsplayer.Name}** has High Value Item Stack `({now.stack}) {now.Name}`", true);
+                        return true;
+                    }
+
+                    return false;
+                }
+                bool checkingifsus1e1(string type, int slot, Item now)
+                {
+
+                    if (illegalitems.ContainsKey(now.netID) &&
+                        (bool)MKLP.Config.Main.Using_Survival_Code1)
+                    {
+                        return true;
+                    }
+
+                    return false;
+                }
+                bool checkingifsus1e2(string type, int slot, Item now)
+                {
+
+                    if ((now.value * now.stack) / 5000000 >= maxvalue &&
+                        now.netID != 74
+                        && (bool)MKLP.Config.Main.Using_Main_Code1)
+                    {
+                        return true;
+                    }
+
+                    return false;
                 }
 
                 void checkingifsus2(string type, int slot, Item prev, Item now)
@@ -672,8 +802,112 @@ namespace MKLP.Modules
 
                     }
                 }
-                
 
+                void checkingifsus3(string type, int slot, NetItem prev, Item now)
+                {
+                    if (type == "Inventory" && slot == 58) return;
+
+                    if (!(bool)MKLP.Config.Main.Use_SuspiciousDupe) return;
+
+                    if (now.stack == 255)
+                    {
+                        if (prev.Stack > 240) return;
+                        if (prev.NetId != now.netID) return;
+                        if (prev.NetId == 0 || prev.Stack == 0) return;
+
+                        if (confirmedREV()) return;
+                        revertchest2();
+                        MKLP.PunishPlayer(MKLP_CodeType.Dupe, 0, tsplayer, "Split Duplicating", $"Player **{tsplayer.Account.Name}** has suspicious activity for **Split Dupe** `( {prev.Stack} ) {Lang.GetItemName(prev.NetId)}` to `( {now.stack} ) {now.Name}` `ActiveChest: {tsplayer.ActiveChest}`" +
+                            $"\n- Please Check this player if they are duping", true);
+                        MKLP.SendStaffMessage($"[MKLP] Player [c/8911f1:{tsplayer.Account.Name}]  has suspicious activity for Dupe [i/s{prev.Stack}:{prev.NetId}] to [i/s{now.stack}:{now.netID}]" +
+                            $"\nPlease Check this player if they are duping", Microsoft.Xna.Framework.Color.MediumPurple);
+
+                    }
+                    if (now.stack == 500)
+                    {
+                        if (prev.Stack > 485) return;
+                        if (prev.NetId != now.netID) return;
+                        if (prev.NetId == 0 || prev.Stack == 0) return;
+
+                        if (confirmedREV()) return;
+                        revertchest2();
+                        MKLP.PunishPlayer(MKLP_CodeType.Dupe, 0, tsplayer, "Duplicating", $"Player **{tsplayer.Account.Name}** has suspicious activity for **Dupe** `( {prev.Stack} ) {Lang.GetItemName(prev.NetId)}` to `( {now.stack} ) {now.Name}` `ActiveChest: {tsplayer.ActiveChest}`" +
+                            $"\n- Please Check this player if they are duping", true);
+                        MKLP.SendStaffMessage($"[MKLP] Player [c/8911f1:{tsplayer.Account.Name}]  has suspicious activity for Dupe [i/s{prev.Stack}:{prev.NetId}] to [i/s{now.stack}:{now.netID}]" +
+                            $"\nPlease Check this player if they are duping", Microsoft.Xna.Framework.Color.MediumPurple);
+
+                    }
+                    if (now.stack == 1000)
+                    {
+                        if (prev.Stack > 950) return;
+                        if (prev.NetId != now.netID) return;
+                        if (prev.NetId == 0 || prev.Stack == 0) return;
+
+                        if (confirmedREV()) return;
+                        revertchest2();
+                        MKLP.PunishPlayer(MKLP_CodeType.Dupe, 0, tsplayer, "Duplicating", $"Player **{tsplayer.Account.Name}** has suspicious activity for **Dupe** `( {prev.Stack} ) {Lang.GetItemName(prev.NetId)}` to `( {now.stack} ) {now.Name}` `ActiveChest: {tsplayer.ActiveChest}`" +
+                            $"\n- Please Check this player if they are duping", true);
+                        MKLP.SendStaffMessage($"[MKLP] Player [c/8911f1:{tsplayer.Account.Name}]  has suspicious activity for Dupe [i/s{prev.Stack}:{prev.NetId}] to [i/s{now.stack}:{now.netID}]" +
+                            $"\nPlease Check this player if they are duping", Microsoft.Xna.Framework.Color.MediumPurple);
+
+                    }
+                    if (now.stack == 5000)
+                    {
+                        if (prev.Stack > 4905) return;
+                        if (prev.NetId != now.netID) return;
+                        if (prev.NetId == 0 || prev.Stack == 0) return;
+
+                        if (confirmedREV()) return;
+                        revertchest2();
+                        MKLP.PunishPlayer(MKLP_CodeType.Dupe, 0, tsplayer, "Duplicating", $"Player **{tsplayer.Account.Name}** has suspicious activity for **Dupe** `( {prev.Stack} ) {Lang.GetItemName(prev.NetId)}` to `( {now.stack} ) {now.Name}` `ActiveChest: {tsplayer.ActiveChest}`" +
+                            $"\n- Please Check this player if they are duping", true);
+                        MKLP.SendStaffMessage($"[MKLP] Player [c/8911f1:{tsplayer.Account.Name}]  has suspicious activity for Dupe [i/s{prev.Stack}:{prev.NetId}] to [i/s{now.stack}:{now.netID}]" +
+                            $"\nPlease Check this player if they are duping", Microsoft.Xna.Framework.Color.MediumPurple);
+
+                    }
+                    if (now.stack == 9999)
+                    {
+                        if (prev.Stack > 9905) return;
+                        if (prev.NetId != now.netID) return;
+                        if (prev.NetId == 0 || prev.Stack == 0) return;
+
+                        if (confirmedREV()) return;
+                        revertchest2();
+                        MKLP.PunishPlayer(MKLP_CodeType.Dupe, 0, tsplayer, "Duplicating", $"Player **{tsplayer.Account.Name}** has suspicious activity for **Dupe** `( {prev.Stack} ) {Lang.GetItemName(prev.NetId)}` to `( {now.stack} ) {now.Name}` `ActiveChest: {tsplayer.ActiveChest}`" +
+                            $"\n- Please Check this player if they are duping", true);
+                        MKLP.SendStaffMessage($"[MKLP] Player [c/8911f1:{tsplayer.Account.Name}]  has suspicious activity for Dupe [i/s{prev.Stack}:{prev.NetId}] to [i/s{now.stack}:{now.netID}]" +
+                            $"\nPlease Check this player if they are duping", Microsoft.Xna.Framework.Color.MediumPurple);
+
+                    }
+                    void revertchest2()
+                    {
+                        if (dontrevertchest) return;
+                        int checkindex = 0;
+                        foreach (var revertitem in PreviousChestP[tsplayer])
+                        {
+                            /*
+                            Main.chest[tsplayer.ActiveChest].item[i] = tsplayer.GetData<Item[]>("MKLP_PrevChestOpen")[i];
+                            tsplayer.SendData(PacketTypes.ChestItem, "", tsplayer.ActiveChest, i,
+                                tsplayer.GetData<Item[]>("MKLP_PrevChestOpen")[i].stack,
+                                tsplayer.GetData<Item[]>("MKLP_PrevChestOpen")[i].prefix,
+                                tsplayer.GetData<Item[]>("MKLP_PrevChestOpen")[i].netID);
+                            */
+                            Item RevertingItem = new Item();
+
+                            RevertingItem.netDefaults(revertitem.NetId);
+                            RevertingItem.stack = revertitem.Stack;
+                            RevertingItem.prefix = revertitem.PrefixId;
+
+                            Main.chest[tsplayer.ActiveChest].item[checkindex] = RevertingItem;
+                            tsplayer.SendData(PacketTypes.ChestItem, "", tsplayer.ActiveChest, checkindex,
+                                revertitem.Stack,
+                                revertitem.PrefixId,
+                                revertitem.NetId);
+                            checkindex++;
+                        }
+                    }
+                }
+                
                 bool confirmedREV()
                 {
                     if (tsplayer.ContainsData("MKLP_Confirmed_InvRev"))
