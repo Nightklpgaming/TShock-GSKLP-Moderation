@@ -54,21 +54,20 @@ namespace MKLP
         public override string Author => "Nightklp";
         public override string Description => "Makes Moderating a bit easy";
         public override string Name => "MKLP";
-        public override System.Version Version => new System.Version(1, 4);
+        public override System.Version Version => new System.Version(1, 5);
         #endregion
 
         #region [ Variables ]
 
         public static Config Config = Config.Read(); //CONFIG
 
-        public static MKLP_DB DBManager = new MKLP_DB(new SqliteConnection(("Data Source=" + Path.Combine(TShock.SavePath, "MKLP.sqlite"))));
+        public static MKLP_DB DBManager = new();
 
         public static DiscordKLP Discordklp = new();
 
         public static AccountDLinked LinkAccountManager = new();
 
         public static Dictionary<string, string> DisabledKey = new();
-
 
         //illegal things list
         public static Dictionary<int, string> IllegalItemProgression = new();
@@ -100,7 +99,8 @@ namespace MKLP
 
             PlayerHooks.PlayerCommand += OnPlayerCommand;
 
-            PlayerHooks.PlayerChat += OnPlayerChat;
+            //PlayerHooks.PlayerChat += OnPlayerChat;
+            ServerApi.Hooks.ServerChat.Register(this, OnChatReceived);
 
             //=====================game=====================
             ServerApi.Hooks.NetGetData.Register(this, OnGetData);
@@ -129,7 +129,11 @@ namespace MKLP
 
             ServerApi.Hooks.NpcKilled.Register(this, OnNPCKilled);
 
-            //GetDataHandlers.get
+            ServerApi.Hooks.NpcAIUpdate.Register(this, OnNPCAIUpdate);
+
+            ServerApi.Hooks.ProjectileAIUpdate.Register(this, OnProjectileAIUpdate);
+
+            //ServerApi.Hooks.WireTriggerAnnouncementBox.Register(this, OnProjectileAIUpdate);
 
             //=====================Server===================
             //ServerApi.Hooks.GameUpdate.Register(this, OnUpdate);
@@ -180,7 +184,7 @@ namespace MKLP
 
             if ((bool)Config.Main.Replace_AccountInfo_TShockCommand)
             {
-                Command VarMCMD_AccountInfo = new(MCMD_AccountInfo, "accountinfo", "ai") { HelpText = "Shows information about a user." };
+                Command VarMCMD_AccountInfo = new(Permissions.checkaccountinfo, MCMD_AccountInfo, "accountinfo", "ai") { HelpText = "Shows information about a user." };
                 Commands.ChatCommands.RemoveAll(cmd => cmd.Names.Exists(alias => VarMCMD_AccountInfo.Names.Contains(alias)));
                 Commands.ChatCommands.Add(VarMCMD_AccountInfo);
             } else
@@ -352,7 +356,8 @@ namespace MKLP
 
                 PlayerHooks.PlayerCommand -= OnPlayerCommand;
 
-                PlayerHooks.PlayerChat -= OnPlayerChat;
+                //PlayerHooks.PlayerChat -= OnPlayerChat;
+                ServerApi.Hooks.ServerChat.Deregister(this, OnChatReceived);
 
                 //=====================game=====================
                 ServerApi.Hooks.NetGetData.Deregister(this, OnGetData);
@@ -378,6 +383,10 @@ namespace MKLP
                 ServerApi.Hooks.NpcSpawn.Deregister(this, OnNPCSpawn);
 
                 ServerApi.Hooks.NpcKilled.Deregister(this, OnNPCKilled);
+
+                ServerApi.Hooks.NpcAIUpdate.Deregister(this, OnNPCAIUpdate);
+
+                ServerApi.Hooks.ProjectileAIUpdate.Deregister(this, OnProjectileAIUpdate);
 
                 //=====================Server===================
                 //ServerApi.Hooks.GameUpdate.Deregister(this, OnUpdate);
@@ -448,14 +457,35 @@ namespace MKLP
             }
 
             #region [ latency ]
+            
             if (args.MsgID == PacketTypes.ItemOwner)
             {
+                
                 if (player.ContainsData("MKLP_StartGetLatency"))
                 {
                     player.SetData("MKLP_GetLatency", (DateTime.UtcNow - player.GetData<DateTime>("MKLP_StartGetLatency")).TotalMilliseconds);
                     player.RemoveData("MKLP_StartGetLatency");
                 }
+                
+                /*
+                var user = TShock.Players[args.Msg.whoAmI];
+                if (user == null) return;
+                using (BinaryReader date = new BinaryReader(new MemoryStream(args.Msg.readBuffer, args.Index, args.Length)))
+                {
+                    int iid = date.ReadInt16();
+                    int pid = date.ReadByte();
+                    if (pid != 255) return;
+                    var pingresponse = PlayerPing[args.Msg.whoAmI];
+                    var ping = pingresponse?.RecentPings[iid];
+                    if (ping != null)
+                    {
+                        ping.End = DateTime.Now;
+                        ping.Channel!.Writer.TryWrite(iid);
+                    }
+                }
+                */
             }
+            
             #endregion
 
             #region [ Disable ]
@@ -672,6 +702,7 @@ namespace MKLP
 
         private void OnGameUpdate(EventArgs args)
         {
+            /*
             //List<Item> newitemget = new();
             if (!(bool)Config.Main.Use_OnUpdate_Func) return;
 
@@ -711,6 +742,7 @@ namespace MKLP
                     newitemDrops[index] = TItem;
                 }
             }
+            */
 
             int maxvalue = 10;
 
@@ -742,6 +774,7 @@ namespace MKLP
                 foreach (TSPlayer player in TShock.Players)
                 {
                     if (player == null) continue;
+                    DBManager.CheckPlayerMute(player, true);
                     player.SetData("MKLP_StartGetLatency", DateTime.UtcNow);
                     NetMessage.SendData((int)PacketTypes.ItemOwner, player.Index, -1, null, 0, player.Index);
                 }
@@ -859,20 +892,102 @@ namespace MKLP
         bool LockDown = false;
         string LockDownReason = "";
 
-        DateTime checklatency_interval = DateTime.UtcNow.AddSeconds(5);
+        /*
+        private PingData[] PlayerPing { get; set; }
+        public class PingData
+        {
+            public TimeSpan? LastPing;
+            internal PingDetails?[] RecentPings = new PingDetails?[Terraria.Main.item.Length];
+        }
+        internal class PingDetails
+        {
+            internal Channel<int>? Channel;
+            internal DateTime Start = DateTime.Now;
+            internal DateTime? End = null;
+        }
+
+        public async Task<TimeSpan> Ping(TSPlayer player)
+        {
+            return await Ping(player, new CancellationTokenSource(1000).Token);
+        }
+
+        public async Task<TimeSpan> Ping(TSPlayer player, CancellationToken token)
+        {
+            var pingdata = PlayerPing[player.Index];
+            if (pingdata == null) return TimeSpan.MaxValue;
+
+            var inv = -1;
+            for (var i = 0; i < Terraria.Main.item.Length; i++)
+                if (Terraria.Main.item[i] != null)
+                    if (!Terraria.Main.item[i].active || Terraria.Main.item[i].playerIndexTheItemIsReservedFor == 255)
+                    {
+                        if (pingdata.RecentPings[i]?.Channel == null)
+                        {
+                            inv = i;
+                            break;
+                        }
+                    }
+
+            if (inv == -1) return TimeSpan.MaxValue;
+
+            var pd = pingdata.RecentPings[inv] ??= new PingDetails();
+
+            pd.Channel ??= Channel.CreateBounded<int>(new BoundedChannelOptions(30)
+            {
+                SingleReader = true,
+                SingleWriter = true
+            });
+
+
+            Terraria.NetMessage.TrySendData((int)PacketTypes.RemoveItemOwner, player.Index, -1, null, inv);
+
+            await pd.Channel.Reader.ReadAsync(token);
+            pd.Channel = null;
+
+            return (pingdata.LastPing = pd.End!.Value - pd.Start).Value;
+        }
+        */
+
+        /*
+        private void Hook_Ping_GetData(GetDataEventArgs args)
+        {
+            if (args.Handled) return;
+            if (args.MsgID != PacketTypes.ItemOwner) return;
+            var user = TShock.Players[args.Msg.whoAmI];
+            if (user == null) return;
+            using (BinaryReader date = new BinaryReader(new MemoryStream(args.Msg.readBuffer, args.Index, args.Length)))
+            {
+                int iid = date.ReadInt16();
+                int pid = date.ReadByte();
+                if (pid != 255) return;
+                var pingresponse = PlayerPing[args.Msg.whoAmI];
+                var ping = pingresponse?.RecentPings[iid];
+                if (ping != null)
+                {
+                    ping.End = DateTime.Now;
+                    ping.Channel!.Writer.TryWrite(iid);
+                }
+            }
+        }
+        */
+
+        DateTime checklatency_interval = DateTime.MinValue;
+
         private void OnPlayerUpdate(object? sender, GetDataHandlers.PlayerUpdateEventArgs args)
         {
             #region code
             if ((bool)Config.Main.Use_OnUpdate_Func) return;
 
-            if (checklatency_interval < DateTime.UtcNow)
+            if ((DateTime.UtcNow - checklatency_interval).TotalSeconds >= 5)
             {
-                checklatency_interval.AddSeconds(5);
+                checklatency_interval = DateTime.UtcNow;
+
                 foreach (TSPlayer player in TShock.Players)
                 {
                     if (player == null) continue;
                     player.SetData("MKLP_StartGetLatency", DateTime.UtcNow);
                     NetMessage.SendData((int)PacketTypes.ItemOwner, player.Index, -1, null, 0, player.Index);
+                    //player.SetData("MKLP_GetLatency", Ping(player).Result.TotalMilliseconds);
                 }
             }
 
@@ -982,7 +1097,7 @@ namespace MKLP
 
                 #endregion
 
-                #region UUID Match
+                #region UUID Match [ alt-acc prevention ]
 
                 var getuuidmatch = GetMatchUUID_UserAccount(player.Name, player.UUID);
                 UserAccount useraccount = TShock.UserAccounts.GetUserAccountByName(player.Name);
@@ -1006,13 +1121,13 @@ namespace MKLP
                         {
                             if (JsonConvert.DeserializeObject<List<string>>(get.KnownIps).Contains(player.IP))
                             {
-                                player.Disconnect("Your UUID And IP matches with other accounts");
+                                player.Disconnect("( UUID|IP ) making 2 or more accounts is forbidden!");
                                 return;
                             }
                         }
                     } else if (!whitelisted)
                     {
-                        player.Disconnect("Your UUID matches with other accounts");
+                        player.Disconnect("( UUID ) making 2 or more accounts is forbidden!");
                         return;
                     }
                 }
@@ -1242,103 +1357,105 @@ namespace MKLP
                 this.Since = Since;
             }
         }
-        private void OnPlayerChat(PlayerChatEventArgs args)
+        private async void OnChatReceived(ServerChatEventArgs args)
         {
             #region code
 
             if (!(bool)Config.ChatMod.Using_Chat_AutoMod) return;
 
+            TSPlayer player = TShock.Players[args.Who];
+
             foreach (string banned in Config.ChatMod.Ban_MessageContains)
             {
-                if (args.RawText.ToLower().Contains(banned.ToLower()))
+                if (args.Text.ToLower().Contains(banned.ToLower()))
                 {
-                    args.Player.SendErrorMessage("You can not send that message!");
+                    player.SendErrorMessage("You can not send that message!");
                     args.Handled = true;
                     return;
                 }
             }
-            if (args.RawText.Length >= (int)Config.ChatMod.Maximum__MessageLength_NoSpace && !args.RawText.Contains(" "))
+            if (args.Text.Length >= (int)Config.ChatMod.Maximum__MessageLength_NoSpace && !args.Text.Contains(" "))
             {
-                args.Player.SendErrorMessage("You can not send that message!");
+                player.SendErrorMessage("You can not send that message!");
                 args.Handled = true;
                 return;
             }
 
-            if (args.RawText.Length >= (int)Config.ChatMod.Maximum__MessageLength_WithSpace)
+            if (args.Text.Length >= (int)Config.ChatMod.Maximum__MessageLength_WithSpace)
             {
-                args.Player.SendErrorMessage("You can not send that message!");
+                player.SendErrorMessage("You can not send that message!");
                 args.Handled = true;
                 return;
             }
 
-            if (args.RawText.Length >= (int)Config.ChatMod.Maximum_Spammed_MessageLength_NoSpace && !args.RawText.Contains(" "))
+            if (args.Text.Length >= (int)Config.ChatMod.Maximum_Spammed_MessageLength_NoSpace && !args.Text.Contains(" "))
             {
-                if (args.Player.ContainsData("MKLP_Chat_Spam_message1"))
+                if (player.ContainsData("MKLP_Chat_Spam_message1"))
                 {
-                    if ((DateTime.UtcNow - args.Player.GetData<PlayerMessageThreshold>("MKLP_Chat_Spam_message1").Since).TotalMilliseconds < (int)Config.ChatMod.Millisecond_Threshold)
+                    if ((DateTime.UtcNow - player.GetData<PlayerMessageThreshold>("MKLP_Chat_Spam_message1").Since).TotalMilliseconds < (int)Config.ChatMod.Millisecond_Threshold)
                     {
-                        if (args.Player.GetData<PlayerMessageThreshold>("MKLP_Chat_Spam_message1").Threshold >= (int)Config.ChatMod.Threshold_Spammed_MessageLength_NoSpace)
+                        if (player.GetData<PlayerMessageThreshold>("MKLP_Chat_Spam_message1").Threshold >= (int)Config.ChatMod.Threshold_Spammed_MessageLength_NoSpace)
                         {
                             SendWarning();
                             return;
                         }
 
-                        args.Player.SetData("MKLP_Chat_Spam_message1", new PlayerMessageThreshold(args.Player.GetData<PlayerMessageThreshold>("MKLP_Chat_Spam_message1").Threshold + 1, DateTime.UtcNow));
+                        player.SetData("MKLP_Chat_Spam_message1", new PlayerMessageThreshold(player.GetData<PlayerMessageThreshold>("MKLP_Chat_Spam_message1").Threshold + 1, DateTime.UtcNow));
                         
                     } else
                     {
-                        args.Player.SetData("MKLP_Chat_Spam_message1", new PlayerMessageThreshold(0, DateTime.UtcNow));
+                        player.SetData("MKLP_Chat_Spam_message1", new PlayerMessageThreshold(0, DateTime.UtcNow));
                     }
                 } else
                 {
-                    args.Player.SetData("MKLP_Chat_Spam_message1", new PlayerMessageThreshold(1, DateTime.UtcNow));
+                    player.SetData("MKLP_Chat_Spam_message1", new PlayerMessageThreshold(1, DateTime.UtcNow));
                 }
             }
 
-            if (args.RawText.Length >= (int)Config.ChatMod.Maximum_Spammed_MessageLength_WithSpace)
+            if (args.Text.Length >= (int)Config.ChatMod.Maximum_Spammed_MessageLength_WithSpace)
             {
-                if (args.Player.ContainsData("MKLP_Chat_Spam_message2"))
+                if (player.ContainsData("MKLP_Chat_Spam_message2"))
                 {
-                    if ((DateTime.UtcNow - args.Player.GetData<PlayerMessageThreshold>("MKLP_Chat_Spam_message2").Since).TotalMilliseconds < (int)Config.ChatMod.Millisecond_Threshold)
+                    if ((DateTime.UtcNow - player.GetData<PlayerMessageThreshold>("MKLP_Chat_Spam_message2").Since).TotalMilliseconds < (int)Config.ChatMod.Millisecond_Threshold)
                     {
-                        if (args.Player.GetData<PlayerMessageThreshold>("MKLP_Chat_Spam_message2").Threshold >= (int)Config.ChatMod.Threshold_Spammed_MessageLength_WithSpace)
+                        if (player.GetData<PlayerMessageThreshold>("MKLP_Chat_Spam_message2").Threshold >= (int)Config.ChatMod.Threshold_Spammed_MessageLength_WithSpace)
                         {
                             SendWarning();
                             return;
                         }
 
-                        args.Player.SetData("MKLP_Chat_Spam_message2", new PlayerMessageThreshold(args.Player.GetData<PlayerMessageThreshold>("MKLP_Chat_Spam_message2").Threshold + 1, DateTime.UtcNow));
+                        player.SetData("MKLP_Chat_Spam_message2", new PlayerMessageThreshold(player.GetData<PlayerMessageThreshold>("MKLP_Chat_Spam_message2").Threshold + 1, DateTime.UtcNow));
 
                     }
                     else
                     {
-                        args.Player.SetData("MKLP_Chat_Spam_message2", new PlayerMessageThreshold(0, DateTime.UtcNow));
+                        player.SetData("MKLP_Chat_Spam_message2", new PlayerMessageThreshold(0, DateTime.UtcNow));
                     }
                 }
                 else
                 {
-                    args.Player.SetData("MKLP_Chat_Spam_message2", new PlayerMessageThreshold(1, DateTime.UtcNow));
+                    player.SetData("MKLP_Chat_Spam_message2", new PlayerMessageThreshold(1, DateTime.UtcNow));
                 }
             }
 
             void SendWarning()
             {
-                if (args.Player.ContainsData("MKLP_Chat_Warning_message"))
+                if (player.ContainsData("MKLP_Chat_Warning_message"))
                 {
-                    args.Player.SetData("MKLP_Chat_Warning_message", args.Player.GetData<int>("MKLP_Chat_Warning_message") + 1);
+                    player.SetData("MKLP_Chat_Warning_message", player.GetData<int>("MKLP_Chat_Warning_message") + 1);
                 } else
                 {
-                    args.Player.SetData("MKLP_Chat_Warning_message", 1);
+                    player.SetData("MKLP_Chat_Warning_message", 1);
                 }
 
-                if (args.Player.GetData<int>("MKLP_Chat_Warning_message") >= (int)Config.ChatMod.MutePlayer_AtWarning)
+                if (player.GetData<int>("MKLP_Chat_Warning_message") >= (int)Config.ChatMod.MutePlayer_AtWarning)
                 {
                     if ((bool)Config.ChatMod.PermanentDuration)
                     {
-                        ManagePlayer.OnlineMute(false, args.Player, "Spamming/Flooding Messages", "(Auto Chat Mod)", DateTime.MaxValue);
+                        ManagePlayer.OnlineMute(false, player, "Spamming/Flooding Messages", "(Auto Chat Mod)", DateTime.MaxValue);
                     } else
                     {
-                        ManagePlayer.OnlineMute(false, args.Player, "Spamming/Flooding Messages", "(Auto Chat Mod)", DateTime.UtcNow.AddSeconds((int)Config.ChatMod.MuteDuration_Seconds));
+                        ManagePlayer.OnlineMute(false, player, "Spamming/Flooding Messages", "(Auto Chat Mod)", DateTime.UtcNow.AddSeconds((int)Config.ChatMod.MuteDuration_Seconds));
                     }
                     NumberOfMutedPlayers++;
                     args.Handled = true;
@@ -1356,7 +1473,7 @@ namespace MKLP
                     return;
                 }
 
-                args.Player.SendWarningMessage("Warning! please do not spam/flood the messages!");
+                player.SendWarningMessage("Warning! please do not spam/flood the messages!");
                 args.Handled = true;
                 return;
             }
@@ -1539,7 +1656,7 @@ namespace MKLP
 
             if (!NPC.downedBoss3)
             {
-                if (args.Action == GetDataHandlers.EditAction.KillActuator ||
+                if ((args.Action == GetDataHandlers.EditAction.KillActuator ||
                     args.Action == GetDataHandlers.EditAction.PlaceActuator ||
                     args.Action == GetDataHandlers.EditAction.KillWire ||
                     args.Action == GetDataHandlers.EditAction.PlaceWire ||
@@ -1548,7 +1665,7 @@ namespace MKLP
                     args.Action == GetDataHandlers.EditAction.KillWire3 ||
                     args.Action == GetDataHandlers.EditAction.PlaceWire3 ||
                     args.Action == GetDataHandlers.EditAction.KillWire4 ||
-                    args.Action == GetDataHandlers.EditAction.PlaceWire4 &&
+                    args.Action == GetDataHandlers.EditAction.PlaceWire4) &&
                     (
                     !args.Player.HasPermission(Config.Permissions.Ignore_IllegalWireProgression) &&
                     !args.Player.HasPermission(TShockAPI.Permissions.item) &&
@@ -2003,8 +2120,6 @@ namespace MKLP
             int TileX = args.TileX;
             int TileY = args.TileY;
 
-            if (LiquidThreshold()) return;
-
             // Log the interaction details
             string liquidName = args.Type switch
             {
@@ -2014,22 +2129,19 @@ namespace MKLP
                 GetDataHandlers.LiquidType.Honey => "Honey",
                 GetDataHandlers.LiquidType.Shimmer => "Shimmer"
             };
+            if (LiquidThreshold()) return;
 
-            if ((int)Main.worldSurface >= TileY)
+
+            if (TileY < (int)Main.worldSurface && args.Type != GetDataHandlers.LiquidType.Removal)
             {
                 // Log liquid placed
                 if (!args.Player.HasPermission(Config.Permissions.IgnoreAntiGrief_protectsurface_placeliquid) && (bool)Config.Main.Using_AntiGrief_Surface_PlaceLiquid)
                 {
-                    args.Player.SendErrorMessage(Config.Main.Message_AntiGrief_Surface_Break);
+                    args.Player.SendErrorMessage(Config.Main.Message_AntiGrief_Surface_PlaceLiquid);
                     args.Player.SendTileSquareCentered(TileX, TileY, 4);
                     args.Handled = true;
                     return;
                 }
-            }
-            else
-            {
-                // Log liquid removed
-                TShock.Log.ConsoleInfo($"{args.Player.Name} removed {liquidName} at ({TileX}, {TileY}).");
             }
 
             #region ( Threshold )
@@ -2092,161 +2204,170 @@ namespace MKLP
         private void OnNewProjectile(object sender, GetDataHandlers.NewProjectileEventArgs args)
         {
             #region code
-            short ident = args.Identity;
-            //Vector2 pos = args.Position;
-            //Vector2 vel = args.Velocity;
-            //float knockback = args.Knockback;
-            //short damage = args.Damage;
-            byte owner = args.Owner;
-            short type = args.Type;
-            //int index = args.Index;
-            //float[] ai = args.Ai;
-
-            if (ProjectileThreshold()) return;
-
-            Dictionary<short, string> GetIllegalProj = SurvivalManager.GetIllegalProjectile();
-
-            
-            if (args.Player.IsLoggedIn && IllegalProjectileProgression.ContainsKey(type) &&
-                !args.Player.HasPermission(Config.Permissions.IgnoreSurvivalCode_2) &&
-                (bool)Config.Main.Using_Survival_Code2)
+            try
             {
-                if (PunishPlayer(MKLP_CodeType.Survival, 2, args.Player, $"{GetIllegalProj[type]} Projectile", $"Player **{args.Player.Name}** spawned illegal Projectile progression `itemheld: {args.Player.SelectedItem.netID} projectile: {Lang.GetProjectileName(type)}` **{GetIllegalProj[type]}**"))
+                short ident = args.Identity;
+                //Vector2 pos = args.Position;
+                //Vector2 vel = args.Velocity;
+                //float knockback = args.Knockback;
+                //short damage = args.Damage;
+                byte owner = args.Owner;
+                short type = args.Type;
+                //int index = args.Index;
+                //float[] ai = args.Ai;
+
+                if (ProjectileThreshold()) return;
+
+                Dictionary<short, string> GetIllegalProj = SurvivalManager.GetIllegalProjectile();
+
+
+                if (args.Player.IsLoggedIn && IllegalProjectileProgression.ContainsKey(type) &&
+                    !args.Player.HasPermission(Config.Permissions.IgnoreSurvivalCode_2) &&
+                    (bool)Config.Main.Using_Survival_Code2)
                 {
-                    args.Player.RemoveProjectile(ident, owner);
-                    args.Handled = true;
-                    return;
-                }
-            }
-            short[] InfectionProj =
-            {
-                ProjectileID.ViciousPowder,
-                ProjectileID.VilePowder,
-
-                ProjectileID.CrimsonSpray,
-                ProjectileID.CorruptSpray,
-                ProjectileID.HallowSpray,
-
-                ProjectileID.BloodWater,
-                ProjectileID.UnholyWater,
-                ProjectileID.HolyWater
-            };
-
-            if (InfectionProj.Contains(type))
-            {
-                if (!args.Player.HasPermission(Config.Permissions.IgnoreAntiGrief_infection) && (bool)Config.Main.Using_AntiGrief_Infection)
-                {
-                    args.Player.SendErrorMessage(Config.Main.Message_AntiGrief_Infection);
-                    args.Player.RemoveProjectile(ident, owner);
-                    args.Handled = true;
-                    return;
-                }
-            }
-            
-            short[] SprayProj =
-            {
-                ProjectileID.CorruptSpray,
-                ProjectileID.CrimsonSpray,
-                ProjectileID.DirtSpray,
-                ProjectileID.HallowSpray,
-                ProjectileID.MushroomSpray,
-                ProjectileID.PureSpray,
-                ProjectileID.SandSpray,
-                ProjectileID.SnowSpray
-            };
-
-            if (SprayProj.Contains(type))
-            {
-                if (!args.Player.HasPermission(Config.Permissions.IgnoreAntiGrief_spray) && (bool)Config.Main.Using_AntiGrief_Spray)
-                {
-                    args.Player.SendErrorMessage(Config.Main.Message_AntiGrief_Spray);
-                    args.Player.RemoveProjectile(ident, owner);
-                    args.Handled = true;
-                    return;
-                }
-            }
-            
-            if (args.Player.TileY <= (int)Main.worldSurface)
-            {
-                short[] explosives =
-                {
-                    //reg bomb
-                    ProjectileID.Bomb,
-                    ProjectileID.StickyBomb,
-                    ProjectileID.BouncyBomb,
-
-                    //reg dynamite
-                    ProjectileID.Dynamite,
-                    ProjectileID.StickyDynamite,
-                    ProjectileID.BouncyDynamite,
-
-                    //others
-                    ProjectileID.BombFish,
-                    ProjectileID.LavaBomb,
-                    ProjectileID.WetBomb,
-                    ProjectileID.HoneyBomb,
-
-                    //rocket
-                    ProjectileID.RocketII,
-                    ProjectileID.RocketSnowmanII,
-                    ProjectileID.RocketIV,
-                    ProjectileID.RocketSnowmanIV,
-
-                    ProjectileID.ClusterFragmentsII,
-                    ProjectileID.ClusterGrenadeII,
-                    ProjectileID.ClusterMineII,
-                    ProjectileID.ClusterRocketII,
-                    ProjectileID.ClusterSnowmanFragmentsII,
-                    ProjectileID.ClusterSnowmanRocketII,
-                    ProjectileID.MiniNukeGrenadeII,
-                    ProjectileID.MiniNukeMineII,
-                    ProjectileID.MiniNukeRocketII,
-                    ProjectileID.MiniNukeSnowmanRocketII,
-                    ProjectileID.LavaGrenade,
-                    ProjectileID.LavaMine,
-                    ProjectileID.LavaRocket,
-                    ProjectileID.LavaSnowmanRocket,
-
-                    //celebratiomk
-                    ProjectileID.Celeb2RocketExplosive,
-                    ProjectileID.Celeb2RocketExplosiveLarge,
-                    ProjectileID.Celeb2RocketLarge
-                };
-
-                if (!explosives.Contains(type)) return;
-
-                if (!args.Player.HasPermission(Config.Permissions.IgnoreAntiGrief_protectsurface_explosive) && (bool)Config.Main.Using_AntiGrief_Surface_Explosive)
-                {
-                    args.Player.SendErrorMessage(Config.Main.Message_AntiGrief_Surface_Explosive);
-                    args.Player.RemoveProjectile(ident, owner);
-                    args.Handled = true;
-                    return;
-                }
-            }
-
-
-            bool ProjectileThreshold()
-            {
-                if (!(bool)Config.Main.Using_Default_Code5) return false;
-                if (args.Player.HasPermission(Config.Permissions.IgnoreDefaultCode_5)) return false;
-
-                int max = (int)Config.Main.default_code5_maxdefault;
-
-                if (Main.hardMode) max = (int)Config.Main.default_code5_maxHM;
-
-                if (args.Player.ProjectileThreshold >= max)
-                {
-                    if (PunishPlayer(MKLP_CodeType.Default, 5, args.Player, $"Spawning too many projectiles at onces!", $"Player **{args.Player.Name}** Spawned to many projectile at onces! `itemheld: {args.Player.SelectedItem.netID} projectile id: {type}` `Threshold: {max}`"))
+                    if (PunishPlayer(MKLP_CodeType.Survival, 2, args.Player, $"{GetIllegalProj[type]} Projectile", $"Player **{args.Player.Name}** spawned illegal Projectile progression `itemheld: {args.Player.SelectedItem.netID} projectile: {Lang.GetProjectileName(type)}` **{GetIllegalProj[type]}**"))
                     {
                         args.Player.RemoveProjectile(ident, owner);
                         args.Handled = true;
-                        return true;
+                        return;
+                    }
+                }
+                short[] InfectionProj =
+                {
+                    ProjectileID.ViciousPowder,
+                    ProjectileID.VilePowder,
+
+                    ProjectileID.CrimsonSpray,
+                    ProjectileID.CorruptSpray,
+                    ProjectileID.HallowSpray,
+
+                    ProjectileID.BloodWater,
+                    ProjectileID.UnholyWater,
+                    ProjectileID.HolyWater
+                };
+
+                if (InfectionProj.Contains(type))
+                {
+                    if (!args.Player.HasPermission(Config.Permissions.IgnoreAntiGrief_infection) && (bool)Config.Main.Using_AntiGrief_Infection)
+                    {
+                        args.Player.SendErrorMessage(Config.Main.Message_AntiGrief_Infection);
+                        args.Player.RemoveProjectile(ident, owner);
+                        args.Handled = true;
+                        return;
                     }
                 }
 
-                return false;
-            }
+                short[] SprayProj =
+                {
+                    ProjectileID.CorruptSpray,
+                    ProjectileID.CrimsonSpray,
+                    ProjectileID.DirtSpray,
+                    ProjectileID.HallowSpray,
+                    ProjectileID.MushroomSpray,
+                    ProjectileID.PureSpray,
+                    ProjectileID.SandSpray,
+                    ProjectileID.SnowSpray
+                };
 
+                if (SprayProj.Contains(type))
+                {
+                    if (!args.Player.HasPermission(Config.Permissions.IgnoreAntiGrief_spray) && (bool)Config.Main.Using_AntiGrief_Spray)
+                    {
+                        args.Player.SendErrorMessage(Config.Main.Message_AntiGrief_Spray);
+                        args.Player.RemoveProjectile(ident, owner);
+                        args.Handled = true;
+                        return;
+                    }
+                }
+
+                if (args.Player.TileY <= (int)Main.worldSurface)
+                {
+                    short[] explosives =
+                    {
+                        //misc
+                        ProjectileID.DirtBomb,
+                        ProjectileID.DirtStickyBomb,
+
+                        //reg bomb
+                        ProjectileID.Bomb,
+                        ProjectileID.StickyBomb,
+                        ProjectileID.BouncyBomb,
+
+                        //reg dynamite
+                        ProjectileID.Dynamite,
+                        ProjectileID.StickyDynamite,
+                        ProjectileID.BouncyDynamite,
+
+                        //others
+                        ProjectileID.BombFish,
+                        ProjectileID.LavaBomb,
+                        ProjectileID.WetBomb,
+                        ProjectileID.HoneyBomb,
+
+                        //rocket
+                        ProjectileID.RocketII,
+                        ProjectileID.RocketSnowmanII,
+                        ProjectileID.RocketIV,
+                        ProjectileID.RocketSnowmanIV,
+
+                        ProjectileID.ClusterFragmentsII,
+                        ProjectileID.ClusterGrenadeII,
+                        ProjectileID.ClusterMineII,
+                        ProjectileID.ClusterRocketII,
+                        ProjectileID.ClusterSnowmanFragmentsII,
+                        ProjectileID.ClusterSnowmanRocketII,
+                        ProjectileID.MiniNukeGrenadeII,
+                        ProjectileID.MiniNukeMineII,
+                        ProjectileID.MiniNukeRocketII,
+                        ProjectileID.MiniNukeSnowmanRocketII,
+                        ProjectileID.LavaGrenade,
+                        ProjectileID.LavaMine,
+                        ProjectileID.LavaRocket,
+                        ProjectileID.LavaSnowmanRocket,
+
+                        //celebratiomk
+                        ProjectileID.Celeb2RocketExplosive,
+                        ProjectileID.Celeb2RocketExplosiveLarge,
+                        ProjectileID.Celeb2RocketLarge
+                    };
+
+                    if (!explosives.Contains(type)) return;
+
+                    if (!args.Player.HasPermission(Config.Permissions.IgnoreAntiGrief_protectsurface_explosive) && (bool)Config.Main.Using_AntiGrief_Surface_Explosive)
+                    {
+                        args.Player.SendErrorMessage(Config.Main.Message_AntiGrief_Surface_Explosive);
+                        args.Player.RemoveProjectile(ident, owner);
+                        args.Handled = true;
+                        return;
+                    }
+                }
+
+
+                bool ProjectileThreshold()
+                {
+                    if (!(bool)Config.Main.Using_Default_Code5) return false;
+                    if (args.Player.HasPermission(Config.Permissions.IgnoreDefaultCode_5)) return false;
+
+                    int max = (int)Config.Main.default_code5_maxdefault;
+
+                    if (Main.hardMode) max = (int)Config.Main.default_code5_maxHM;
+
+                    if (args.Player.ProjectileThreshold >= max)
+                    {
+                        if (PunishPlayer(MKLP_CodeType.Default, 5, args.Player, $"Spawning too many projectiles at onces!", $"Player **{args.Player.Name}** Spawned to many projectile at onces! `itemheld: {args.Player.SelectedItem.netID} projectile id: {type}` `Threshold: {max}`"))
+                        {
+                            args.Player.RemoveProjectile(ident, owner);
+                            args.Handled = true;
+                            return true;
+                        }
+                    }
+
+                    return false;
+                }
+            } catch (OutOfMemoryException e)
+            {
+                MKLP_Console.SendLog_Exception(e);
+            }
             
             #endregion
         }
@@ -3451,6 +3572,151 @@ namespace MKLP
             #endregion
         }
 
+        public struct GetPlayerIG
+        {
+            public int PreviousHealth;
+            public DateTime immunityTill;
+
+            public GetPlayerIG(int prevhp)
+            {
+                PreviousHealth = prevhp;
+                immunityTill = DateTime.MinValue;
+            }
+            public GetPlayerIG(int prevhp, DateTime immunity)
+            {
+                PreviousHealth = prevhp;
+                immunityTill = immunity;
+            }
+        }
+
+        private void OnNPCAIUpdate(NpcAiUpdateEventArgs args)
+        {
+            #region code
+            /*
+            if ((bool)Config.Main.ServerSideDamage)
+            {
+                foreach (TSPlayer player in TShock.Players)
+                {
+                    if (player == null) continue;
+
+                    //float getdistance = (float)Math.Sqrt(((args.Npc.Center.X / 16) - (player.TPlayer.Center.X / 16))
+                    //    * ((args.Npc.Center.X / 16) - (player.TPlayer.Center.X / 16))
+                    //    + ((args.Npc.Center.Y / 16) - (player.TPlayer.Center.Y / 16))
+                    //    * ((args.Npc.Center.Y / 16) - (player.TPlayer.Center.Y / 16)));
+
+                    float getdistance = player.TPlayer.Center.Distance(args.Npc.Center);
+
+                    if (getdistance <= 32)
+                    {
+                        if (player.ContainsData("MKLP_GetPlayerIG"))
+                        {
+                            if (player.TPlayer.onHitDodge || player.TPlayer.shadowDodge) continue;
+
+                            GetPlayerIG getplrdata = player.GetData<GetPlayerIG>("MKLP_GetPlayerIG");
+
+                            if ((getplrdata.immunityTill - DateTime.UtcNow).TotalSeconds > 0) continue;
+
+                            int totaldmg = args.Npc.damage - player.TPlayer.statDefense;
+                            int hpresult = getplrdata.PreviousHealth - totaldmg;
+
+                            if (player.TPlayer.statLife == getplrdata.PreviousHealth)
+                            {
+                                
+                                //player.TPlayer.statLife -= totaldmg;
+                                //player.TPlayer.statLife = hpresult;
+                                //TSPlayer.All.SendData(PacketTypes.PlayerHp, number: player.Index);
+                                //TSPlayer.All.SendData(PacketTypes.PlayerUpdate, number: player.Index);
+                                //player.DamagePlayer(totaldmg);
+                                
+                                player.TPlayer.statLife = hpresult;
+                                TSPlayer.All.SendData(PacketTypes.PlayerHp, number: player.Index, number2: hpresult);
+                                TSPlayer.All.SendData(PacketTypes.CreateCombatTextExtended,
+                                    $"=[{totaldmg}]=",
+                                    (int)Color.Red.packedValue, player.X, player.Y);
+
+                                DateTime getcd = DateTime.UtcNow;
+
+                                player.SetData("MKLP_GetPlayerIG", new GetPlayerIG(player.TPlayer.statLife, getcd.AddMilliseconds(300)));
+                            }
+                            else
+                            {
+                                player.SetData("MKLP_GetPlayerIG", new GetPlayerIG(player.TPlayer.statLife));
+                            }
+                        } else
+                        {
+                            player.SetData("MKLP_GetPlayerIG", new GetPlayerIG(player.TPlayer.statLife));
+                        }
+                    }
+                }
+            }
+            */
+            #endregion
+        }
+
+
+        private void OnProjectileAIUpdate(ProjectileAiUpdateEventArgs args)
+        {
+            #region code
+            /*
+            if (!args.Projectile.hostile) return;
+
+            if ((bool)Config.Main.ServerSideDamage)
+            {
+                foreach (TSPlayer player in TShock.Players)
+                {
+                    if (player == null) continue;
+
+                    //float getdistance = (float)Math.Sqrt(((args.Projectile.Center.X / 16) - (player.TPlayer.Center.X / 16))
+                    //    * ((args.Projectile.Center.X / 16) - (player.TPlayer.Center.X / 16))
+                    //    + ((args.Projectile.Center.Y / 16) - (player.TPlayer.Center.Y / 16))
+                    //    * ((args.Projectile.Center.Y / 16) - (player.TPlayer.Center.Y / 16)));
+
+                    float getdistance = player.TPlayer.Center.Distance(args.Projectile.Center);
+
+                    if (getdistance <= 32)
+                    {
+                        if (player.ContainsData("MKLP_GetPlayerIG"))
+                        {
+                            if (player.TPlayer.onHitDodge || player.TPlayer.shadowDodge) continue;
+
+                            GetPlayerIG getplrdata = player.GetData<GetPlayerIG>("MKLP_GetPlayerIG");
+
+                            if ((getplrdata.immunityTill - DateTime.UtcNow).TotalSeconds > 0) continue;
+
+                            int totaldmg = args.Projectile.damage - player.TPlayer.statDefense;
+                            int hpresult = getplrdata.PreviousHealth - totaldmg;
+
+                            if (player.TPlayer.statLife == getplrdata.PreviousHealth)
+                            {
+                                //player.TPlayer.statLife -= totaldmg;
+                                player.TPlayer.statLife = hpresult;
+                                TSPlayer.All.SendData(PacketTypes.PlayerHp, number: player.Index);
+                                TSPlayer.All.SendData(PacketTypes.PlayerUpdate, number: player.Index);
+                                player.DamagePlayer(totaldmg);
+                                TSPlayer.All.SendData(PacketTypes.CreateCombatTextExtended,
+                                    $"=[{totaldmg}]=",
+                                    (int)Color.Red.packedValue, player.X, player.Y);
+
+                                DateTime getcd = DateTime.UtcNow;
+
+                                player.SetData("MKLP_GetPlayerIG", new GetPlayerIG(player.TPlayer.statLife, getcd.AddMilliseconds(300)));
+                            }
+                            else
+                            {
+                                player.SetData("MKLP_GetPlayerIG", new GetPlayerIG(player.TPlayer.statLife));
+                            }
+                        }
+                        else
+                        {
+                            player.SetData("MKLP_GetPlayerIG", new GetPlayerIG(player.TPlayer.statLife));
+                        }
+                    }
+                }
+            }
+            */
+            #endregion
+        }
+
         #endregion
 
         #region { Server }
@@ -3486,7 +3752,22 @@ namespace MKLP
                     }
                 }
             }
-            
+
+            if (literalText.EndsWith(" has awoken!"))
+            {
+                args.Message._mode = NetworkText.Mode.LocalizationKey;
+                literalText = args.Message.ToString();
+
+                string bossName = literalText[..literalText.IndexOf(" has awoken!")];
+
+                foreach (NPC npc in Main.npc)
+                {
+                    if (npc.FullName.StartsWith(bossName) && npc.type == 0 && !npc.active)
+                    {
+                        args.Handled = true;
+                    }
+                }
+            }
 
             #endregion
         }
@@ -4799,7 +5080,7 @@ namespace MKLP
 
                     try
                     {
-                        ulong getuserid = LinkAccountManager.GetUserID(tsplayer.Account.Name);
+                        ulong getuserid = (bool)Config.DataBaseDLink.Target_UserAccount_ID ? LinkAccountManager.GetUserIDByAccountID(tsplayer.Account.ID) : LinkAccountManager.GetUserIDByAccountName(tsplayer.Account.Name);
 
                         Context = Context.Replace("%ingamelinkedusername%", Discordklp.GetUser(getuserid).Username);
                         Context = Context.Replace("%ingamelinkedicon%", Config.Main.StaffChat_Message_ingamelinkedicon);
@@ -4818,8 +5099,8 @@ namespace MKLP
 
                     try
                     {
-                        ulong getuserid = LinkAccountManager.GetUserID(tsplayer.Name);
-                        
+                        ulong getuserid = (bool)Config.DataBaseDLink.Target_UserAccount_ID ? LinkAccountManager.GetUserIDByAccountID(tsplayer.Account.ID) : LinkAccountManager.GetUserIDByAccountName(tsplayer.Account.Name);
+
                         Context = Context.Replace("%ingamelinkedusername%", Discordklp.GetUser(getuserid).Username);
                         Context = Context.Replace("%ingamelinkedicon%", Config.Main.StaffChat_Message_ingamelinkedicon);
                     }
@@ -4880,8 +5161,8 @@ namespace MKLP
 
                     try
                     {
-                        ulong getuserid = LinkAccountManager.GetUserID(tsplayer.Account.Name);
-                        
+                        ulong getuserid = (bool)Config.DataBaseDLink.Target_UserAccount_ID ? LinkAccountManager.GetUserIDByAccountID(tsplayer.Account.ID) : LinkAccountManager.GetUserIDByAccountName(tsplayer.Account.Name);
+
                         Context = Context.Replace("%ingamelinkedusername%", Discordklp.GetUser((ulong)getuserid).Username);
                         Context = Context.Replace("%discordacclinkedicon%", Config.Main.StaffChat_Message_discordacclinkedicon);
 
@@ -4899,8 +5180,8 @@ namespace MKLP
 
                     try
                     {
-                        ulong getuserid = getuserid = LinkAccountManager.GetUserID(tsplayer.Name);
-                        
+                        ulong getuserid = getuserid = (bool)Config.DataBaseDLink.Target_UserAccount_ID ? LinkAccountManager.GetUserIDByAccountID(tsplayer.Account.ID) : LinkAccountManager.GetUserIDByAccountName(tsplayer.Account.Name);
+
                         Context = Context.Replace("%ingamelinkedusername%", Discordklp.GetUser((ulong)getuserid).Username);
                         Context = Context.Replace("%discordacclinkedicon%", Config.Main.StaffChat_Message_discordacclinkedicon);
 
@@ -6615,35 +6896,98 @@ namespace MKLP
                 case "resetschedule":
                 case "resetsched":
                     {
-                        DateTime today = new(DateTime.UtcNow.Year, DateTime.UtcNow.Month, DateTime.UtcNow.Day, (int)Config.BossManager.Default_ScheduleDay_Hour, 0, 0);
+                        if (args.Parameters.Count != 1)
+                        {
+                            DateTime gettoday;
+                            if (!DateTime.TryParse(args.Parameters[1], out gettoday))
+                            {
+                                args.Player.SendErrorMessage("Invalid DateTime Schedule!");
+                                return;
+                            }
 
-                        //DateTime today = DateTime.Parse($"{DateTime.UtcNow.Month}/{DateTime.UtcNow.Day}/{DateTime.UtcNow.Year}");
+                            DateTime today = new(gettoday.Year, gettoday.Month, gettoday.Day, (int)Config.BossManager.Default_ScheduleDay_Hour, 0, 0);
 
-                        Config.BossManager.ScheduleAllowKingSlime = today.AddDays((double)Config.BossManager.Default_ScheduleDay_AllowKingSlime);
-                        Config.BossManager.ScheduleAllowEyeOfCthulhu = today.AddDays((double)Config.BossManager.Default_ScheduleDay_AllowEyeOfCthulhu);
-                        Config.BossManager.ScheduleAllowEaterOfWorlds = today.AddDays((double)Config.BossManager.Default_ScheduleDay_AllowEaterOfWorlds);
-                        Config.BossManager.ScheduleAllowBrainOfCthulhu = today.AddDays((double)Config.BossManager.Default_ScheduleDay_AllowBrainOfCthulhu);
-                        Config.BossManager.ScheduleAllowQueenBee = today.AddDays((double)Config.BossManager.Default_ScheduleDay_AllowQueenBee);
-                        Config.BossManager.ScheduleAllowSkeletron = today.AddDays((double)Config.BossManager.Default_ScheduleDay_AllowSkeletron);
-                        Config.BossManager.ScheduleAllowDeerclops = today.AddDays((double)Config.BossManager.Default_ScheduleDay_AllowDeerclops);
-                        Config.BossManager.ScheduleAllowWallOfFlesh = today.AddDays((double)Config.BossManager.Default_ScheduleDay_AllowWallOfFlesh);
-                        Config.BossManager.ScheduleAllowQueenSlime = today.AddDays((double)Config.BossManager.Default_ScheduleDay_AllowQueenSlime);
-                        Config.BossManager.ScheduleAllowTheDestroyer = today.AddDays((double)Config.BossManager.Default_ScheduleDay_AllowTheDestroyer);
-                        Config.BossManager.ScheduleAllowTheTwins = today.AddDays((double)Config.BossManager.Default_ScheduleDay_AllowTheTwins);
-                        Config.BossManager.ScheduleAllowSkeletronPrime = today.AddDays((double)Config.BossManager.Default_ScheduleDay_AllowSkeletronPrime);
-                        Config.BossManager.ScheduleAllowMechdusa = today.AddDays((double)Config.BossManager.Default_ScheduleDay_AllowMechdusa);
-                        Config.BossManager.ScheduleAllowPlantera = today.AddDays((double)Config.BossManager.Default_ScheduleDay_AllowPlantera);
-                        Config.BossManager.ScheduleAllowGolem = today.AddDays((double)Config.BossManager.Default_ScheduleDay_AllowGolem);
-                        Config.BossManager.ScheduleAllowDukeFishron = today.AddDays((double)Config.BossManager.Default_ScheduleDay_AllowDukeFishron);
-                        Config.BossManager.ScheduleAllowEmpressOfLight = today.AddDays((double)Config.BossManager.Default_ScheduleDay_AllowEmpressOfLight);
-                        Config.BossManager.ScheduleAllowLunaticCultist = today.AddDays((double)Config.BossManager.Default_ScheduleDay_AllowLunaticCultist);
-                        Config.BossManager.ScheduleAllowMoonLord = today.AddDays((double)Config.BossManager.Default_ScheduleDay_AllowMoonLord);
+                            string[] getmonth_str = {
+                                "Jan",
+                                "feb",
+                                "Mar",
+                                "Apr",
+                                "May",
+                                "Jun",
+                                "Jul",
+                                "Aug",
+                                "Sep",
+                                "Oct",
+                                "Nov",
+                                "Dec"
+                            };
 
-                        args.Player.SendInfoMessage("Reset Boss Schedule");
+                            string resultstr = $"{getmonth_str[today.Month - 1]} {today.Day}, {today.Year}";
 
-                        Config.Changeall();
-                        Config.Read();
-                        return;
+                            //DateTime today = DateTime.Parse($"{DateTime.UtcNow.Month}/{DateTime.UtcNow.Day}/{DateTime.UtcNow.Year}");
+
+                            Config.BossManager.ScheduleAllowKingSlime = today.AddDays((double)Config.BossManager.Default_ScheduleDay_AllowKingSlime);
+                            Config.BossManager.ScheduleAllowEyeOfCthulhu = today.AddDays((double)Config.BossManager.Default_ScheduleDay_AllowEyeOfCthulhu);
+                            Config.BossManager.ScheduleAllowEaterOfWorlds = today.AddDays((double)Config.BossManager.Default_ScheduleDay_AllowEaterOfWorlds);
+                            Config.BossManager.ScheduleAllowBrainOfCthulhu = today.AddDays((double)Config.BossManager.Default_ScheduleDay_AllowBrainOfCthulhu);
+                            Config.BossManager.ScheduleAllowQueenBee = today.AddDays((double)Config.BossManager.Default_ScheduleDay_AllowQueenBee);
+                            Config.BossManager.ScheduleAllowSkeletron = today.AddDays((double)Config.BossManager.Default_ScheduleDay_AllowSkeletron);
+                            Config.BossManager.ScheduleAllowDeerclops = today.AddDays((double)Config.BossManager.Default_ScheduleDay_AllowDeerclops);
+                            Config.BossManager.ScheduleAllowWallOfFlesh = today.AddDays((double)Config.BossManager.Default_ScheduleDay_AllowWallOfFlesh);
+                            Config.BossManager.ScheduleAllowQueenSlime = today.AddDays((double)Config.BossManager.Default_ScheduleDay_AllowQueenSlime);
+                            Config.BossManager.ScheduleAllowTheDestroyer = today.AddDays((double)Config.BossManager.Default_ScheduleDay_AllowTheDestroyer);
+                            Config.BossManager.ScheduleAllowTheTwins = today.AddDays((double)Config.BossManager.Default_ScheduleDay_AllowTheTwins);
+                            Config.BossManager.ScheduleAllowSkeletronPrime = today.AddDays((double)Config.BossManager.Default_ScheduleDay_AllowSkeletronPrime);
+                            Config.BossManager.ScheduleAllowMechdusa = today.AddDays((double)Config.BossManager.Default_ScheduleDay_AllowMechdusa);
+                            Config.BossManager.ScheduleAllowPlantera = today.AddDays((double)Config.BossManager.Default_ScheduleDay_AllowPlantera);
+                            Config.BossManager.ScheduleAllowGolem = today.AddDays((double)Config.BossManager.Default_ScheduleDay_AllowGolem);
+                            Config.BossManager.ScheduleAllowDukeFishron = today.AddDays((double)Config.BossManager.Default_ScheduleDay_AllowDukeFishron);
+                            Config.BossManager.ScheduleAllowEmpressOfLight = today.AddDays((double)Config.BossManager.Default_ScheduleDay_AllowEmpressOfLight);
+                            Config.BossManager.ScheduleAllowLunaticCultist = today.AddDays((double)Config.BossManager.Default_ScheduleDay_AllowLunaticCultist);
+                            Config.BossManager.ScheduleAllowMoonLord = today.AddDays((double)Config.BossManager.Default_ScheduleDay_AllowMoonLord);
+
+                            
+
+                            args.Player.SendInfoMessage($"Reload Boss Schedule" +
+                                $"\nStarting Point: {resultstr}");
+
+                            Config.Changeall();
+                            Config.Read();
+                            return;
+                        } else
+                        {
+                            DateTime today = new(DateTime.UtcNow.Year, DateTime.UtcNow.Month, DateTime.UtcNow.Day, (int)Config.BossManager.Default_ScheduleDay_Hour, 0, 0);
+
+                            //DateTime today = DateTime.Parse($"{DateTime.UtcNow.Month}/{DateTime.UtcNow.Day}/{DateTime.UtcNow.Year}");
+
+                            Config.BossManager.ScheduleAllowKingSlime = today.AddDays((double)Config.BossManager.Default_ScheduleDay_AllowKingSlime);
+                            Config.BossManager.ScheduleAllowEyeOfCthulhu = today.AddDays((double)Config.BossManager.Default_ScheduleDay_AllowEyeOfCthulhu);
+                            Config.BossManager.ScheduleAllowEaterOfWorlds = today.AddDays((double)Config.BossManager.Default_ScheduleDay_AllowEaterOfWorlds);
+                            Config.BossManager.ScheduleAllowBrainOfCthulhu = today.AddDays((double)Config.BossManager.Default_ScheduleDay_AllowBrainOfCthulhu);
+                            Config.BossManager.ScheduleAllowQueenBee = today.AddDays((double)Config.BossManager.Default_ScheduleDay_AllowQueenBee);
+                            Config.BossManager.ScheduleAllowSkeletron = today.AddDays((double)Config.BossManager.Default_ScheduleDay_AllowSkeletron);
+                            Config.BossManager.ScheduleAllowDeerclops = today.AddDays((double)Config.BossManager.Default_ScheduleDay_AllowDeerclops);
+                            Config.BossManager.ScheduleAllowWallOfFlesh = today.AddDays((double)Config.BossManager.Default_ScheduleDay_AllowWallOfFlesh);
+                            Config.BossManager.ScheduleAllowQueenSlime = today.AddDays((double)Config.BossManager.Default_ScheduleDay_AllowQueenSlime);
+                            Config.BossManager.ScheduleAllowTheDestroyer = today.AddDays((double)Config.BossManager.Default_ScheduleDay_AllowTheDestroyer);
+                            Config.BossManager.ScheduleAllowTheTwins = today.AddDays((double)Config.BossManager.Default_ScheduleDay_AllowTheTwins);
+                            Config.BossManager.ScheduleAllowSkeletronPrime = today.AddDays((double)Config.BossManager.Default_ScheduleDay_AllowSkeletronPrime);
+                            Config.BossManager.ScheduleAllowMechdusa = today.AddDays((double)Config.BossManager.Default_ScheduleDay_AllowMechdusa);
+                            Config.BossManager.ScheduleAllowPlantera = today.AddDays((double)Config.BossManager.Default_ScheduleDay_AllowPlantera);
+                            Config.BossManager.ScheduleAllowGolem = today.AddDays((double)Config.BossManager.Default_ScheduleDay_AllowGolem);
+                            Config.BossManager.ScheduleAllowDukeFishron = today.AddDays((double)Config.BossManager.Default_ScheduleDay_AllowDukeFishron);
+                            Config.BossManager.ScheduleAllowEmpressOfLight = today.AddDays((double)Config.BossManager.Default_ScheduleDay_AllowEmpressOfLight);
+                            Config.BossManager.ScheduleAllowLunaticCultist = today.AddDays((double)Config.BossManager.Default_ScheduleDay_AllowLunaticCultist);
+                            Config.BossManager.ScheduleAllowMoonLord = today.AddDays((double)Config.BossManager.Default_ScheduleDay_AllowMoonLord);
+
+                            args.Player.SendInfoMessage("Reset Boss Schedule");
+
+                            Config.Changeall();
+                            Config.Read();
+                            return;
+                        }
+                        
+
                     }
                 #endregion
                 default:
@@ -7644,7 +7988,7 @@ namespace MKLP
         {
             #region code
 
-            if (!(bool)Config.DataBase.UsingMKLPDatabase || !(bool)Config.DataBase.UsingDB)
+            if ((Config.DataBaseDLink.StorageType != "sqlite" && Config.DataBaseDLink.SqliteDBPath != Path.Combine(TShock.SavePath, "MKLP.sqlite")) || !(bool)Config.DataBaseDLink.UsingDB)
             {
                 args.Player.SendErrorMessage("You cannot use this command" +
                     "\nas if 'UsingDB' and 'UsingMKLPDatabase' in Config file is set to false...");
@@ -7923,7 +8267,7 @@ namespace MKLP
 
                 try
                 {
-                    userid = LinkAccountManager.GetUserID(account.Name);
+                    userid = (bool)Config.DataBaseDLink.Target_UserAccount_ID ? LinkAccountManager.GetUserIDByAccountID(account.ID) : LinkAccountManager.GetUserIDByAccountName(account.Name);
                 } catch { }
 
 
@@ -7976,6 +8320,8 @@ namespace MKLP
 
         private void MCMD_Playing(CommandArgs args)
         {
+            #region code
+
             bool invalidUsage = (args.Parameters.Count > 2);
 
             bool displayIdsRequested = false;
@@ -8048,6 +8394,8 @@ namespace MKLP
                     FooterFormat = $"Type {Commands.Specifier}who {(displayIdsRequested ? "-i" : string.Empty)} for more."
                 }
             );
+
+            #endregion
         }
 
         #endregion

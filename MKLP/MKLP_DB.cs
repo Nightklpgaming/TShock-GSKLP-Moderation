@@ -18,11 +18,41 @@ namespace MKLP
     {
         private IDbConnection _db;
 
-        public MKLP_DB(IDbConnection db)
+        public MKLP_DB()
         {
-            _db = db;
+            if (MKLP.Config.DataBaseMain.StorageType == "sqlite")
+            {
+                string sql = Path.Combine(TShock.SavePath, MKLP.Config.DataBaseMain.SqliteDBPath);
+                Directory.CreateDirectory(Path.GetDirectoryName(sql));
+                _db = new Microsoft.Data.Sqlite.SqliteConnection(string.Format("Data Source={0}", sql));
+            }
+            else if (MKLP.Config.DataBaseMain.StorageType == "mysql")
+            {
+                try
+                {
+                    var hostport = MKLP.Config.DataBaseMain.MySqlHost.Split(':');
+                    MySqlConnection DB = new MySqlConnection();
+                    DB.ConnectionString =
+                        String.Format("Server={0}; Port={1}; Database={2}; Uid={3}; Pwd={4};",
+                            hostport[0],
+                            hostport.Length > 1 ? hostport[1] : "3306",
+                            MKLP.Config.DataBaseMain.MySqlDbName,
+                            MKLP.Config.DataBaseMain.MySqlUsername,
+                            MKLP.Config.DataBaseMain.MySqlPassword
+                            );
+                    _db = DB;
+                }
+                catch (MySqlException ex)
+                {
+                    throw new Exception("MySql not setup correctly");
+                }
+            }
+            else
+            {
+                throw new Exception("Invalid storage type");
+            }
 
-            var sqlCreator = new SqlTableCreator(db, new SqliteQueryCreator());
+            var sqlCreator = new SqlTableCreator(_db, new SqliteQueryCreator());
 
             sqlCreator.EnsureTableStructure(new SqlTable("Reports",
                 new SqlColumn("ID", MySqlDbType.Int32) { AutoIncrement = true, Primary = true },
@@ -280,17 +310,15 @@ namespace MKLP
         public bool CheckPlayerMute(TSPlayer player, bool inform_unmuted = false)
         {
             bool IsExist = false;
+            bool muted = false;
             try
             {
                 DateTime Name = GetMuteExpiration($"Name:{player.Name}");
 
                 IsExist = true;
-                if (DateTime.UtcNow > Name)
+                if (DateTime.UtcNow < Name)
                 {
-                    player.mute = false;
-                } else
-                {
-                    player.mute = true;
+                    muted = true;
                 }
 
             } catch (NullReferenceException) { }
@@ -300,13 +328,9 @@ namespace MKLP
                 DateTime AccountName = GetMuteExpiration($"Account:{player.Account.Name}");
 
                 IsExist = true;
-                if (DateTime.UtcNow > AccountName)
+                if (DateTime.UtcNow < AccountName)
                 {
-                    player.mute = false;
-                }
-                else
-                {
-                    player.mute = true;
+                    muted = true;
                 }
 
             }
@@ -317,13 +341,9 @@ namespace MKLP
                 DateTime IP = GetMuteExpiration($"IP:{player.IP}");
 
                 IsExist = true;
-                if (DateTime.UtcNow > IP)
+                if (DateTime.UtcNow < IP)
                 {
-                    player.mute = false;
-                }
-                else
-                {
-                    player.mute = true;
+                    muted = true;
                 }
 
             }
@@ -334,13 +354,9 @@ namespace MKLP
                 DateTime UUID = GetMuteExpiration($"UUID:{player.UUID}");
 
                 IsExist = true;
-                if (DateTime.UtcNow > UUID)
+                if (DateTime.UtcNow < UUID)
                 {
-                    player.mute = false;
-                }
-                else
-                {
-                    player.mute = true;
+                    muted = true;
                 }
 
             }
@@ -359,6 +375,11 @@ namespace MKLP
                 return player.mute;
             }
             */
+
+            if (muted)
+            {
+                player.mute = true;
+            }
 
             if (IsExist && !player.mute && inform_unmuted)
             {

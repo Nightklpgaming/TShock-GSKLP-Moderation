@@ -13,9 +13,9 @@
     <SourceRoot Include="C:\Users\Rock\.nuget\packages\" />
   </ItemGroup>
   <ItemGroup Condition=" '$(ExcludeRestorePackageImports)' != 'true' ">
-    <None Include="$(NuGetPackageRoot)tshock\5.2.0\contentFiles\any\net6.0\HttpServer.dll" Condition="Exists('$(NuGetPackageRoot)tshock\5.2.0\contentFiles\any\net6.0\HttpServer.dll')">
+    <None Include="$(NuGetPackageRoot)tshock\5.2.3\contentFiles\any\net6.0\HttpServer.dll" Condition="Exists('$(NuGetPackageRoot)tshock\5.2.3\contentFiles\any\net6.0\HttpServer.dll')">
       <NuGetPackageId>TShock</NuGetPackageId>
-      <NuGetPackageVersion>5.2.0</NuGetPackageVersion>
+      <NuGetPackageVersion>5.2.3</NuGetPackageVersion>
       <NuGetItemType>None</NuGetItemType>
       <Pack>false</Pack>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>

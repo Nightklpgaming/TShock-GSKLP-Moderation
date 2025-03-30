@@ -506,122 +506,125 @@ namespace MKLP.Modules
                     }
                 }
 
+                #region Chest
                 bool dontrevertchest = (PunishmentType)MKLP.Config.Main.SuspiciousDupe_PunishmentType != PunishmentType.RevertAndLog &&
                             (PunishmentType)MKLP.Config.Main.SuspiciousDupe_PunishmentType != PunishmentType.Revert;
-                if ((bool)MKLP.Config.Main.DetectAllPlayerInv)
+                if (tsplayer.ActiveChest != -1)
                 {
-                    if (tsplayer.ActiveChest != -1)
-                    {
-                        try
-                        {
-                            
-                            //NetItem[] prevchestopen = tsplayer.GetData<NetItem[]>("MKLP_PrevChestOpen");
-                            NetItem[] prevchestopencheck = PreviousChestP[tsplayer];
-
-                            int indexchestcheck = 0;
-
-                            foreach (var prevchestopen in PreviousChestP[tsplayer])
-                            {
-                                //checkingifsus1("Chest", i, Main.chest[tsplayer.ActiveChest].item[i]);
-                                if (checkingifsus1e1("Chest", indexchestcheck, Main.chest[tsplayer.ActiveChest].item[indexchestcheck]) || checkingifsus1e2("Chest", indexchestcheck, Main.chest[tsplayer.ActiveChest].item[indexchestcheck]))
-                                {
-                                    Main.chest[tsplayer.ActiveChest].item[indexchestcheck].SetDefaults();
-                                    tsplayer.SendData(PacketTypes.ChestItem, "", tsplayer.ActiveChest, indexchestcheck, 0, 0, 0);
-                                }
-
-                                if (Main.chest[tsplayer.ActiveChest].item[indexchestcheck].netID != prevchestopen.NetId ||
-                                    Main.chest[tsplayer.ActiveChest].item[indexchestcheck].stack != prevchestopen.Stack ||
-                                    Main.chest[tsplayer.ActiveChest].item[indexchestcheck].prefix != prevchestopen.PrefixId)
-                                {
-                                    InventoryManager.TryAddInvLog(tsplayer, prevchestopen, Main.chest[tsplayer.ActiveChest].item[indexchestcheck], indexchestcheck, "Chest");
-
-                                    checkingifsus3("Chest", indexchestcheck, prevchestopen, Main.chest[tsplayer.ActiveChest].item[indexchestcheck]);
-                                }
-                                indexchestcheck++;
-                            }
-                            
-                            //NetItem[] prevchestopen = tsplayer.GetData<Item>("MKLP_PrevChestOpen");
-
-                            /*
-                            int indexchestcheck = 0;
-
-                            foreach (var prevchestopen in tsplayer.GetData<Item[]>("MKLP_PrevChestOpen"))
-                            {
-                                //checkingifsus1("Chest", i, Main.chest[tsplayer.ActiveChest].item[i]);
-                                if (checkingifsus1e1("Chest", indexchestcheck, Main.chest[tsplayer.ActiveChest].item[indexchestcheck]) || checkingifsus1e2("Chest", indexchestcheck, Main.chest[tsplayer.ActiveChest].item[indexchestcheck]))
-                                {
-                                    Main.chest[tsplayer.ActiveChest].item[indexchestcheck].SetDefaults();
-                                    tsplayer.SendData(PacketTypes.ChestItem, "", tsplayer.ActiveChest, indexchestcheck, 0, 0, 0);
-                                }
-
-                                if (Main.chest[tsplayer.ActiveChest].item[indexchestcheck].netID != prevchestopen.netID ||
-                                    Main.chest[tsplayer.ActiveChest].item[indexchestcheck].stack != prevchestopen.stack ||
-                                    Main.chest[tsplayer.ActiveChest].item[indexchestcheck].prefix != prevchestopen.prefix)
-                                {
-                                    InventoryManager.TryAddInvLog(tsplayer, prevchestopen, Main.chest[tsplayer.ActiveChest].item[indexchestcheck], indexchestcheck, "Chest");
-
-                                    checkingifsus4("Chest", indexchestcheck, prevchestopen, Main.chest[tsplayer.ActiveChest].item[indexchestcheck]);
-                                }
-                                Console.WriteLine(prevchestopen.netID + "|" + prevchestopen.stack + "---" + Main.chest[tsplayer.ActiveChest].item[indexchestcheck].netID + "|" + Main.chest[tsplayer.ActiveChest].item[indexchestcheck].stack);
-                                indexchestcheck++;
-                                
-                            }
-                            */
-                        }
-                        catch (Exception e)
-                        {
-                            //Console.WriteLine("\n\n" + e);
-                        }
-                    }
                     try
                     {
-                        
-                        List<NetItem> chestitem = new();
-                        foreach (Item item in Main.chest[tsplayer.ActiveChest].item)
+
+                        //NetItem[] prevchestopen = tsplayer.GetData<NetItem[]>("MKLP_PrevChestOpen");
+                        NetItem[] prevchestopencheck = PreviousChestP[tsplayer];
+
+                        int indexchestcheck = 0;
+
+                        foreach (var prevchestopen in PreviousChestP[tsplayer])
                         {
-                            if (item == null)
+                            //checkingifsus1("Chest", i, Main.chest[tsplayer.ActiveChest].item[i]);
+                            if (checkingifsus1e1("Chest", indexchestcheck, Main.chest[tsplayer.ActiveChest].item[indexchestcheck]) || checkingifsus1e2("Chest", indexchestcheck, Main.chest[tsplayer.ActiveChest].item[indexchestcheck]))
                             {
-                                chestitem.Add(new NetItem(0, 0, 0));
-                                //Console.Write("0-");
-                                continue;
+                                Main.chest[tsplayer.ActiveChest].item[indexchestcheck].SetDefaults();
+                                tsplayer.SendData(PacketTypes.ChestItem, "", tsplayer.ActiveChest, indexchestcheck, 0, 0, 0);
                             }
-                            if (item.IsAir)
+
+                            if (Main.chest[tsplayer.ActiveChest].item[indexchestcheck].netID != prevchestopen.NetId ||
+                                Main.chest[tsplayer.ActiveChest].item[indexchestcheck].stack != prevchestopen.Stack ||
+                                Main.chest[tsplayer.ActiveChest].item[indexchestcheck].prefix != prevchestopen.PrefixId)
                             {
-                                chestitem.Add(new NetItem(0, 0, 0));
-                                //Console.Write("0-");
-                                continue;
+                                InventoryManager.TryAddInvLog(tsplayer, prevchestopen, Main.chest[tsplayer.ActiveChest].item[indexchestcheck], indexchestcheck, "Chest");
+
+                                checkingifsus3("Chest", indexchestcheck, prevchestopen, Main.chest[tsplayer.ActiveChest].item[indexchestcheck]);
                             }
-                            
-                            chestitem.Add(new NetItem(item.netID, item.stack, item.prefix));
-                            //Console.Write(item.netID + "-");
+                            indexchestcheck++;
+                        }
+
+                        //NetItem[] prevchestopen = tsplayer.GetData<Item>("MKLP_PrevChestOpen");
+
+                        /*
+                        int indexchestcheck = 0;
+
+                        foreach (var prevchestopen in tsplayer.GetData<Item[]>("MKLP_PrevChestOpen"))
+                        {
+                            //checkingifsus1("Chest", i, Main.chest[tsplayer.ActiveChest].item[i]);
+                            if (checkingifsus1e1("Chest", indexchestcheck, Main.chest[tsplayer.ActiveChest].item[indexchestcheck]) || checkingifsus1e2("Chest", indexchestcheck, Main.chest[tsplayer.ActiveChest].item[indexchestcheck]))
+                            {
+                                Main.chest[tsplayer.ActiveChest].item[indexchestcheck].SetDefaults();
+                                tsplayer.SendData(PacketTypes.ChestItem, "", tsplayer.ActiveChest, indexchestcheck, 0, 0, 0);
+                            }
+
+                            if (Main.chest[tsplayer.ActiveChest].item[indexchestcheck].netID != prevchestopen.netID ||
+                                Main.chest[tsplayer.ActiveChest].item[indexchestcheck].stack != prevchestopen.stack ||
+                                Main.chest[tsplayer.ActiveChest].item[indexchestcheck].prefix != prevchestopen.prefix)
+                            {
+                                InventoryManager.TryAddInvLog(tsplayer, prevchestopen, Main.chest[tsplayer.ActiveChest].item[indexchestcheck], indexchestcheck, "Chest");
+
+                                checkingifsus4("Chest", indexchestcheck, prevchestopen, Main.chest[tsplayer.ActiveChest].item[indexchestcheck]);
+                            }
+                            Console.WriteLine(prevchestopen.netID + "|" + prevchestopen.stack + "---" + Main.chest[tsplayer.ActiveChest].item[indexchestcheck].netID + "|" + Main.chest[tsplayer.ActiveChest].item[indexchestcheck].stack);
+                            indexchestcheck++;
 
                         }
-                        var result = chestitem.ToArray();
-                        //Console.WriteLine("\n");
-                        foreach (var e in result)
-                        {
-                            //Console.Write(e.NetId + "-");
-
-                        }
-                        if (PreviousChestP.ContainsKey(tsplayer))
-                        {
-                            PreviousChestP[tsplayer] = result;
-                        }
-                        else
-                        {
-                            PreviousChestP.Add(tsplayer, (NetItem[])result);
-                        }
-                        
-                        //Item[] chestitem = new Item[40];
-                        //chestitem = (Item[])Main.chest[tsplayer.ActiveChest].item.Clone();
-                        //tsplayer.SetData("MKLP_PrevChestOpen", Main.chest[tsplayer.ActiveChest].item.Clone());
-                        //tsplayer.SetData("MKLP_PrevChestOpen", result);
+                        */
                     }
                     catch (Exception e)
                     {
                         //Console.WriteLine("\n\n" + e);
                     }
+                }
+                try
+                {
 
+                    List<NetItem> chestitem = new();
+                    foreach (Item item in Main.chest[tsplayer.ActiveChest].item)
+                    {
+                        if (item == null)
+                        {
+                            chestitem.Add(new NetItem(0, 0, 0));
+                            //Console.Write("0-");
+                            continue;
+                        }
+                        if (item.IsAir)
+                        {
+                            chestitem.Add(new NetItem(0, 0, 0));
+                            //Console.Write("0-");
+                            continue;
+                        }
+
+                        chestitem.Add(new NetItem(item.netID, item.stack, item.prefix));
+                        //Console.Write(item.netID + "-");
+
+                    }
+                    var result = chestitem.ToArray();
+                    //Console.WriteLine("\n");
+                    foreach (var e in result)
+                    {
+                        //Console.Write(e.NetId + "-");
+
+                    }
+                    if (PreviousChestP.ContainsKey(tsplayer))
+                    {
+                        PreviousChestP[tsplayer] = result;
+                    }
+                    else
+                    {
+                        PreviousChestP.Add(tsplayer, (NetItem[])result);
+                    }
+
+                    //Item[] chestitem = new Item[40];
+                    //chestitem = (Item[])Main.chest[tsplayer.ActiveChest].item.Clone();
+                    //tsplayer.SetData("MKLP_PrevChestOpen", Main.chest[tsplayer.ActiveChest].item.Clone());
+                    //tsplayer.SetData("MKLP_PrevChestOpen", result);
+                }
+                catch (Exception e)
+                {
+                    //Console.WriteLine("\n\n" + e);
+                }
+
+                #endregion
+
+                if ((bool)MKLP.Config.Main.DetectAllPlayerInv)
+                {
                     for (int i = 0; i < tsplayer.TPlayer.bank.item.Count(); i++)
                     {
                         checkingifsus1("PiggyBank", i, tsplayer.TPlayer.bank.item[i]);

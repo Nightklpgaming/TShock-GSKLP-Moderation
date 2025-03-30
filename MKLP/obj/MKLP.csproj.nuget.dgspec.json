@@ -55,11 +55,11 @@
             },
             "TSAPI": {
               "target": "Package",
-              "version": "[5.2.0, )"
+              "version": "[5.2.1, )"
             },
             "TShock": {
               "target": "Package",
-              "version": "[5.2.0, )"
+              "version": "[5.2.3, )"
             }
           },
           "imports": [

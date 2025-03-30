@@ -21,7 +21,8 @@ namespace MKLP
         public CONFIG_PERMISSIONS Permissions;
         public CONFIG_DISCORD Discord;
         public CONFIG_BOSSES BossManager;
-        public CONFIG_DATABASE DataBase;
+        public CONFIG_DATABASE DataBaseMain;
+        public CONFIG_DATABASE_LINKING DataBaseDLink;
         public CONFIG_UNRELEASE_FEATURE Unrelease;
 
         static string path = Path.Combine(TShock.SavePath, "MKLP.json");
@@ -62,8 +63,11 @@ namespace MKLP
             if (args.BossManager == null) args.BossManager = new();
             args.BossManager.FixNull();
 
-            if (args.DataBase == null) args.DataBase = new();
-            args.DataBase.FixNull();
+            if (args.DataBaseMain == null) args.DataBaseMain = new();
+            args.DataBaseMain.FixNull();
+
+            if (args.DataBaseDLink == null) args.DataBaseDLink = new();
+            args.DataBaseDLink.FixNull();
 
             if (args.Unrelease == null) args.Unrelease = new();
             args.Unrelease.FixNull();
@@ -99,7 +103,9 @@ namespace MKLP
                 Permissions = new(),
                 Discord = new(),
                 BossManager = new(),
-                DataBase = new(),
+                DataBaseMain = new(),
+                DataBaseDLink = new(),
+                Unrelease = new(),
             };
         }
 
@@ -339,6 +345,8 @@ namespace MKLP
 
         public bool? Use_VanishCMD_TPlayer_Active_Var = false;
 
+        public bool? ServerSideDamage = false;
+
         public bool? Use_OnUpdate_Func = true;
 
         public bool? DetectAllPlayerInv = false;
@@ -457,6 +465,8 @@ namespace MKLP
 
             if (Use_VanishCMD_TPlayer_Active_Var == null) Use_VanishCMD_TPlayer_Active_Var = getdefault.Use_VanishCMD_TPlayer_Active_Var;
 
+            if (ServerSideDamage == null) ServerSideDamage = getdefault.ServerSideDamage;
+
             if (Use_OnUpdate_Func == null) Use_OnUpdate_Func = getdefault.Use_OnUpdate_Func;
 
             if (DetectAllPlayerInv == null) DetectAllPlayerInv = getdefault.DetectAllPlayerInv;
@@ -569,6 +579,7 @@ namespace MKLP
     public class CONFIG_DISCORD
     {
         public string BotToken = "NONE";
+        public string SlashCommandName = "";
         public ulong? MainGuildID = 0;
         public ulong? StaffChannel = 0;
         public ulong? MainChannelLog = 0;
@@ -583,6 +594,7 @@ namespace MKLP
             CONFIG_DISCORD getdefault = new();
 
             if (BotToken == null) BotToken = getdefault.BotToken;
+            if (SlashCommandName == null) SlashCommandName = getdefault.SlashCommandName;
             if (MainGuildID == null) MainGuildID = getdefault.MainGuildID;
             if (StaffChannel == null) StaffChannel = getdefault.StaffChannel;
             if (MainChannelLog == null) MainChannelLog = getdefault.MainChannelLog;
@@ -939,22 +951,12 @@ namespace MKLP
 
     public class CONFIG_DATABASE
     {
-        public bool? UsingDB = true;
-
-        public bool? UsingMKLPDatabase = true;
-
-        public bool? UseTShockFilePath = true;
-        public string Path = "file1/file2/";
-        public string File = "example.sqlite";
-
-        public string TableName = "LinkedAccounts";
-        public string Get_AccountName_DB = "Name";
-        public string Get_UserID_DB = "DiscordUserID";
-
-        public bool? UsingCustom = false;
-
-        public string Custom_Get_AccountName_From_UserID = "";
-        public string Custom_Get_UserID_From_AccountName = "";
+        public string StorageType = "sqlite";
+        public string SqliteDBPath = Path.Combine(TShock.SavePath, "MKLP.sqlite");
+        public string MySqlHost = "localhost:3306";
+        public string MySqlDbName = "";
+        public string MySqlUsername = "";
+        public string MySqlPassword = "";
         
         public CONFIG_DATABASE() { }
 
@@ -962,22 +964,64 @@ namespace MKLP
         {
             CONFIG_DATABASE getdefault = new();
 
+            if (StorageType == null) StorageType = getdefault.StorageType;
+            if (SqliteDBPath == null) SqliteDBPath = getdefault.SqliteDBPath;
+            if (MySqlHost == null) MySqlHost = getdefault.MySqlHost;
+            if (MySqlDbName == null) MySqlDbName = getdefault.MySqlDbName;
+            if (MySqlUsername == null) MySqlUsername = getdefault.MySqlUsername;
+            if (MySqlPassword == null) MySqlPassword = getdefault.MySqlPassword;
+        }
+    }
+
+    public class CONFIG_DATABASE_LINKING
+    {
+        public bool? UsingDB = true;
+        public bool? Target_UserAccount_ID = false;
+
+        public string StorageType = "sqlite";
+        public string SqliteDBPath = Path.Combine(TShock.SavePath, "MKLP.sqlite");
+        public string MySqlHost = "localhost:3306";
+        public string MySqlDbName = "";
+        public string MySqlUsername = "";
+        public string MySqlPassword = "";
+
+        public string TableName = "LinkedAccounts";
+        public string Get_AccountName_DB = "Name";
+        public string Get_AccountID_DB = "ID";
+        public string Get_UserID_DB = "DiscordUserID";
+
+        public bool? UsingCustom = false;
+
+        public string Custom_Get_AccountName_From_UserID = "";
+        public string Custom_Get_UserID_From_AccountName = "";
+        public string Custom_Get_UserID_From_AccountID = "";
+        
+        public CONFIG_DATABASE_LINKING() { }
+
+        public void FixNull()
+        {
+            CONFIG_DATABASE_LINKING getdefault = new();
+
             if (UsingDB == null) UsingDB = getdefault.UsingDB;
+            if (Target_UserAccount_ID == null) Target_UserAccount_ID = getdefault.Target_UserAccount_ID;
 
-            if (UsingMKLPDatabase == null) UsingMKLPDatabase = getdefault.UsingMKLPDatabase;
-
-            if (UseTShockFilePath == null) UseTShockFilePath = getdefault.UseTShockFilePath;
-            if (Path == null) Path = getdefault.Path;
-            if (File == null) File = getdefault.File;
+            if (StorageType == null) StorageType = getdefault.StorageType;
+            if (SqliteDBPath == null) SqliteDBPath = getdefault.SqliteDBPath;
+            if (MySqlHost == null) MySqlHost = getdefault.MySqlHost;
+            if (MySqlDbName == null) MySqlDbName = getdefault.MySqlDbName;
+            if (MySqlUsername == null) MySqlUsername = getdefault.MySqlUsername;
+            if (MySqlPassword == null) MySqlPassword = getdefault.MySqlPassword;
 
             if (TableName == null) TableName = getdefault.TableName;
             if (Get_AccountName_DB == null) Get_AccountName_DB = getdefault.Get_AccountName_DB;
+            if (Get_AccountID_DB == null) Get_AccountID_DB = getdefault.Get_AccountID_DB;
             if (Get_UserID_DB == null) Get_UserID_DB = getdefault.Get_UserID_DB;
 
             if (UsingCustom == null) UsingCustom = getdefault.UsingCustom;
 
             if (Custom_Get_AccountName_From_UserID == null) Custom_Get_AccountName_From_UserID = getdefault.Custom_Get_AccountName_From_UserID;
             if (Custom_Get_UserID_From_AccountName == null) Custom_Get_UserID_From_AccountName = getdefault.Custom_Get_UserID_From_AccountName;
+            if (Custom_Get_UserID_From_AccountID == null) Custom_Get_UserID_From_AccountID = getdefault.Custom_Get_UserID_From_AccountID;
         }
     }
 

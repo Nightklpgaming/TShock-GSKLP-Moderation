@@ -131,13 +131,15 @@ namespace MKLP.Modules
 
             #region [ Slash Commands ]
 
+            string SlashCommandName = "";
+
             List<SlashCommandBuilder> Guildcommands = new()
             {
                 new SlashCommandBuilder()
-                    .WithName("moderation")
+                    .WithName(SlashCommandName + "moderation")
                     .WithDescription("Manage Server in-game"),
                 new SlashCommandBuilder()
-                    .WithName("moderation-user")
+                    .WithName(SlashCommandName + "moderation-user")
                     .WithDescription("Manage players account")
                     .AddOption(new SlashCommandOptionBuilder()
                         .WithName("user")
@@ -146,7 +148,7 @@ namespace MKLP.Modules
                         .WithRequired(true)
                         ),
                 new SlashCommandBuilder()
-                    .WithName("ingame-command")
+                    .WithName(SlashCommandName + "ingame-command")
                     .WithDescription("execute a command ingame!")
                     .AddOption(new SlashCommandOptionBuilder()
                         .WithName("command")
@@ -154,7 +156,44 @@ namespace MKLP.Modules
                         .WithType(ApplicationCommandOptionType.String)
                         .WithRequired(true)
                         )
-        };
+            };
+
+            if (MKLP.Config.Discord.SlashCommandName != "")
+            {
+                SlashCommandName = $"{MKLP.Config.Discord.SlashCommandName}";
+
+                Guildcommands = new()
+                {
+                    new SlashCommandBuilder()
+                    .WithName(SlashCommandName)
+                    .WithDescription("MKLP Command")
+                    .AddOption(new SlashCommandOptionBuilder()
+                            .WithName("moderation")
+                            .WithDescription("Manage Server in-game")
+                            .WithType(ApplicationCommandOptionType.SubCommand))
+                    .AddOption(new SlashCommandOptionBuilder()
+                            .WithName("moderation-user")
+                            .WithDescription("Manage players account")
+                            .WithType(ApplicationCommandOptionType.SubCommand)
+                            .AddOption(new SlashCommandOptionBuilder()
+                                .WithName("user")
+                                .WithDescription("ingame account you want to moderate")
+                                .WithType(ApplicationCommandOptionType.String)
+                                .WithRequired(true)
+                                ))
+                    .AddOption(new SlashCommandOptionBuilder()
+                            .WithName("ingame-command")
+                            .WithDescription("execute a command ingame!")
+                                .WithType(ApplicationCommandOptionType.SubCommand)
+                            .AddOption(new SlashCommandOptionBuilder()
+                                .WithName("command")
+                                .WithDescription("type a command")
+                                .WithType(ApplicationCommandOptionType.String)
+                                .WithRequired(true)
+                                ))
+                };
+            }
+            
             #endregion
 
 
@@ -744,8 +783,8 @@ namespace MKLP.Modules
                                             string stplayer = $"- {ply.Name} ";
                                             try
                                             {
-                                                if (ply.Account.Name == null) continue;
-                                                ulong getuserid = MKLP.LinkAccountManager.GetUserID(ply.Account.Name);
+                                                if (ply.Account.Name == null) continue; 
+                                                ulong getuserid = (bool)MKLP.Config.DataBaseDLink.Target_UserAccount_ID ? MKLP.LinkAccountManager.GetUserIDByAccountID(ply.Account.ID) : MKLP.LinkAccountManager.GetUserIDByAccountName(ply.Account.Name);
                                                 stplayer += "[ <@!" + getuserid + "> ]";
 
                                             }
@@ -1308,7 +1347,7 @@ namespace MKLP.Modules
 
                                                 try
                                                 {
-                                                    getuserid = MKLP.LinkAccountManager.GetUserID(message.Data.CustomId.Split(S_)[4]);
+                                                    getuserid = (bool)MKLP.Config.DataBaseDLink.Target_UserAccount_ID ? MKLP.LinkAccountManager.GetUserIDByAccountID(getuseraccount.ID) : MKLP.LinkAccountManager.GetUserIDByAccountName(getuseraccount.Name);
                                                 }
                                                 catch { }
 
@@ -1468,6 +1507,22 @@ namespace MKLP.Modules
                                                     return;
                                                 }
 
+                                                var modal = new ModalBuilder()
+                                                    .WithTitle($"Banning [ {message.Data.CustomId.Split(S_)[4]} ]")
+                                                    .WithCustomId("MKLP_InGame_PlayerAction_Ban_".Replace('_', S_) + message.Data.CustomId.Split(S_)[4])
+                                                    .AddTextInput("Reason", "Ban_reason".Replace('_', S_), TextInputStyle.Paragraph, "Cheating", value: message.Data.CustomId.Split(S_)[5])
+                                                    .AddTextInput("Duration", "Ban_duration".Replace('_', S_), TextInputStyle.Short, "0d 0h 0m 0s", maxLength: 15, value: "Permanent");
+
+                                                await message.RespondWithModalAsync(modal.Build());
+
+                                                return;
+                                                /*
+                                                if (!AccountHasPermission(executer, MKLP.Config.Permissions.CMD_Ban))
+                                                {
+                                                    await message.RespondAsync("You do not have permission to Ban a player!", ephemeral: true);
+                                                    return;
+                                                }
+
                                                 TSPlayer? targetplayer = null;
                                                 foreach (TSPlayer player in TShock.Players)
                                                 {
@@ -1517,6 +1572,7 @@ namespace MKLP.Modules
                                                 }
 
                                                 return;
+                                                */
                                             }
                                         #endregion
                                         case "Disable":
@@ -2190,6 +2246,696 @@ namespace MKLP.Modules
         private async Task SlashCommandHandler(SocketSlashCommand command)
         {
             #region code
+            string SlashCommandName = "";
+
+            if (MKLP.Config.Discord.SlashCommandName != "")
+            {
+                SlashCommandName = $"{MKLP.Config.Discord.SlashCommandName}";
+                if (command.Data.Name == SlashCommandName)
+                {
+                    switch (command.Data.Options.First().Name)
+                    {
+                        case "moderation":
+                            #region ( Command | moderation )
+                            {
+                                try
+                                {
+                                    UserAccount executer = GetUserIDAccHasPermission(command.User.Id, TSStaffPermission);
+                                    if (executer == null)
+                                    {
+                                        await command.RespondAsync("You do not have permission to proceed this interaction!", ephemeral: true);
+                                        return;
+                                    }
+
+                                    string stringplayers = "";
+
+                                    foreach (TSPlayer ply in TShock.Players)
+                                    {
+                                        if (ply != null && ply.Active)
+                                        {
+                                            string stplayer = $"- {ply.Name} ";
+                                            try
+                                            {
+                                                if (ply.Account.Name == null) continue;
+                                                ulong getuserid = (bool)MKLP.Config.DataBaseDLink.Target_UserAccount_ID ? MKLP.LinkAccountManager.GetUserIDByAccountID(ply.Account.ID) : MKLP.LinkAccountManager.GetUserIDByAccountName(ply.Account.Name);
+                                                stplayer += "[ <@!" + getuserid + "> ]";
+                                            }
+                                            catch (NullReferenceException) { }
+                                            stringplayers += stplayer + "\n";
+                                        }
+                                    }
+
+                                    if (stringplayers == "") stringplayers = "No Players Online...";
+
+                                    #region { stringdefeatedbosses }
+                                    string GetListDefeatedBoss()
+                                    {
+                                        CONFIG_BOSSES getenabledboss = MKLP.Config.BossManager;
+                                        Dictionary<string, bool> defeatedbosses = new();
+                                        if ((bool)getenabledboss.AllowKingSlime)
+                                        {
+                                            if (NPC.downedSlimeKing)
+                                            {
+                                                defeatedbosses.Add("King Slime", true);
+                                            }
+                                            else
+                                            {
+                                                defeatedbosses.Add("King Slime", false);
+                                            }
+                                        }
+                                        else if (NPC.downedSlimeKing)
+                                        {
+                                            defeatedbosses.Add("King Slime", true);
+                                        }
+                                        if ((bool)getenabledboss.AllowEyeOfCthulhu)
+                                        {
+                                            if (NPC.downedBoss1)
+                                            {
+                                                defeatedbosses.Add("Eye of Cthulhu", true);
+                                            }
+                                            else
+                                            {
+                                                defeatedbosses.Add("Eye of Cthulhu", false);
+                                            }
+                                        }
+                                        else if (NPC.downedBoss1)
+                                        {
+                                            defeatedbosses.Add("Eye of Cthulhu", true);
+                                        }
+                                        if ((bool)getenabledboss.AllowEaterOfWorlds || (bool)getenabledboss.AllowBrainOfCthulhu)
+                                        {
+                                            if (NPC.downedBoss2)
+                                            {
+                                                defeatedbosses.Add("Evil Boss", true);
+                                            }
+                                            else
+                                            {
+                                                defeatedbosses.Add("Evil Boss", false);
+                                            }
+                                        }
+                                        else if (NPC.downedBoss2)
+                                        {
+                                            defeatedbosses.Add("Evil Boss", true);
+                                        }
+                                        if ((bool)getenabledboss.AllowDeerclops)
+                                        {
+                                            if (NPC.downedDeerclops)
+                                            {
+                                                defeatedbosses.Add("Deerclops", true);
+                                            }
+                                            else
+                                            {
+                                                defeatedbosses.Add("Deerclops", false);
+                                            }
+                                        }
+                                        else if (NPC.downedDeerclops)
+                                        {
+                                            defeatedbosses.Add("Deerclops", true);
+                                        }
+                                        if ((bool)getenabledboss.AllowQueenBee)
+                                        {
+                                            if (NPC.downedQueenBee)
+                                            {
+                                                defeatedbosses.Add("QueenBee", true);
+                                            }
+                                            else
+                                            {
+                                                defeatedbosses.Add("QueenBee", false);
+                                            }
+                                        }
+                                        else if (NPC.downedQueenBee)
+                                        {
+                                            defeatedbosses.Add("QueenBee", true);
+                                        }
+                                        if ((bool)getenabledboss.AllowSkeletron)
+                                        {
+                                            if (NPC.downedBoss3)
+                                            {
+                                                defeatedbosses.Add("Skeletron", true);
+                                            }
+                                            else
+                                            {
+                                                defeatedbosses.Add("Skeletron", false);
+                                            }
+                                        }
+                                        else if (NPC.downedBoss3)
+                                        {
+                                            defeatedbosses.Add("Skeletron", true);
+                                        }
+                                        if ((bool)getenabledboss.AllowWallOfFlesh)
+                                        {
+                                            if (Main.hardMode)
+                                            {
+                                                defeatedbosses.Add("Wall of Flesh", true);
+                                            }
+                                            else
+                                            {
+                                                defeatedbosses.Add("Wall of Flesh", false);
+                                            }
+                                        }
+                                        else if (Main.hardMode)
+                                        {
+                                            defeatedbosses.Add("Wall of Flesh", true);
+                                        }
+                                        if ((bool)getenabledboss.AllowQueenSlime)
+                                        {
+                                            if (NPC.downedQueenSlime)
+                                            {
+                                                defeatedbosses.Add("Queen Slime", true);
+                                            }
+                                            else
+                                            {
+                                                defeatedbosses.Add("Queen Slime", false);
+                                            }
+                                        }
+                                        else if (NPC.downedQueenSlime)
+                                        {
+                                            defeatedbosses.Add("Queen Slime", true);
+                                        }
+                                        if (Main.zenithWorld)
+                                        {
+                                            if ((bool)getenabledboss.AllowTheDestroyer && (bool)getenabledboss.AllowTheTwins && (bool)getenabledboss.AllowSkeletronPrime)
+                                            {
+                                                if (NPC.downedMechBoss1 && NPC.downedMechBoss2 && NPC.downedMechBoss3)
+                                                {
+                                                    defeatedbosses.Add("Mechdusa", true);
+                                                }
+                                                else
+                                                {
+                                                    defeatedbosses.Add("Mechdusa", false);
+                                                }
+                                            }
+                                            else if (NPC.downedMechBoss1 && NPC.downedMechBoss2 && NPC.downedMechBoss3)
+                                            {
+                                                defeatedbosses.Add("Mechdusa", true);
+                                            }
+                                        }
+                                        else
+                                        {
+                                            if ((bool)getenabledboss.AllowTheDestroyer)
+                                            {
+                                                if (NPC.downedMechBoss1)
+                                                {
+                                                    defeatedbosses.Add("Destroyer", true);
+                                                }
+                                                else
+                                                {
+                                                    defeatedbosses.Add("Destroyer", false);
+                                                }
+                                            }
+                                            else if (NPC.downedMechBoss1)
+                                            {
+                                                defeatedbosses.Add("Destroyer", true);
+                                            }
+                                            if ((bool)getenabledboss.AllowTheTwins)
+                                            {
+                                                if (NPC.downedMechBoss2)
+                                                {
+                                                    defeatedbosses.Add("The Twins", true);
+                                                }
+                                                else
+                                                {
+                                                    defeatedbosses.Add("The Twins", false);
+                                                }
+                                            }
+                                            else if (NPC.downedMechBoss2)
+                                            {
+                                                defeatedbosses.Add("The Twins", true);
+                                            }
+                                            if ((bool)getenabledboss.AllowSkeletronPrime)
+                                            {
+                                                if (NPC.downedMechBoss3)
+                                                {
+                                                    defeatedbosses.Add("Skeletron prime", true);
+                                                }
+                                                else
+                                                {
+                                                    defeatedbosses.Add("Skeletron prime", false);
+                                                }
+                                            }
+                                            else if (NPC.downedMechBoss3)
+                                            {
+                                                defeatedbosses.Add("Skeletron prime", true);
+                                            }
+                                        }
+
+                                        if ((bool)getenabledboss.AllowDukeFishron)
+                                        {
+                                            if (NPC.downedFishron)
+                                            {
+                                                defeatedbosses.Add("Duke Fishron", true);
+                                            }
+                                            else
+                                            {
+                                                defeatedbosses.Add("Duke Fishron", false);
+                                            }
+                                        }
+                                        else if (NPC.downedFishron)
+                                        {
+                                            defeatedbosses.Add("Duke Fishron", true);
+                                        }
+                                        if ((bool)getenabledboss.AllowPlantera)
+                                        {
+                                            if (NPC.downedPlantBoss)
+                                            {
+                                                defeatedbosses.Add("Plantera", true);
+                                            }
+                                            else
+                                            {
+                                                defeatedbosses.Add("Plantera", false);
+                                            }
+                                        }
+                                        else if (NPC.downedPlantBoss)
+                                        {
+                                            defeatedbosses.Add("Plantera", true);
+                                        }
+                                        if ((bool)getenabledboss.AllowEmpressOfLight)
+                                        {
+                                            if (NPC.downedEmpressOfLight)
+                                            {
+                                                defeatedbosses.Add("Empress of Light", true);
+                                            }
+                                            else
+                                            {
+                                                defeatedbosses.Add("Empress of Light", false);
+                                            }
+                                        }
+                                        else if (NPC.downedEmpressOfLight)
+                                        {
+                                            defeatedbosses.Add("Empress of Light", true);
+                                        }
+                                        if ((bool)getenabledboss.AllowGolem)
+                                        {
+                                            if (NPC.downedGolemBoss)
+                                            {
+                                                defeatedbosses.Add("Golem", true);
+                                            }
+                                            else
+                                            {
+                                                defeatedbosses.Add("Golem", false);
+                                            }
+                                        }
+                                        else if (NPC.downedGolemBoss)
+                                        {
+                                            defeatedbosses.Add("Golem", true);
+                                        }
+                                        if ((bool)getenabledboss.AllowLunaticCultist)
+                                        {
+                                            if (NPC.downedAncientCultist)
+                                            {
+                                                defeatedbosses.Add("Lunatic Cultist", true);
+                                            }
+                                            else
+                                            {
+                                                defeatedbosses.Add("Lunatic Cultist", false);
+                                            }
+                                        }
+                                        else if (NPC.downedAncientCultist)
+                                        {
+                                            defeatedbosses.Add("Lunatic Cultist", true);
+                                        }
+                                        if ((bool)getenabledboss.AllowMoonLord)
+                                        {
+                                            if (NPC.downedMoonlord)
+                                            {
+                                                defeatedbosses.Add("MoonLord", true);
+                                            }
+                                            else
+                                            {
+                                                defeatedbosses.Add("MoonLord", false);
+                                            }
+                                        }
+                                        else if (NPC.downedMoonlord)
+                                        {
+                                            defeatedbosses.Add("MoonLord", true);
+                                        }
+                                        string result = "";
+                                        foreach (var boss in defeatedbosses)
+                                        {
+                                            result += $"{(boss.Value ? ":green_circle:" : ":yellow_circle:")} {boss.Key} {(boss.Value ? "[ defeated ]" : "[ enabled ]")}\n";
+                                        }
+
+                                        return result;
+                                    }
+                                    #endregion
+
+                                    #region { stringdefeatedinvasion }
+                                    string GetListDefeatedInvasion()
+                                    {
+                                        Dictionary<string, bool> defeatedinvasion = new();
+                                        if (true)
+                                        {
+                                            if (NPC.downedGoblins)
+                                            {
+                                                defeatedinvasion.Add("Goblin Army", true);
+                                            }
+                                            else
+                                            {
+                                                //defeatedinvasion.Add("Goblin Army", false);
+                                            }
+                                        }
+                                        if (true)
+                                        {
+                                            if (NPC.downedFrost)
+                                            {
+                                                defeatedinvasion.Add("Frost Legion", true);
+                                            }
+                                            else
+                                            {
+                                                //defeatedinvasion.Add("Frost Legion", false);
+                                            }
+                                        }
+                                        if (true)
+                                        {
+                                            if (NPC.downedPirates)
+                                            {
+                                                defeatedinvasion.Add("Pirates", true);
+                                            }
+                                            else
+                                            {
+                                                //defeatedinvasion.Add("Pirates", false);
+                                            }
+                                        }
+                                        if (true)
+                                        {
+                                            if (NPC.downedMartians)
+                                            {
+                                                defeatedinvasion.Add("The Martians", true);
+                                            }
+                                            else
+                                            {
+                                                //defeatedinvasion.Add("The Martians", false);
+                                            }
+                                        }
+                                        if (true)
+                                        {
+                                            if (NPC.downedTowers)
+                                            {
+                                                defeatedinvasion.Add("Celestial Pillars", true);
+                                            }
+                                            else
+                                            {
+                                                //defeatedinvasion.Add("Celestial Pillars", false);
+                                            }
+                                        }
+                                        string result = "";
+
+                                        foreach (var invasion in defeatedinvasion)
+                                        {
+                                            result += $"- {invasion.Key}\n";
+                                        }
+
+                                        return result;
+                                    }
+                                    #endregion
+
+                                    #region { stringactivities }
+                                    string GetListActivities()
+                                    {
+                                        string result = "";
+
+                                        if (Main.bloodMoon) result += "- Blood Moon \n";
+
+                                        if (Main.eclipse) result += "- Solar Eclipse \n";
+
+                                        if (Main.invasionType == 1) result += $"- Goblin Army [ %{Main.invasionProgress} ]\n";
+
+                                        if (Main.invasionType == 2) result += $"- Frost Legion [ %{Main.invasionProgress} ]\n";
+
+                                        if (Main.invasionType == 3) result += $"- Pirate Invasion [ %{Main.invasionProgress} ]\n";
+
+                                        if (Main.invasionType == 4) result += $"- Martians [ %{Main.invasionProgress} ]\n";
+
+                                        if (Main.pumpkinMoon) result += $"- Pumkin Moon [ wave {NPC.waveNumber} ]\n";
+
+                                        if (Main.snowMoon) result += $"- Frost Moon [ wave {NPC.waveNumber} ]\n";
+
+                                        if (Terraria.GameContent.Events.DD2Event.Ongoing) result += $"- Old One's Army [ Wave {Main.invasionProgressWave} ]\n";
+
+                                        Dictionary<int, string> bosses = new();
+
+                                        bosses.Add(50, "- King Slime"); // King Slime
+                                        bosses.Add(4, "- Eye of Cthulhu"); // Eye of Cthulu
+
+                                        bosses.Add(13, "- Eater of Worlds"); // Eater of Worlds
+                                        bosses.Add(266, "- Brain of Cthulhu"); // Brain of Cthulu
+
+                                        bosses.Add(222, "- Queen Bee"); // Queen Bee
+                                        bosses.Add(35, "- Skeletron"); // Skeletron
+                                        bosses.Add(668, "- Deerclops"); // Deerclops
+                                        bosses.Add(113, "- Wall of Flesh"); // Wall of Flesh
+                                        bosses.Add(657, "- Queen Slime"); // Queen Slime
+
+                                        bosses.Add(125, "- Retinazer"); // Retinazer
+                                        bosses.Add(126, "- Spazmatism"); // Spazmatism
+                                        bosses.Add(134, "- The Destroyer"); // The Destroyer
+                                        bosses.Add(127, "- Skeletron Prime"); // Skeletron Prime
+
+                                        bosses.Add(262, "- Plantera"); // Plantera
+                                        bosses.Add(245, "- Golem"); // Golem
+
+                                        bosses.Add(636, "- Empress of Light"); // Empress Of Light
+
+                                        bosses.Add(370, "- Duke Fishron"); // Duke Fishron
+                                        bosses.Add(439, "- Lunatic Cultist");// Lunatic Cultist
+                                        bosses.Add(396, "- Moon Lord"); // Moon Lord
+
+                                        foreach (var npc in Main.npc)
+                                        {
+                                            if (!npc.active) continue;
+                                            if (bosses.ContainsKey(npc.netID))
+                                            {
+                                                result += $"- {bosses[npc.netID]} [ {npc.life}/{npc.lifeMax}:heart: ]\n";
+                                            }
+                                        }
+
+                                        return result;
+                                    }
+
+                                    #endregion
+
+                                    string defeatedbosses = GetListDefeatedBoss();
+                                    if (defeatedbosses == "") defeatedbosses = "No Bosses Defeated...";
+
+                                    string defeatedinvasion = GetListDefeatedInvasion();
+                                    if (defeatedinvasion == "") defeatedinvasion = "no Invasions Completed...";
+
+                                    string OngoingActivity = GetListActivities();
+                                    if (OngoingActivity == "") OngoingActivity = "Nothing is Happening...";
+
+                                    string reportlist = "";
+
+                                    foreach (MKLP_Report report in MKLP.DBManager.GetReportList(4))
+                                    {
+                                        reportlist +=
+                                            $"**'{report.From}' Report** {TimestampTag.FormatFromDateTime(report.Since, TimestampTagStyles.Relative)}" +
+                                            $"\n> **ID:** {report.ID}" +
+                                            $"\n> **Location:** `{report.Location}`" +
+                                            $"\n> **Players online during report:** `{report.Players.Replace(S_.ToString(), ", ")}`" +
+                                            $"\n> " +
+                                            $"\n> **target:** {(report.Target == "" ? "none" : report.Target)}" +
+                                            $"\n> **Message:** {report.Message}\n\n";
+                                    }
+
+                                    var embed = new EmbedBuilder()
+                                            .WithTitle("Server Moderation Menu")
+                                            .WithDescription("## 📑 Latest Report" +
+                                            $"\n{(reportlist == "" ? "no latest reports today..." : reportlist)}")
+                                            .WithColor(EmbedColor)
+                                            .WithFields(
+                                                new EmbedFieldBuilder()
+                                                    .WithName($"Online Players [{Main.player.Where(x => x.name.Length != 0).Count()}/{Main.maxNetPlayers}]")
+                                                    .WithValue(stringplayers),
+                                                new EmbedFieldBuilder()
+                                                    .WithName("Bosses")
+                                                    .WithValue(defeatedbosses)
+                                                    .WithIsInline(true),
+                                                new EmbedFieldBuilder()
+                                                    .WithName("Invasions Defeated")
+                                                    .WithValue(defeatedinvasion)
+                                                    .WithIsInline(true),
+                                                new EmbedFieldBuilder()
+                                                    .WithName("Activities")
+                                                    .WithValue(OngoingActivity)
+                                            )
+                                            .Build();
+
+
+                                    if (Main.player.Where(x => x.name.Length != 0).Count() != 0)
+                                    {
+
+                                        var menuBuilder = new SelectMenuBuilder()
+                                        .WithPlaceholder("Select a Player")
+                                        .WithCustomId("MKLP_SendMsg_PlayerModView_Main".Replace('_', S_))
+                                        .WithMinValues(1)
+                                        .WithMaxValues(1);
+
+                                        foreach (TSPlayer player in TShock.Players)
+                                        {
+                                            if (player == null) continue;
+                                            if (player.Name == "" ||
+                                                player.Name.Replace("*", "") == "" ||
+                                                player.Name == " ") continue;
+                                            if (!player.IsLoggedIn) continue;
+                                            menuBuilder.AddOption(player.Name, player.Account.Name, $"Account: {player.Account.Name}");
+                                        }
+
+                                        var component = new ComponentBuilder()
+                                            .WithButton("Refresh", "MKLP_EditMsg_ServerModView".Replace('_', S_), ButtonStyle.Secondary, row: 0)
+                                            .WithSelectMenu(menuBuilder, row: 1);
+
+                                        await command.RespondAsync(embed: embed, components: component.Build(), ephemeral: true);
+
+                                    }
+                                    else
+                                    {
+                                        var component = new ComponentBuilder()
+                                            .WithButton("Refresh", "MKLP_EditMsg_ServerModView".Replace('_', S_), ButtonStyle.Secondary, row: 0);
+                                        await command.RespondAsync(embed: embed, components: component.Build(), ephemeral: true);
+                                    }
+                                }
+                                catch (Exception e)
+                                {
+                                    await command.RespondAsync("An error occur executing this command", ephemeral: true);
+                                    MKLP_Console.SendLog_Exception(e);
+                                }
+                                return;
+                            }
+                        #endregion
+                        case "moderation-user":
+                            #region ( Command | moderation-user )
+                            {
+                                try
+                                {
+                                    UserAccount executer = GetUserIDAccHasPermission(command.User.Id, TSStaffPermission);
+                                    if (executer == null)
+                                    {
+                                        await command.RespondAsync("You do not have permission to proceed this interaction!", ephemeral: true);
+                                        return;
+                                    }
+
+                                    UserAccount getuseraccount = TShock.UserAccounts.GetUserAccountByName(command.Data.Options.First().Options.First().Value.ToString());
+
+                                    if (getuseraccount == null)
+                                    {
+                                        await command.RespondAsync("Invalid User Account!", ephemeral: true);
+                                        return;
+                                    }
+
+                                    TSPlayer? targetplayer = null;
+                                    foreach (TSPlayer player in TShock.Players)
+                                    {
+                                        if (player == null) continue;
+
+                                        if (player.Account.Name == command.Data.Options.First().Options.First().Value.ToString())
+                                        {
+                                            targetplayer = player;
+                                        }
+                                    }
+
+                                    var buttons = new ComponentBuilder()
+                                        .WithButton("Refresh", "MKLP_EditMsg_PlayerModViewOffline_Main_".Replace('_', S_) + getuseraccount.Name, ButtonStyle.Secondary)
+                                        .WithButton("Main", "XXX", ButtonStyle.Primary, disabled: true)
+                                        .WithButton("Reports from them", "MKLP_EditMsg_PlayerModViewOffline_Report1_".Replace('_', S_) + getuseraccount.Name, ButtonStyle.Primary, row: 1)
+                                        .WithButton($"{getuseraccount.Name} Reports", "MKLP_EditMsg_PlayerModViewOffline_Report2_".Replace('_', S_) + getuseraccount.Name, ButtonStyle.Primary, row: 1)
+                                        .WithButton("Ban Player", "MKLP_InGame_PlayerAction_Ban_".Replace('_', S_) + getuseraccount.Name, ButtonStyle.Danger, row: 2)
+                                        .WithButton("Mute Player", "MKLP_InGame_PlayerAction_Mute_".Replace('_', S_) + getuseraccount.Name, ButtonStyle.Danger, row: 2);
+
+                                    ulong? getuserid = null;
+
+
+                                    try
+                                    {
+                                        getuserid = (bool)MKLP.Config.DataBaseDLink.Target_UserAccount_ID ? MKLP.LinkAccountManager.GetUserIDByAccountID(getuseraccount.ID) : MKLP.LinkAccountManager.GetUserIDByAccountName(getuseraccount.Name);
+                                    }
+                                    catch { }
+
+                                    var embed = new EmbedBuilder()
+                                        .WithTitle($"Account [ {getuseraccount.Name} ]")
+                                        .WithDescription(
+                                            $"**Account ID:** `{getuseraccount.ID}`" +
+                                            $"\n**Is in the server?:** `{(targetplayer == null ? "no" : "yes")}`" +
+                                            $"\n**Group:** `{getuseraccount.Group}`" +
+                                            $"\n**Registered Since:** `{getuseraccount.Registered}` {GetSince(DateTime.Parse(getuseraccount.Registered))}" +
+                                            $"\n**Last Accessed:** `{getuseraccount.LastAccessed}` {GetSince(DateTime.Parse(getuseraccount.LastAccessed))}" +
+                                            $"{(getuserid == null ? "" : $"\n\n**Discord UserID:** `{(ulong)getuserid}`")}"
+                                        ).WithColor(EmbedColor);
+
+                                    await command.RespondAsync(embed: embed.Build(), components: buttons.Build(), ephemeral: true);
+                                }
+                                catch (Exception e)
+                                {
+                                    await command.RespondAsync("An error occur executing this command", ephemeral: true);
+                                    MKLP_Console.SendLog_Exception(e);
+                                }
+
+                                return;
+                            }
+                        #endregion
+                        case "ingame-command":
+                            #region ( Command | ingame-command )
+                            {
+                                UserAccount executer = GetUserIDAccHasPermission(command.User.Id, TSStaffPermission);
+                                if (executer == null)
+                                {
+                                    await command.RespondAsync("You do not have permission to proceed this interaction!", ephemeral: true);
+                                    return;
+                                }
+
+                                if (executer == null)
+                                {
+                                    await command.RespondAsync("⚠️Warning⚠️ your Account does not Exist!", null, false, true);
+                                    return;
+                                }
+
+                                var getgroup = TShock.Groups.GetGroupByName(executer.Group);
+                                TSRestPlayer player = new TSRestPlayer(executer.Name, getgroup);
+
+                                player.Account = executer;
+
+
+                                try
+                                {
+                                    string option1 = command.Data.Options.First().Options.First().Value.ToString();
+
+
+                                    Commands.HandleCommand(player, option1);
+
+                                    string OutPutResult = "";
+
+                                    foreach (string output in player.GetCommandOutput())
+                                    {
+                                        OutPutResult += output;
+                                    }
+
+                                    if (OutPutResult == "") OutPutResult = "   ";
+
+                                    if (OutPutResult.Length > 4096) OutPutResult = OutPutResult.Substring(0, 4096);
+
+                                    var embed = new EmbedBuilder()
+                                        .WithTitle("Command OutPut")
+                                        .WithDescription("```\n" + OutPutResult + "\n```")
+                                        .WithColor(Discord.Color.Purple)
+                                        .Build();
+
+                                    await command.RespondAsync($"## Command executed! `{option1}`", embed: embed, ephemeral: true);
+
+
+
+                                }
+                                catch (Exception e)
+                                {
+                                    Console.WriteLine(e);
+                                    await command.RespondAsync("there was an error trying to execute the command!", ephemeral: true);
+                                    return;
+                                }
+                                return;
+                            }
+                            #endregion
+                    }
+                    return;
+                }
+            }
 
             switch (command.Data.Name)
             {
@@ -2215,7 +2961,7 @@ namespace MKLP.Modules
                                     try
                                     {
                                         if (ply.Account.Name == null) continue;
-                                        ulong getuserid = MKLP.LinkAccountManager.GetUserID(ply.Account.Name);
+                                        ulong getuserid = (bool)MKLP.Config.DataBaseDLink.Target_UserAccount_ID ? MKLP.LinkAccountManager.GetUserIDByAccountID(ply.Account.ID) : MKLP.LinkAccountManager.GetUserIDByAccountName(ply.Account.Name);
                                         stplayer += "[ <@!" + getuserid + "> ]";
                                     }
                                     catch (NullReferenceException) { }
@@ -2783,7 +3529,7 @@ namespace MKLP.Modules
 
                             try
                             {
-                                getuserid = MKLP.LinkAccountManager.GetUserID(command.Data.Options.First().Value.ToString());
+                                getuserid = (bool)MKLP.Config.DataBaseDLink.Target_UserAccount_ID ? MKLP.LinkAccountManager.GetUserIDByAccountID(getuseraccount.ID) : MKLP.LinkAccountManager.GetUserIDByAccountName(getuseraccount.Name);
                             }
                             catch { }
 
@@ -2931,7 +3677,7 @@ namespace MKLP.Modules
 
                 try
                 {
-                    string getlinkaccountname = MKLP.LinkAccountManager.GetAccountName(discorduser.Id);
+                    string getlinkaccountname = (bool)MKLP.Config.DataBaseDLink.Target_UserAccount_ID ? TShock.UserAccounts.GetUserAccountByID(MKLP.LinkAccountManager.GetAccountIDByUserID(discorduser.Id)).Name : TShock.UserAccounts.GetUserAccountByName(MKLP.LinkAccountManager.GetAccountNameByUserID(discorduser.Id)).Name;
 
                     Context = Context.Replace("%discordingame%", getlinkaccountname);
                     Context = Context.Replace("%discordoringame%", getlinkaccountname);
@@ -3272,7 +4018,7 @@ namespace MKLP.Modules
         {
             try
             {
-                UserAccount executer = TShock.UserAccounts.GetUserAccountByName(MKLP.LinkAccountManager.GetAccountName(UserID));
+                UserAccount executer = (bool)MKLP.Config.DataBaseDLink.Target_UserAccount_ID ? TShock.UserAccounts.GetUserAccountByID(MKLP.LinkAccountManager.GetAccountIDByUserID(UserID)) : TShock.UserAccounts.GetUserAccountByName(MKLP.LinkAccountManager.GetAccountNameByUserID(UserID));
 
                 if (executer == null)
                 {
