@@ -2805,9 +2805,12 @@ namespace MKLP
             #endregion
         }
 
+        static bool OnCheckIllegal = false;
         private void OnNPCKilled(NpcKilledEventArgs args)
         {
             #region code
+            OnCheckIllegal = true;
+            /*
             int[] BossIDs =
             {
                 50, // King Slime
@@ -2829,8 +2832,9 @@ namespace MKLP
 			    439, // Lunatic Cultist
 			    396 // Moon Lord
 		    };
+            */
 
-            if (BossIDs.Contains(args.npc.type))
+            if (args.npc.boss)
             {
                 IllegalItemProgression = SurvivalManager.GetIllegalItem();
 
@@ -2840,8 +2844,8 @@ namespace MKLP
 
                 IllegalWallProgression = SurvivalManager.GetIllegalWall();
             }
-            
 
+            OnCheckIllegal = false;
             #endregion
         }
 
@@ -8625,6 +8629,7 @@ namespace MKLP
             }
             if (CodeType == MKLP_CodeType.Survival)
             {
+                if (OnCheckIllegal) return true;
                 switch ((PunishmentType)Config.Main.Survival_Code_PunishmentType)
                 {
                     case PunishmentType.Ban:

@@ -350,7 +350,7 @@ namespace MKLP
 
         public bool? Use_VanishCMD_TPlayer_Active_Var = false;
 
-        public bool? ServerSideDamage = false;
+        //public bool? ServerSideDamage = false;
 
         public bool? Use_OnUpdate_Func = true;
 
@@ -470,7 +470,7 @@ namespace MKLP
 
             if (Use_VanishCMD_TPlayer_Active_Var == null) Use_VanishCMD_TPlayer_Active_Var = getdefault.Use_VanishCMD_TPlayer_Active_Var;
 
-            if (ServerSideDamage == null) ServerSideDamage = getdefault.ServerSideDamage;
+            //if (ServerSideDamage == null) ServerSideDamage = getdefault.ServerSideDamage;
 
             if (Use_OnUpdate_Func == null) Use_OnUpdate_Func = getdefault.Use_OnUpdate_Func;
 
@@ -1051,6 +1051,7 @@ namespace MKLP
     {
         public string InfoText = "This is a beta stage! ( do not use it )";
         public bool? Detect_ItemPlayerSpawn = false;
+        public bool? ServerSideDamage = false;
 
         public CONFIG_UNRELEASE_FEATURE()
         {
@@ -1064,6 +1065,7 @@ namespace MKLP
             InfoText = "This is a beta stage! ( do not use it )";
 
             if (Detect_ItemPlayerSpawn == null) Detect_ItemPlayerSpawn = getdefault.Detect_ItemPlayerSpawn;
+            if (ServerSideDamage == null) ServerSideDamage = getdefault.ServerSideDamage;
         }
     }
     #endregion
