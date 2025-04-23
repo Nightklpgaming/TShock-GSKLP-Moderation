@@ -23,6 +23,7 @@ namespace MKLP
         public CONFIG_BOSSES BossManager;
         public CONFIG_DATABASE DataBaseMain;
         public CONFIG_DATABASE_LINKING DataBaseDLink;
+        public CONFIG_BanGuard BanGuard;
         public CONFIG_UNRELEASE_FEATURE Unrelease;
 
         static string path = Path.Combine(TShock.SavePath, "MKLP.json");
@@ -69,6 +70,9 @@ namespace MKLP
             if (args.DataBaseDLink == null) args.DataBaseDLink = new();
             args.DataBaseDLink.FixNull();
 
+            if (args.BanGuard == null) args.BanGuard = new();
+            args.BanGuard.FixNull();
+
             if (args.Unrelease == null) args.Unrelease = new();
             args.Unrelease.FixNull();
 
@@ -105,6 +109,7 @@ namespace MKLP
                 BossManager = new(),
                 DataBaseMain = new(),
                 DataBaseDLink = new(),
+                BanGuard = new(),
                 Unrelease = new(),
             };
         }
@@ -985,7 +990,7 @@ namespace MKLP
         public string MySqlUsername = "";
         public string MySqlPassword = "";
 
-        public string TableName = "LinkedAccounts";
+        public string TableName = "AccountDLinking";
         public string Get_AccountName_DB = "Name";
         public string Get_AccountID_DB = "ID";
         public string Get_UserID_DB = "DiscordUserID";
@@ -1022,6 +1027,23 @@ namespace MKLP
             if (Custom_Get_AccountName_From_UserID == null) Custom_Get_AccountName_From_UserID = getdefault.Custom_Get_AccountName_From_UserID;
             if (Custom_Get_UserID_From_AccountName == null) Custom_Get_UserID_From_AccountName = getdefault.Custom_Get_UserID_From_AccountName;
             if (Custom_Get_UserID_From_AccountID == null) Custom_Get_UserID_From_AccountID = getdefault.Custom_Get_UserID_From_AccountID;
+        }
+    }
+    public class CONFIG_BanGuard
+    {
+        public bool? UsingBanGuard = true;
+        public bool? UsingPlugin = false;
+        public string APIKey = "Token/APIKey HERE!";
+        
+        public CONFIG_BanGuard() { }
+
+        public void FixNull()
+        {
+            CONFIG_BanGuard getdefault = new();
+
+            if (UsingBanGuard == null) UsingBanGuard = getdefault.UsingBanGuard;
+            if (UsingPlugin == null) UsingPlugin = getdefault.UsingPlugin;
+            if (APIKey == null) APIKey = getdefault.APIKey;
         }
     }
 

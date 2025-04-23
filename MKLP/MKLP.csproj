@@ -12,4 +12,10 @@
     <PackageReference Include="TSAPI" Version="5.2.1" />
     <PackageReference Include="TShock" Version="5.2.3" />
   </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="BanGuard">
+      <HintPath>..\..\..\..\..\Downloads\BanGuard.dll</HintPath>
+    </Reference>
+  </ItemGroup>
 </Project>

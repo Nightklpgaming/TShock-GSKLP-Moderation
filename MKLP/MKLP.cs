@@ -4,6 +4,7 @@ using IL.Terraria.DataStructures;
 using IL.Terraria.Graphics;
 using Microsoft.Data.Sqlite;
 using Microsoft.Xna.Framework;
+using MKLP.Functions;
 using MKLP.Modules;
 using MySqlX.XDevAPI.Relational;
 using Newtonsoft.Json;
@@ -78,16 +79,25 @@ namespace MKLP
 
         public static Dictionary<ushort, string> IllegalWallProgression = new();
 
+        public static bool HasBanGuardPlugin = false;
         #endregion
 
         public MKLP(Main game) : base(game)
         {
             //amogus
+            HasBanGuardPlugin = File.Exists(Path.Combine("ServerPlugins", "BanGuard.dll"));
         }
 
         #region [ Initialize ]
         public override void Initialize()
         {
+            if (!HasBanGuardPlugin && ((bool)Config.BanGuard.UsingBanGuard && (bool)Config.BanGuard.UsingPlugin))
+            {
+                Config.BanGuard.UsingBanGuard = false;
+                MKLP_Console.SendLog_Warning("Warning: BanGuard plugin doesn't Exist on \"ServerPlugins\" Folder!");
+            }
+            BanGuardAPI.Initialize();
+
             //=====================Player===================
             GetDataHandlers.PlayerUpdate += OnPlayerUpdate;
 
@@ -266,9 +276,21 @@ namespace MKLP
             });
             if ((bool)Config.Main.Replace_Ban_TShockCommand)
             {
-                Command VarCMD_Ban = new(Config.Permissions.CMD_Ban, CMD_Ban, "ban") { HelpText = "Bans a player" };
-                Commands.ChatCommands.RemoveAll(cmd => cmd.Names.Exists(alias => VarCMD_Ban.Names.Contains(alias)));
-                Commands.ChatCommands.Add(VarCMD_Ban);
+                if (HasBanGuardPlugin && ((bool)Config.BanGuard.UsingPlugin && (bool)Config.BanGuard.UsingBanGuard))
+                {
+                    Commands.ChatCommands.Add(new Command(Config.Permissions.CMD_Ban, CMD_Ban, "qban")
+                    {
+                        HelpText = "Bans a player"
+                    });
+                    MKLP_Console.SendLog_Warning("Cannot Replace TShock Ban Command When \"UsingPlugin\" on \"BanGuard\" are enabled on Config");
+                    Config.BanGuard.APIKey = BanGuard.BanGuard.Config.APIKey;
+                    Config.Changeall();
+                } else
+                {
+                    Command VarCMD_Ban = new(Config.Permissions.CMD_Ban, CMD_Ban, "ban") { HelpText = "Bans a player" };
+                    Commands.ChatCommands.RemoveAll(cmd => cmd.Names.Exists(alias => VarCMD_Ban.Names.Contains(alias)));
+                    Commands.ChatCommands.Add(VarCMD_Ban);
+                }
             } else
             {
                 Commands.ChatCommands.Add(new Command(Config.Permissions.CMD_Ban, CMD_Ban, "qban")
@@ -433,7 +455,7 @@ namespace MKLP
         Item[] prevItemDrops = new Item[401];
         public static Dictionary<int, Item> newitemDrops = new();
         //static Item[] lostitemDrops = null;
-        private void OnGetData(GetDataEventArgs args)
+        private async void OnGetData(GetDataEventArgs args)
         {
             if (args.Handled)
                 return;
@@ -456,8 +478,37 @@ namespace MKLP
                 }
             }
 
+            #region [ ContinueConnecting2 ]
+
+            if (args.MsgID != PacketTypes.ContinueConnecting2)
+            {
+                if ((bool)Config.BanGuard.UsingBanGuard)
+                {
+                    if (player == null || player.State > 1) return;
+
+                    args.Handled = true;
+                    int prevState = player.State;
+                    player.State = 0;
+
+                    bool isBanned = await BanGuardAPI.CheckPlayerBan(player.UUID, player.Name, player.IP) ?? false;
+
+                    if (isBanned)
+                    {
+                        player.Disconnect("You are banned on the BanGuard network.\nVisit https://banguard.uk for more details.");
+                    }
+                    else
+                    {
+                        args.Handled = false;
+                        player.State = prevState + 1;
+                        player.SendData(PacketTypes.WorldInfo);
+                    }
+                }
+            }
+
+            #endregion
+
             #region [ latency ]
-            
+
             if (args.MsgID == PacketTypes.ItemOwner)
             {
                 
@@ -583,9 +634,6 @@ namespace MKLP
 
                 if (!player.IsLoggedIn) return;
 
-                if (player.HasPermission(Permissions.item) ||
-                    player.HasPermission(Permissions.give)) return;
-
                 if ((bool)Config.Main.Use_OnUpdate_Func) return;
 
                 if ((bool)Config.Main.DetectAllPlayerInv)
@@ -616,12 +664,6 @@ namespace MKLP
                     }
                     else
                     {
-                        /*
-                        if (Main.chest[player.ActiveChest] != null)
-                        {
-                            if (player.ActiveChest != -1) player.SetData("MKLP_PrevChestOpen", Main.chest[player.ActiveChest].item.Clone());
-                        }
-                        */
                         player.SetData("MKLP_PrevInventory", player.TPlayer.inventory.Clone());
                         player.SetData("MKLP_PrevPiggyBank", player.TPlayer.bank.item.Clone());
                         player.SetData("MKLP_PrevSafe", player.TPlayer.bank2.item.Clone());
@@ -702,9 +744,9 @@ namespace MKLP
 
         private void OnGameUpdate(EventArgs args)
         {
+            if (!(bool)Config.Main.Use_OnUpdate_Func) return;
             /*
             //List<Item> newitemget = new();
-            if (!(bool)Config.Main.Use_OnUpdate_Func) return;
 
             for (int i = 0; i < Main.item.Count(); i++)
             {
@@ -2418,10 +2460,11 @@ namespace MKLP
             #endregion
         }
 
-        private void OnNPCSpawn(NpcSpawnEventArgs args)
+        private async void OnNPCSpawn(NpcSpawnEventArgs args)
         {
             #region code
-            
+
+            if (!Main.npc[args.NpcId].boss) return;
 
             for (int i = 0; i < Main.maxNPCs; i++)
             {
@@ -2593,16 +2636,18 @@ namespace MKLP
                 if (Main.zenithWorld)
                 {
                     if ((!NPC.downedMechBoss1 && !NPC.downedMechBoss2 && !NPC.downedMechBoss1) &&
-                        (npc.type == NPCID.Retinazer || npc.type == NPCID.Spazmatism || npc.type == NPCID.TheDestroyer || npc.type == NPCID.SkeletronPrime)
+                        (npc.type == NPCID.Retinazer || npc.type == NPCID.Spazmatism || (npc.type == NPCID.TheDestroyer || npc.type == NPCID.TheDestroyerBody || npc.type == NPCID.TheDestroyerTail) || npc.type == NPCID.SkeletronPrime)
                         )
                     {
                         if (!(bool)Config.BossManager.AllowMechdusa)
                         {
+                            await Task.Delay(700);
                             DespawnNPC();
                             TShock.Utils.Broadcast("Mechdusa isn't allowed yet!", Color.MediumPurple);
                         }
                         if (TShock.Utils.GetActivePlayerCount() < (int)Config.BossManager.Mechdusa_RequiredPlayersforBoss)
                         {
+                            await Task.Delay(700);
                             DespawnNPC();
                             TShock.Utils.Broadcast("There aren't enough players to fight Mechdusa!" +
                             $"\nPlayers Needed: {(int)Config.BossManager.Mechdusa_RequiredPlayersforBoss}", Color.MediumPurple);
@@ -2625,7 +2670,7 @@ namespace MKLP
                         }
                     }
 
-                    if (!NPC.downedMechBoss1 && npc.type == NPCID.TheDestroyer) // The Destroyer
+                    if (!NPC.downedMechBoss1 && (npc.type == NPCID.TheDestroyer || npc.type == NPCID.TheDestroyerBody || npc.type == NPCID.TheDestroyerTail)) // The Destroyer
                     {
                         if (!(bool)Config.BossManager.AllowTheDestroyer)
                         {
@@ -3777,6 +3822,13 @@ namespace MKLP
             Config = Config.Read();
             LinkAccountManager.ReloadConfig();
             args.Player.SendMessage("MKLP config reloaded!", Microsoft.Xna.Framework.Color.Purple);
+
+            if (!HasBanGuardPlugin && ((bool)Config.BanGuard.UsingBanGuard && (bool)Config.BanGuard.UsingPlugin))
+            {
+                Config.BanGuard.UsingBanGuard = false;
+                args.Player.SendWarningMessage("Warning: BanGuard plugin doesn't Exist on 'ServerPlugins' Folder!");
+                MKLP_Console.SendLog_Warning("Warning: BanGuard plugin doesn't Exist on \"ServerPlugins\" Folder!");
+            }
         }
 
         private void OnWorldSave(WorldSaveEventArgs args)
@@ -3916,6 +3968,7 @@ namespace MKLP
                     Config.BossManager.AllowTheTwins = true;
                     Config.BossManager.AllowTheDestroyer = true;
                     Config.BossManager.AllowSkeletronPrime = true;
+                    Config.BossManager.AllowMechdusa = true;
                     changed = true;
                     Discordklp.KLPBotSendMessage_BossEnabled("Mechdusa");
                 }
@@ -7276,7 +7329,12 @@ namespace MKLP
                 args.Player.SendErrorMessage($"Usage: {Commands.Specifier}{((bool)Config.Main.Replace_Ban_TShockCommand ? "ban" : "qban")} <player> <reason> <duration> <args...>");
                 args.Player.SendMessage($"[c/8fbfd4:Example:] [c/a5d063:{Commands.Specifier}{((bool)Config.Main.Replace_Ban_TShockCommand ? "ban" : "qban")} {args.Player.Name} \"cheating\" \"1d 1m\" -offline]" +
                     $"\n[c/8fbfd4:duration:] 1d = 1day (d,h,m,s = day,hour,minute,second)" +
-                    $"\n[c/8fbfd4:args:] ( -alt = bans only name ) ( -account = only used when banning a offline player ) ( -accountid = only used when banning a offline player account id )",
+                    $"\n" +
+                    $"\n[c/8fbfd4:args:] " +
+                    $"\n( -alt = bans only name )" +
+                    $"\n( -account = only used when banning a offline player )" +
+                    $"\n( -accountid = only used when banning a offline player account id )" +
+                    ((bool)Config.BanGuard.UsingBanGuard ? $"\n( -banguard = must have a category to use banguard ex.'/ban \"{args.Player.Name}\" -banguard hacks' )\n( -banguardauto = automatically assign banguard category from your reason must be accurate )" : ""),
                     Color.Gray);
                 return;
             }
@@ -7284,13 +7342,21 @@ namespace MKLP
             bool altban = args.Parameters.Any(p => p == "-alt");
             bool accountban = args.Parameters.Any(p => p == "-account");
             bool accountidban = args.Parameters.Any(p => p == "-accountid");
+            bool usingbanguardauto = args.Parameters.Any(p => p == "-banguardauto");
+            int usingbanguardi = args.Parameters.FindIndex(p => p == "-banguard") + 1;
+            string usingbanguardcat = "N/A";
+
+            if (usingbanguardi > 0 && usingbanguardi < args.Parameters.Count)
+            {
+                usingbanguardcat = args.Parameters[usingbanguardi];
+            }
 
             bool uuidip = true;
 
             if (altban == true) uuidip = false;
 
 
-            List<string> flags = new List<string>() { "-alt", "-account", "-accountid" };
+            List<string> flags = new List<string>() { "-alt", "-account", "-accountid", "-banguardauto", "-banguard" };
 
             string reason = "No Reason Specified";
             string duration = null;
@@ -7299,7 +7365,7 @@ namespace MKLP
             for (int i = 1; i < args.Parameters.Count; i++)
             {
                 var param = args.Parameters[i];
-                if (!flags.Contains(param))
+                if (!flags.Contains(param) || (usingbanguardcat != "N/A" && i == usingbanguardi))
                 {
                     reason = param;
                     break;
@@ -7308,7 +7374,7 @@ namespace MKLP
             for (int i = 2; i < args.Parameters.Count; i++)
             {
                 var param = args.Parameters[i];
-                if (!flags.Contains(param))
+                if (!flags.Contains(param) || (usingbanguardcat != "N/A" && i == usingbanguardi))
                 {
                     duration = param;
                     break;
@@ -7318,6 +7384,22 @@ namespace MKLP
             if (TShock.Utils.TryParseTime(duration, out ulong seconds))
             {
                 expiration = DateTime.UtcNow.AddSeconds(seconds);
+            }
+
+            if (!(bool)Config.BanGuard.UsingBanGuard)
+            {
+                if (usingbanguardauto)
+                {
+                    usingbanguardcat = BanGuardAPI.GetCategoryFromReason(reason);
+                }
+                if (usingbanguardcat != "N/A")
+                {
+                    if (!BanGuardAPI.IsCategory(usingbanguardcat))
+                    {
+                        args.Player.SendErrorMessage("Invalid BanGuard Category!");
+                        return;
+                    }
+                }
             }
 
             if (accountidban)
@@ -7357,9 +7439,14 @@ namespace MKLP
                     }
                 }
 
+                if (usingbanguardcat != "N/A" && BanGuardAPI._isApiKeyValid)
+                {
+                    args.Player.SendInfoMessage("Using BanGuard Ban...");
+                }
+
                 if (targetplayer != null)
                 {
-                    if (ManagePlayer.OnlineBan(args.Silent, targetplayer, reason, args.Player.Account.Name, expiration, uuidip, uuidip))
+                    if (ManagePlayer.OnlineBan(args.Silent, targetplayer, reason, args.Player.Account.Name, expiration, uuidip, uuidip, usingbanguardcat))
                     {
                         args.Player.SendSuccessMessage($"Successfully banned {targetplayer.Name} for {reason}");
                     }
@@ -7370,7 +7457,7 @@ namespace MKLP
                 }
                 else
                 {
-                    if (ManagePlayer.OfflineBan(targetaccount, reason, args.Player.Account.Name, expiration, uuidip, uuidip))
+                    if (ManagePlayer.OfflineBan(targetaccount, reason, args.Player.Account.Name, expiration, uuidip, uuidip, usingbanguardcat))
                     {
                         args.Player.SendSuccessMessage($"Successfully banned Acc: {targetaccount.Name} for {reason}");
                     }
@@ -7409,9 +7496,15 @@ namespace MKLP
                     }
                 }
 
+
+                if (usingbanguardcat != "N/A" && BanGuardAPI._isApiKeyValid)
+                {
+                    args.Player.SendInfoMessage("Using BanGuard Ban...");
+                }
+
                 if (targetplayer != null)
                 {
-                    if (ManagePlayer.OnlineBan(args.Silent, targetplayer, reason, args.Player.Account.Name, expiration, uuidip, uuidip))
+                    if (ManagePlayer.OnlineBan(args.Silent, targetplayer, reason, args.Player.Account.Name, expiration, uuidip, uuidip, usingbanguardcat))
                     {
                         args.Player.SendSuccessMessage($"Successfully banned {targetplayer.Name} for {reason}");
                     }
@@ -7421,7 +7514,7 @@ namespace MKLP
                     }
                 } else
                 {
-                    if (ManagePlayer.OfflineBan(targetaccount, reason, args.Player.Account.Name, expiration, uuidip, uuidip))
+                    if (ManagePlayer.OfflineBan(targetaccount, reason, args.Player.Account.Name, expiration, uuidip, uuidip, usingbanguardcat))
                     {
                         args.Player.SendSuccessMessage($"Successfully banned Acc: {targetaccount.Name} for {reason}");
                     }
@@ -7450,7 +7543,12 @@ namespace MKLP
                 var targetplayer = players[0];
 
 
-                if (ManagePlayer.OnlineBan(args.Silent, targetplayer, reason, args.Player.Account.Name, expiration, uuidip, uuidip))
+                if (usingbanguardcat != "N/A" && BanGuardAPI._isApiKeyValid)
+                {
+                    args.Player.SendInfoMessage("Using BanGuard Ban...");
+                }
+
+                if (ManagePlayer.OnlineBan(args.Silent, targetplayer, reason, args.Player.Account.Name, expiration, uuidip, uuidip, usingbanguardcat))
                 {
                     args.Player.SendSuccessMessage($"Successfully banned {targetplayer.Name} for {reason}");
                 } else
@@ -8112,7 +8210,7 @@ namespace MKLP
                             }
                             targetname = getuseraccount.Name;
                         }
-                        if (getplayers.Count == 0)
+                        if (getplayers.Count == 1)
                         {
                             targetname = getplayers[0].Name;
                         }
@@ -8854,6 +8952,20 @@ namespace MKLP
             Console.WriteLine("> You can download the latest version at");
             Console.ForegroundColor = ConsoleColor.DarkMagenta;
             Console.WriteLine($"> https://github.com/Nightklpgaming/TShock-GSKLP-Moderation/releases/tag/{newversion}");
+            Console.ResetColor();
+        }
+
+        public static void SendLog_Warning(object? value)
+        {
+            SendTitle();
+            Console.ResetColor();
+            Console.ForegroundColor = ConsoleColor.Yellow;
+            Console.Write(" Warning: ");
+            Console.ResetColor();
+
+            Console.ResetColor();
+            Console.ForegroundColor = ConsoleColor.Gray;
+            Console.WriteLine(value);
             Console.ResetColor();
         }
 

@@ -50,3 +50,5 @@ D:\Nightklp_KLP\my_Terraria_Plugins\GSKLP\MKLP\MKLP\obj\Debug\net6.0\MKLP.dll
 D:\Nightklp_KLP\my_Terraria_Plugins\GSKLP\MKLP\MKLP\obj\Debug\net6.0\refint\MKLP.dll
 D:\Nightklp_KLP\my_Terraria_Plugins\GSKLP\MKLP\MKLP\obj\Debug\net6.0\MKLP.pdb
 D:\Nightklp_KLP\my_Terraria_Plugins\GSKLP\MKLP\MKLP\obj\Debug\net6.0\ref\MKLP.dll
+D:\Nightklp_KLP\my_Terraria_Plugins\GSKLP\MKLP\MKLP\bin\Debug\net6.0\BanGuard.dll
+D:\Nightklp_KLP\my_Terraria_Plugins\GSKLP\MKLP\MKLP\obj\Debug\net6.0\MKLP.csproj.Up2Date

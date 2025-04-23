@@ -6,8 +6,11 @@ using IL.Terraria.ID;
 using IL.Terraria.UI;
 using Microsoft.Data.Sqlite;
 using Microsoft.Xna.Framework;
+using MKLP.Functions;
 using MKLP.Modules;
 using MySqlX.XDevAPI.Relational;
+using Newtonsoft.Json;
+
 
 
 //System
@@ -1029,7 +1032,7 @@ namespace MKLP.Modules
 
         #region [ Ban ]
 
-        public static bool OnlineBan(bool Silent, TSPlayer Player, string Reason, string Executer, DateTime Duration, bool IP = false, bool UUID = false)
+        public static bool OnlineBan(bool Silent, TSPlayer Player, string Reason, string Executer, DateTime Duration, bool IP = false, bool UUID = false, string banguardtype = "N/A")
         {
             var getban = TShock.Bans.RetrieveBansByIdentifier(Identifier.Account + Player.Name);
 
@@ -1065,7 +1068,15 @@ namespace MKLP.Modules
             if (MKLP.DisabledKey.ContainsKey(Identifier.IP + Player.IP)) { MKLP.DisabledKey.Remove(Identifier.IP + Player.IP); }
             if (MKLP.DisabledKey.ContainsKey(Identifier.UUID + Player.UUID)) { MKLP.DisabledKey.Remove(Identifier.UUID + Player.UUID); }
 
+            bool banguardused = false;
+            if (banguardtype != "N/A" && ((bool)MKLP.Config.BanGuard.UsingBanGuard && !(bool)MKLP.Config.BanGuard.UsingPlugin) && BanGuardAPI._isApiKeyValid)
+            {
+                _ = BanGuardAPI.BanPlayer(Player.UUID, banguardtype, Player.IP);
+                banguardused = true;
+            }
+
             MKLP.Discordklp.KLPBotSendMessageMainLog($"**{Executer}** 🔨Banned **{Player.Name}** for `{Reason}`" +
+                (banguardused ? $"\n-# 🛡️BanGuard has been used on this one! ( category: {banguardtype} )" : "") +
                 $"\n### Ban Tickets Numbers:\n" +
                 Tickets +
                 $"-# Duration: {(Duration == DateTime.MaxValue ? "Permanent" : GetDuration(Duration))}");
@@ -1103,7 +1114,7 @@ namespace MKLP.Modules
             }
         }
 
-        public static bool OfflineBan(UserAccount Account, string Reason, string Executer, DateTime Duration, bool IP = false, bool UUID = false)
+        public static bool OfflineBan(UserAccount Account, string Reason, string Executer, DateTime Duration, bool IP = false, bool UUID = false, string banguardtype = "N/A")
         {
             var getban = TShock.Bans.RetrieveBansByIdentifier(Identifier.Account + Account.Name);
             
@@ -1121,7 +1132,7 @@ namespace MKLP.Modules
             Tickets += $"- {TShock.Bans.InsertBan(Identifier.Name + Account.Name, Reason, Executer, DateTime.UtcNow, Duration).Ban.TicketNumber} : PlayerName\n";
             Tickets += $"- {TShock.Bans.InsertBan(Identifier.Account + Account.Name, Reason, Executer, DateTime.UtcNow, Duration).Ban.TicketNumber} : Account\n";
 
-            string[] GetIPs = GetIPListAccount(Account.KnownIps);
+            var GetIPs = JsonConvert.DeserializeObject<List<string>>(Account.KnownIps);
             if (IP)
             {
                 Tickets += $"- {TShock.Bans.InsertBan(Identifier.IP + GetIPs[GetIPs.Count() - 1], Reason, Executer, DateTime.UtcNow, Duration).Ban.TicketNumber} : IP\n";
@@ -1132,10 +1143,17 @@ namespace MKLP.Modules
             if (MKLP.DisabledKey.ContainsKey(Identifier.IP + GetIPs[GetIPs.Count() - 1])) { MKLP.DisabledKey.Remove(Identifier.IP + GetIPs[GetIPs.Count() - 1]); }
             if (MKLP.DisabledKey.ContainsKey(Identifier.UUID + Account.UUID)) { MKLP.DisabledKey.Remove(Identifier.UUID + Account.UUID); }
 
+            bool banguardused = false;
+            if (banguardtype != "N/A" && ((bool)MKLP.Config.BanGuard.UsingBanGuard && !(bool)MKLP.Config.BanGuard.UsingPlugin) && BanGuardAPI._isApiKeyValid)
+            {
+                _ = BanGuardAPI.BanPlayer(Account.UUID, banguardtype, GetIPs[GetIPs.Count() - 1]);
+                banguardused = true;
+            }
 
             MKLP.SendStaffMessage($"[MKLP] Account [c/008ecf:{Account.Name}] was banned by [c/008ecf:{Executer}]", Microsoft.Xna.Framework.Color.DarkCyan);
 
             MKLP.Discordklp.KLPBotSendMessageMainLog($"**{Executer}** 🔨Banned **{Account.Name}** for `{Reason}`" +
+                (banguardused ? $"\n-# 🛡️BanGuard has been used on this one! ( category: {banguardtype} )" : "") +
                 $"\n### Ban Tickets Numbers:\n" +
                 Tickets +
                 $"-# Duration: {(Duration == DateTime.MaxValue ? "Permanent" : GetDuration(Duration))}");
@@ -1172,7 +1190,7 @@ namespace MKLP.Modules
 
             string Tickets = "";
 
-            string[] getIPs = GetIPListAccount(Account.KnownIps);
+            var getIPs = JsonConvert.DeserializeObject<List<string>>(Account.KnownIps);
 
 
             int? getban_Name = getticket(Identifier.Name + Account.Name);
@@ -1348,7 +1366,7 @@ namespace MKLP.Modules
             bool MuteSuccess = false;
 
             if (MKLP.DBManager.AddMute(Identifier.Account + Account.Name, Duration, Reason)) MuteSuccess = true;
-            string[] GetIPs = GetIPListAccount(Account.KnownIps);
+            var GetIPs = JsonConvert.DeserializeObject<List<string>>(Account.KnownIps);
             if (MKLP.DBManager.AddMute(Identifier.IP + GetIPs[GetIPs.Count() - 1], Duration, Reason)) MuteSuccess = true;
             if (MKLP.DBManager.AddMute(Identifier.UUID + Account.UUID, Duration, Reason)) MuteSuccess = true;
 
@@ -1391,7 +1409,7 @@ namespace MKLP.Modules
             bool UnMuteSuccess = false;
 
             if (MKLP.DBManager.DeleteMute(Identifier.Account + Account.Name)) UnMuteSuccess = true;
-            string[] GetIPs = GetIPListAccount(Account.KnownIps);
+            var GetIPs = JsonConvert.DeserializeObject<List<string>>(Account.KnownIps);
             if (MKLP.DBManager.DeleteMute(Identifier.IP + GetIPs[GetIPs.Count() - 1])) UnMuteSuccess = true;
             if (MKLP.DBManager.DeleteMute(Identifier.UUID + Account.UUID)) UnMuteSuccess = true;
 
@@ -1407,26 +1425,5 @@ namespace MKLP.Modules
 
         #endregion
 
-        static string[] GetIPListAccount(string KnownIPs)
-        {
-            if (!KnownIPs.Contains(","))
-            {
-                string[] e = {
-                                $"{KnownIPs.Replace("\"", "").Replace("[", "").Replace("]", "").Replace("\n", "").Replace(" ", "")}"
-                            };
-                return e;
-            }
-            else
-            {
-                return KnownIPs
-                    .Replace("\"", "")
-                    .Replace("[", "")
-                    .Replace("]", "")
-                    .Replace("\n", "")
-                    .Replace(" ", "")
-                    .Split(",");
-
-            }
-        }
     }
 }

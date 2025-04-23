@@ -56,22 +56,22 @@ namespace MKLP
 
             sqlCreator.EnsureTableStructure(new SqlTable("Reports",
                 new SqlColumn("ID", MySqlDbType.Int32) { AutoIncrement = true, Primary = true },
-                new SqlColumn("Reporter", MySqlDbType.VarChar),
-                new SqlColumn("Target", MySqlDbType.VarChar),
+                new SqlColumn("Reporter", MySqlDbType.VarChar, 20),
+                new SqlColumn("Target", MySqlDbType.VarChar, 20),
                 new SqlColumn("Message", MySqlDbType.Text),
                 new SqlColumn("Since", MySqlDbType.DateTime),
-                new SqlColumn("Location", MySqlDbType.VarChar),
+                new SqlColumn("Location", MySqlDbType.VarChar, 100),
                 new SqlColumn("Players", MySqlDbType.Text)));
 
             sqlCreator.EnsureTableStructure(new SqlTable("Mute",
                 new SqlColumn("ID", MySqlDbType.Int32) { AutoIncrement = true, Primary = true },
-                new SqlColumn("Identifier", MySqlDbType.VarChar),
+                new SqlColumn("Identifier", MySqlDbType.VarChar, 100),
                 new SqlColumn("Reason", MySqlDbType.Text),
                 new SqlColumn("Expiration", MySqlDbType.DateTime)));
 
             sqlCreator.EnsureTableStructure(new SqlTable("AccountDLinking",
-                new SqlColumn("Name", MySqlDbType.VarChar) { Primary = true, Unique = true },
-                new SqlColumn("UserID", MySqlDbType.VarChar)));
+                new SqlColumn("Name", MySqlDbType.VarChar, 20) { Primary = true, Unique = true },
+                new SqlColumn("UserID", MySqlDbType.VarChar, 50)));
 
         }
 

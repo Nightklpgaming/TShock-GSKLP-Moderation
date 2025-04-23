@@ -20,6 +20,7 @@ using TShockAPI.DB;
 using Terraria;
 using Microsoft.Xna.Framework.Input;
 using System.Drawing;
+using MKLP.Functions;
 
 namespace MKLP.Modules
 {
@@ -1493,6 +1494,11 @@ namespace MKLP.Modules
                                                     .AddTextInput("Reason", "Ban_reason".Replace('_', S_), TextInputStyle.Paragraph, "Cheating")
                                                     .AddTextInput("Duration", "Ban_duration".Replace('_', S_), TextInputStyle.Short, "0d 0h 0m 0s", maxLength: 15);
 
+                                                if ((bool)MKLP.Config.BanGuard.UsingBanGuard)
+                                                {
+                                                    modal.AddTextInput("BanGuardType", "Ban_BGCategory".Replace('_', S_), TextInputStyle.Short, "Type -auto if you want to automatic categories this ( leave it blank if you don't want to share this on BanGuard )", maxLength: 30, required: false);
+                                                }
+
                                                 await message.RespondWithModalAsync(modal.Build());
 
                                                 return;
@@ -1512,6 +1518,11 @@ namespace MKLP.Modules
                                                     .WithCustomId("MKLP_InGame_PlayerAction_Ban_".Replace('_', S_) + message.Data.CustomId.Split(S_)[4])
                                                     .AddTextInput("Reason", "Ban_reason".Replace('_', S_), TextInputStyle.Paragraph, "Cheating", value: message.Data.CustomId.Split(S_)[5])
                                                     .AddTextInput("Duration", "Ban_duration".Replace('_', S_), TextInputStyle.Short, "0d 0h 0m 0s", maxLength: 15, value: "Permanent");
+
+                                                if ((bool)MKLP.Config.BanGuard.UsingBanGuard)
+                                                {
+                                                    modal.AddTextInput("BanGuardType", "Ban_BGCategory".Replace('_', S_), TextInputStyle.Short, "Type -auto if you want to automatic categories this ( leave it blank if you don't want to share this on BanGuard )", maxLength: 30, required: false);
+                                                }
 
                                                 await message.RespondWithModalAsync(modal.Build());
 
@@ -1817,6 +1828,25 @@ namespace MKLP.Modules
                                                 string duration = components
                                                     .First(x => x.CustomId == "Ban_duration".Replace('_', S_)).Value;
 
+
+                                                string BGCategory = "N/A";
+                                                if ((bool)MKLP.Config.BanGuard.UsingBanGuard && BanGuardAPI._isApiKeyValid)
+                                                {
+                                                    string banguardcat = components
+                                                        .First(x => x.CustomId == "Ban_BGCategory".Replace('_', S_)).Value;
+                                                    if (banguardcat != "")
+                                                    {
+                                                        if (banguardcat == "-auto")
+                                                        {
+                                                            BGCategory = BanGuardAPI.GetCategoryFromReason(reason);
+                                                        }
+                                                        if (BanGuardAPI.IsCategory(banguardcat))
+                                                        {
+                                                            BGCategory = banguardcat;
+                                                        }
+                                                    }
+                                                }
+
                                                 DateTime expiration = DateTime.MaxValue;
 
                                                 TSPlayer? targetplayer = null;
@@ -1838,7 +1868,7 @@ namespace MKLP.Modules
                                                 if (targetplayer != null)
                                                 {
 
-                                                    if (ManagePlayer.OnlineBan(false, targetplayer, reason, executer.Name, expiration, true, true))
+                                                    if (ManagePlayer.OnlineBan(false, targetplayer, reason, executer.Name, expiration, true, true, BGCategory))
                                                     {
                                                         await modal.RespondAsync($"Successfully banned **{targetplayer.Name}**" +
                                                             "\n**Reason:** " + reason, ephemeral: true);
@@ -1864,7 +1894,7 @@ namespace MKLP.Modules
                                                         return;
                                                     }
 
-                                                    if (ManagePlayer.OfflineBan(account, reason, executer.Name, expiration, true, true))
+                                                    if (ManagePlayer.OfflineBan(account, reason, executer.Name, expiration, true, true, BGCategory))
                                                     {
                                                         await modal.RespondAsync($"Successfully banned **{account.Name}**" +
                                                             "\n**Reason:** " + reason, ephemeral: true);
