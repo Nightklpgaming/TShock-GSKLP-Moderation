@@ -283,8 +283,7 @@ namespace MKLP
                         HelpText = "Bans a player"
                     });
                     MKLP_Console.SendLog_Warning("Cannot Replace TShock Ban Command When \"UsingPlugin\" on \"BanGuard\" are enabled on Config");
-                    Config.BanGuard.APIKey = BanGuard.BanGuard.Config.APIKey;
-                    Config.Changeall();
+                    BanGuardAPI.ChangeTokenFromPlugin();
                 } else
                 {
                     Command VarCMD_Ban = new(Config.Permissions.CMD_Ban, CMD_Ban, "ban") { HelpText = "Bans a player" };
@@ -482,7 +481,7 @@ namespace MKLP
 
             if (args.MsgID != PacketTypes.ContinueConnecting2)
             {
-                if ((bool)Config.BanGuard.UsingBanGuard)
+                if ((bool)Config.BanGuard.UsingBanGuard && BanGuardAPI._isApiKeyValid && !(bool)Config.BanGuard.UsingPlugin)
                 {
                     if (player == null || player.State > 1) return;
 

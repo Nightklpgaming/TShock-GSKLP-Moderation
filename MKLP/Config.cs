@@ -993,7 +993,7 @@ namespace MKLP
         public string TableName = "AccountDLinking";
         public string Get_AccountName_DB = "Name";
         public string Get_AccountID_DB = "ID";
-        public string Get_UserID_DB = "DiscordUserID";
+        public string Get_UserID_DB = "UserID";
 
         public bool? UsingCustom = false;
 
@@ -1031,7 +1031,7 @@ namespace MKLP
     }
     public class CONFIG_BanGuard
     {
-        public bool? UsingBanGuard = true;
+        public bool? UsingBanGuard = false;
         public bool? UsingPlugin = false;
         public string APIKey = "Token/APIKey HERE!";
         

@@ -86,7 +86,7 @@ namespace MKLP
 
             if (UsingCustom)
             {
-                using var reader = _db.QueryReader(Custom_Get_AccountName_From_UserID, UserID);
+                using var reader = _db.QueryReader("SELECT * " + Custom_Get_AccountName_From_UserID, UserID);
 
                 while (reader.Read())
                 {
@@ -112,7 +112,7 @@ namespace MKLP
 
             if (UsingCustom)
             {
-                using var reader = _db.QueryReader(Custom_Get_AccountName_From_UserID, UserID);
+                using var reader = _db.QueryReader("SELECT * " + Custom_Get_AccountName_From_UserID, UserID);
 
                 while (reader.Read())
                 {
@@ -139,7 +139,7 @@ namespace MKLP
 
             if (UsingCustom)
             {
-                using var reader = _db.QueryReader(Custom_Get_UserID_From_AccountName, AccountName);
+                using var reader = _db.QueryReader("SELECT * " + Custom_Get_UserID_From_AccountName, AccountName);
                 
                 while (reader.Read())
                 {
@@ -180,7 +180,7 @@ namespace MKLP
 
             if (UsingCustom)
             {
-                using var reader = _db.QueryReader(Custom_Get_UserID_From_AccountID, AccountID);
+                using var reader = _db.QueryReader("SELECT * " + Custom_Get_UserID_From_AccountID, AccountID);
                 
                 while (reader.Read())
                 {

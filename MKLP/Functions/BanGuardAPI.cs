@@ -221,5 +221,11 @@ namespace MKLP.Functions
         {
             return category is "duping" or "hacks" or "griefing" or "tunneling" or "child-safety";
         }
+
+        public static void ChangeTokenFromPlugin()
+        {
+            MKLP.Config.BanGuard.APIKey = BanGuard.BanGuard.Config.APIKey;
+            MKLP.Config.Changeall();
+        }
     }
 }
