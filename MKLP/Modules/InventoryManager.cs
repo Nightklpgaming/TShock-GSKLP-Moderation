@@ -17,13 +17,13 @@ namespace MKLP.Modules
 
         public static void TryAddInvLog(TSPlayer tsplayer, Item prevplayerinv, Item playerinv, int slot, string Type)
         {
-            if (!(bool)MKLP.Config.Main.Save_Inventory_Log) return;
+            if (!(bool)MKLP.Config.Main.Logging.Save_Inventory_Log) return;
 
             InvLog_index++;
 
-            if (InventoryLogs.Count >= (int)MKLP.Config.Main.Save_InvLog_Max)
+            if (InventoryLogs.Count >= (int)MKLP.Config.Main.Logging.Save_InvLog_Max)
             {
-                InventoryLogs.RemoveRange(0, (int)MKLP.Config.Main.Remove_InvLog_IfMax);
+                InventoryLogs.RemoveRange(0, (int)MKLP.Config.Main.Logging.Remove_InvLog_IfMax);
             }
             //OutOfMemoryException
 
@@ -39,13 +39,13 @@ namespace MKLP.Modules
         }
         public static void TryAddInvLog(TSPlayer tsplayer, NetItem prevplayerinv, Item playerinv, int slot, string Type)
         {
-            if (!(bool)MKLP.Config.Main.Save_Inventory_Log) return;
+            if (!(bool)MKLP.Config.Main.Logging.Save_Inventory_Log) return;
 
             InvLog_index++;
 
-            if (InventoryLogs.Count >= (int)MKLP.Config.Main.Save_InvLog_Max)
+            if (InventoryLogs.Count >= (int)MKLP.Config.Main.Logging.Save_InvLog_Max)
             {
-                InventoryLogs.RemoveRange(0, (int)MKLP.Config.Main.Remove_InvLog_IfMax);
+                InventoryLogs.RemoveRange(0, (int)MKLP.Config.Main.Logging.Remove_InvLog_IfMax);
             }
             //OutOfMemoryException
 
@@ -65,26 +65,26 @@ namespace MKLP.Modules
             TSPlayer Player = args.Player;
             if (args.Parameters.Count != 1 && args.Parameters.Count != 2)
             {
-                Player.SendErrorMessage($"Invalid syntax. Proper syntax: {Commands.Specifier}inventoryview <player> <type>" +
-                    $"\nDo [ {Commands.Specifier}inventoryview help ] for more info");
+                Player.SendErrorMessage(MKLP.GetText($"Invalid syntax. Proper syntax: {Commands.Specifier}inventoryview <player> <type>" +
+                    $"\nDo '{Commands.Specifier}inventoryview help' for more info"));
                 return;
             }
 
             if (args.Parameters.Count == 0)
             {
-                args.Player.SendErrorMessage($"Specify a Player!\nDo [ {Commands.Specifier}inventoryview help ] for more info");
+                args.Player.SendErrorMessage(MKLP.GetText($"Specify a Player!\nDo '{Commands.Specifier}inventoryview help' for more info"));
                 return;
             }
 
             //help text
-            string helptext = "[i:3619] [c/00f412:Inventory Viewer Info] [i:3619]" +
+            string helptext = MKLP.GetText("[i:3619] [c/00f412:Inventory Viewer Info] [i:3619]" +
                     "\nYou can view player contents using this command\n" +
                     $"Example: {Commands.Specifier}inventoryview [c/abff96:{Player.Name}] [c/96ffdc:inv] (View inventory contents)\n" +
                     "[c/a4ff4e:[List of Types][c/a4ff4e:]]\n" +
                     "[c/ffffff:'inventory/inv'] [c/71b45a:'equipment/equip'] [c/f268ff:'piggy/pig'] [c/6f6f6f:'safe'] [c/e3fa00:'defenderforge/forge'] [c/c600fa:'voidvault/vault'] [c/fa2b00:'all']" +
                     "\n------------------------------" +
                     "\n[c/fab200:about 'track' type]\ninfo: get logged when a player inventory changes... \nturnoff: to turn it off repeat the command again\n[c/f40000:warning: this can flood your chat message]" +
-                    "\n------------------------------";
+                    "\n------------------------------");
 
             if (args.Parameters[0] == "help")
             {
@@ -94,14 +94,14 @@ namespace MKLP.Modules
 
             if (args.Parameters.Count == 1)
             {
-                args.Player.SendErrorMessage($"Specify a type!\nDo [ {Commands.Specifier}inventoryview help ] for more info");
+                args.Player.SendErrorMessage(MKLP.GetText($"Specify a type!\nDo [ {Commands.Specifier}inventoryview help ] for more info"));
                 return;
             }
 
             var foundPlr = TSPlayer.FindByNameOrID(args.Parameters[0]);
             if (foundPlr.Count == 0)
             {
-                args.Player.SendErrorMessage("Invalid player!");
+                args.Player.SendErrorMessage(MKLP.GetText("Invalid player!"));
                 return;
             }
 
@@ -109,10 +109,10 @@ namespace MKLP.Modules
             string targetplayername = targetplayer.Name;
 
             //makes a variable to check if this player is logged in or not ( usefull to avoid false ban )
-            string targetplayerlogin = "[c/5c5c5c:status: ][c/f40000:This player hasn't been logged in!]";
+            string targetplayerlogin = MKLP.GetText("[c/5c5c5c:status: ][c/f40000:This player hasn't been logged in!]");
             if (targetplayer.IsLoggedIn)
             {
-                targetplayerlogin = "[c/5c5c5c:status: ][c/05f400:this player is logged in.]";
+                targetplayerlogin = MKLP.GetText("[c/5c5c5c:status: ][c/05f400:this player is logged in.]");
             }
 
             #region Types
@@ -184,7 +184,7 @@ namespace MKLP.Modules
         }
 
         #region Functions
-        
+
 
         #endregion
     }

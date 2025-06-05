@@ -1,0 +1,15 @@
+C:\Users\pilap\source\repos\MKLP\MKLP\bin\Debug\net9.0\HttpServer.dll
+C:\Users\pilap\source\repos\MKLP\MKLP\bin\Debug\net9.0\MKLP.deps.json
+C:\Users\pilap\source\repos\MKLP\MKLP\bin\Debug\net9.0\MKLP.dll
+C:\Users\pilap\source\repos\MKLP\MKLP\bin\Debug\net9.0\MKLP.pdb
+C:\Users\pilap\source\repos\MKLP\MKLP\bin\Debug\net9.0\BanGuard.dll
+C:\Users\pilap\source\repos\MKLP\MKLP\obj\Debug\net9.0\MKLP.csproj.AssemblyReference.cache
+C:\Users\pilap\source\repos\MKLP\MKLP\obj\Debug\net9.0\MKLP.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\pilap\source\repos\MKLP\MKLP\obj\Debug\net9.0\MKLP.AssemblyInfoInputs.cache
+C:\Users\pilap\source\repos\MKLP\MKLP\obj\Debug\net9.0\MKLP.AssemblyInfo.cs
+C:\Users\pilap\source\repos\MKLP\MKLP\obj\Debug\net9.0\MKLP.csproj.CoreCompileInputs.cache
+C:\Users\pilap\source\repos\MKLP\MKLP\obj\Debug\net9.0\MKLP.csproj.Up2Date
+C:\Users\pilap\source\repos\MKLP\MKLP\obj\Debug\net9.0\MKLP.dll
+C:\Users\pilap\source\repos\MKLP\MKLP\obj\Debug\net9.0\refint\MKLP.dll
+C:\Users\pilap\source\repos\MKLP\MKLP\obj\Debug\net9.0\MKLP.pdb
+C:\Users\pilap\source\repos\MKLP\MKLP\obj\Debug\net9.0\ref\MKLP.dll

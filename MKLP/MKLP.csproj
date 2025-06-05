@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net6.0</TargetFramework>
@@ -15,7 +15,8 @@
 
   <ItemGroup>
     <Reference Include="BanGuard">
-      <HintPath>..\..\..\..\..\Downloads\BanGuard.dll</HintPath>
+      <HintPath>D:\Nightklp_KLP\my_Terraria_Plugins\GSKLP\MKLP\Ref\BanGuard.dll</HintPath>
     </Reference>
   </ItemGroup>
+
 </Project>

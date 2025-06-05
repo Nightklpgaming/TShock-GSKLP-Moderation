@@ -42,6 +42,7 @@ using TShockAPI;
 using TShockAPI.Configuration;
 using TShockAPI.DB;
 using TShockAPI.Hooks;
+using static Org.BouncyCastle.Math.EC.ECCurve;
 using static System.Net.Mime.MediaTypeNames;
 
 namespace MKLP
@@ -55,7 +56,7 @@ namespace MKLP
         public override string Author => "Nightklp";
         public override string Description => "Makes Moderating a bit easy";
         public override string Name => "MKLP";
-        public override System.Version Version => new System.Version(1, 4, 5, 1);
+        public override System.Version Version => new System.Version(1, 5);
         #endregion
 
         #region [ Variables ]
@@ -89,8 +90,12 @@ namespace MKLP
         }
 
         #region [ Initialize ]
+
+        DateTime InitializeSince = DateTime.UtcNow;
+
         public override void Initialize()
         {
+            InitializeSince = DateTime.UtcNow;
             if (!HasBanGuardPlugin && ((bool)Config.BanGuard.UsingBanGuard && (bool)Config.BanGuard.UsingPlugin))
             {
                 Config.BanGuard.UsingBanGuard = false;
@@ -103,11 +108,15 @@ namespace MKLP
 
             //GetDataHandlers.player
 
+            ServerApi.Hooks.NetGreetPlayer.Register(this, OnNetGreetPlayer);
+
             ServerApi.Hooks.ServerJoin.Register(this, OnPlayerJoin);
 
             ServerApi.Hooks.ServerLeave.Register(this, OnPlayerLeave);
 
             PlayerHooks.PlayerCommand += OnPlayerCommand;
+
+            PlayerHooks.PlayerPostLogin += OnPlayerPostLogin;
 
             //PlayerHooks.PlayerChat += OnPlayerChat;
             ServerApi.Hooks.ServerChat.Register(this, OnChatReceived);
@@ -139,9 +148,11 @@ namespace MKLP
 
             ServerApi.Hooks.NpcKilled.Register(this, OnNPCKilled);
 
-            ServerApi.Hooks.NpcAIUpdate.Register(this, OnNPCAIUpdate);
+            GetDataHandlers.Sign += OnSignChange;
 
-            ServerApi.Hooks.ProjectileAIUpdate.Register(this, OnProjectileAIUpdate);
+            //ServerApi.Hooks.NpcAIUpdate.Register(this, OnNPCAIUpdate);
+
+            //ServerApi.Hooks.ProjectileAIUpdate.Register(this, OnProjectileAIUpdate);
 
             //ServerApi.Hooks.WireTriggerAnnouncementBox.Register(this, OnProjectileAIUpdate);
 
@@ -159,26 +170,26 @@ namespace MKLP
             #region [ Commands Initialize ]
 
             #region { default }
-            
+
             Commands.ChatCommands.Add(new Command(Config.Permissions.Default_CMD_Ping, CMD_ping, "ping")
             {
-                HelpText = "Get Players Latency"
+                HelpText = GetText("Get Players Latency")
             });
-            
+
             Commands.ChatCommands.Add(new Command(Config.Permissions.Default_CMD_Progression, CMD_BE, "progression", "prog")
             {
-                HelpText = "displays defeated bosses and events"
+                HelpText = GetText("displays defeated bosses and events")
             });
 
             Commands.ChatCommands.Add(new Command(Config.Permissions.Default_CMD_Report, CMD_Report, "report")
             {
-                HelpText = "Report any suspicious activity by doing /report <message>",
+                HelpText = GetText("Report any suspicious activity by doing /report <message>"),
                 AllowServer = false
             });
 
             if ((bool)Config.Main.Replace_Who_TShockCommand)
             {
-                Command VarMCMD_Who = new(MCMD_Playing, "playing", "online", "who") { HelpText = "Shows the currently connected players." };
+                Command VarMCMD_Who = new(MCMD_Playing, "playing", "online", "who") { HelpText = GetText("Shows the currently connected players.") };
                 Commands.ChatCommands.RemoveAll(cmd => cmd.Names.Exists(alias => VarMCMD_Who.Names.Contains(alias)));
                 Commands.ChatCommands.Add(VarMCMD_Who);
             }
@@ -189,19 +200,20 @@ namespace MKLP
 
             Commands.ChatCommands.Add(new Command(Config.Permissions.Staff, CMD_StaffChat, "staffchat", "staff", "#")
             {
-                HelpText = "Sends a message in staff chat"
+                HelpText = GetText("Sends a message in staff chat")
             });
 
             if ((bool)Config.Main.Replace_AccountInfo_TShockCommand)
             {
-                Command VarMCMD_AccountInfo = new(Permissions.checkaccountinfo, MCMD_AccountInfo, "accountinfo", "ai") { HelpText = "Shows information about a user." };
+                Command VarMCMD_AccountInfo = new(Permissions.checkaccountinfo, MCMD_AccountInfo, "accountinfo", "ai") { HelpText = GetText("Shows information about a user.") };
                 Commands.ChatCommands.RemoveAll(cmd => cmd.Names.Exists(alias => VarMCMD_AccountInfo.Names.Contains(alias)));
                 Commands.ChatCommands.Add(VarMCMD_AccountInfo);
-            } else
+            }
+            else
             {
                 Commands.ChatCommands.Add(new Command(Permissions.checkaccountinfo, MCMD_AccountInfo, "klpaccountinfo")
                 {
-                    HelpText = "Shows information about a user."
+                    HelpText = GetText("Shows information about a user.")
                 });
             }
 
@@ -211,39 +223,39 @@ namespace MKLP
 
             Commands.ChatCommands.Add(new Command(Config.Permissions.CMD_ClearMessage, CMD_ClearMessage, "clearmessage", "messageclear", "purgemessage")
             {
-                HelpText = "Clears the whole message chat"
+                HelpText = GetText("Clears the whole message chat")
             });
 
             Commands.ChatCommands.Add(new Command(Config.Permissions.CMD_LockDown, CMD_LockDown, "lockdown")
             {
-                HelpText = "Prevents Players from joining the server"
+                HelpText = GetText("Prevents Players from joining the server")
             });
 
             Commands.ChatCommands.Add(new Command(Config.Permissions.CMD_LockDownRegister, CMD_LockDownRegister, "lockdownregister", "lockdownreg")
             {
-                HelpText = "Prevents Players to register their account"
+                HelpText = GetText("Prevents Players to register their account")
             });
 
             Commands.ChatCommands.Add(new Command(Config.Permissions.CMD_MapPingTP, CMD_MapPingTP, "tpmap", "pingmap", "maptp")
             {
                 AllowServer = false,
-                HelpText = "Allows you to teleporter anywhere using map ping"
+                HelpText = GetText("Allows you to teleporter anywhere using map ping")
             });
 
             Commands.ChatCommands.Add(new Command(Config.Permissions.CMD_ClearLag, CMD_ClearLag, "clearlag")
             {
-                HelpText = "Deletes low value npc/items"
+                HelpText = GetText("Deletes low value npc/items")
             });
 
             Commands.ChatCommands.Add(new Command(Config.Permissions.CMD_ManageBoss, CMD_ManageBoss, "manageboss", "mboss")
             {
-                HelpText = "Manage it by enable/disable boss or schedule it"
+                HelpText = GetText("Manage it by enable/disable boss or schedule it")
             });
 
             Commands.ChatCommands.Add(new Command(Config.Permissions.CMD_Vanish, CMD_Vanish, "vanish", "ghost")
             {
                 AllowServer = false,
-                HelpText = "allows you to become completely invisible to players."
+                HelpText = GetText("allows you to become completely invisible to players.")
             });
 
             #endregion
@@ -252,66 +264,63 @@ namespace MKLP
 
             Commands.ChatCommands.Add(new Command(Config.Permissions.CMD_ManageReport, CMD_ManageReport, "managereport", "mreport")
             {
-                HelpText = "View/Delete any reports"
+                HelpText = GetText("View/Delete any reports")
             });
 
             Commands.ChatCommands.Add(new Command(Config.Permissions.CMD_Ban, CMD_BanInfo, "baninfo")
             {
-                HelpText = "Displays ban information using ban ticket number"
+                HelpText = GetText("Displays ban information using ban ticket number")
             });
 
             Commands.ChatCommands.Add(new Command(Config.Permissions.CMD_Disable, CMD_disable, "disable")
             {
-                HelpText = "Acts as Ban but prevents players from doing anything \nwarning: disable's are temporary!"
+                HelpText = GetText("Acts as Ban but prevents players from doing anything \nwarning: disable's are temporary!")
             });
 
             Commands.ChatCommands.Add(new Command(Config.Permissions.CMD_Disable, CMD_undisable, "enable", "undisable")
             {
-                HelpText = "enable's a player that got disabled"
+                HelpText = GetText("enable's a player that got disabled")
             });
 
             Commands.ChatCommands.Add(new Command(Config.Permissions.CMD_UnBan, CMD_UnBan, "unban")
             {
-                HelpText = "Removes ban tickets"
+                HelpText = GetText("Removes ban tickets")
             });
             if ((bool)Config.Main.Replace_Ban_TShockCommand)
             {
                 if (HasBanGuardPlugin && ((bool)Config.BanGuard.UsingPlugin && (bool)Config.BanGuard.UsingBanGuard))
                 {
-                    Commands.ChatCommands.Add(new Command(Config.Permissions.CMD_Ban, CMD_Ban, "qban")
-                    {
-                        HelpText = "Bans a player"
-                    });
-                    MKLP_Console.SendLog_Warning("Cannot Replace TShock Ban Command When \"UsingPlugin\" on \"BanGuard\" are enabled on Config");
+                    MKLP_Console.SendLog_Warning(GetText("Replacing TShock Ban Command When \"UsingPlugin\" on \"BanGuard\" might cause problems"));
                     BanGuardAPI.ChangeTokenFromPlugin();
-                } else
-                {
-                    Command VarCMD_Ban = new(Config.Permissions.CMD_Ban, CMD_Ban, "ban") { HelpText = "Bans a player" };
-                    Commands.ChatCommands.RemoveAll(cmd => cmd.Names.Exists(alias => VarCMD_Ban.Names.Contains(alias)));
-                    Commands.ChatCommands.Add(VarCMD_Ban);
                 }
-            } else
+                Command VarCMD_Ban = new(Config.Permissions.CMD_Ban, CMD_Ban, "ban") { HelpText = GetText("Bans a player") };
+                Commands.ChatCommands.RemoveAll(cmd => cmd.Names.Exists(alias => VarCMD_Ban.Names.Contains(alias)));
+                Commands.ChatCommands.Add(VarCMD_Ban);
+
+            }
+            else
             {
                 Commands.ChatCommands.Add(new Command(Config.Permissions.CMD_Ban, CMD_Ban, "qban")
                 {
-                    HelpText = "Bans a player"
+                    HelpText = GetText("Bans a player")
                 });
             }
 
             Commands.ChatCommands.Add(new Command(Config.Permissions.CMD_UnMute, CMD_UnMute, "unmute")
             {
-                HelpText = "Unmutes Player"
+                HelpText = GetText("Unmutes Player")
             });
             if ((bool)Config.Main.Replace_Mute_TShockCommand)
             {
-                Command VarCMD_Mute = new(Config.Permissions.CMD_Mute, CMD_Mute, "mute") { HelpText = "Mutes Player" };
+                Command VarCMD_Mute = new(Config.Permissions.CMD_Mute, CMD_Mute, "mute") { HelpText = GetText("Mutes Player") };
                 Commands.ChatCommands.RemoveAll(cmd => cmd.Names.Exists(alias => VarCMD_Mute.Names.Contains(alias)));
                 Commands.ChatCommands.Add(VarCMD_Mute);
-            } else
+            }
+            else
             {
                 Commands.ChatCommands.Add(new Command(Config.Permissions.CMD_Mute, CMD_Mute, "qmute")
                 {
-                    HelpText = "Mutes Player"
+                    HelpText = GetText("Mutes Player")
                 });
             }
             #endregion
@@ -320,17 +329,17 @@ namespace MKLP
 
             Commands.ChatCommands.Add(new Command(Config.Permissions.CMD_InventoryView, InventoryManager.InventoryView, "inventoryview", "invview", "inview")
             {
-                HelpText = "View's inventory of a player"
+                HelpText = GetText("View's inventory of a player")
             });
 
             Commands.ChatCommands.Add(new Command(Config.Permissions.CMD_Spy, CMD_Spy, "spy")
             {
-                HelpText = "allows you to stalk a player"
+                HelpText = GetText("allows you to stalk a player")
             });
 
             Commands.ChatCommands.Add(new Command(Config.Permissions.CMD_UUIDMatch, CMD_uuidmatch, "uuidmatch")
             {
-                HelpText = "check useraccounts with following match uuid accounts"
+                HelpText = GetText("check useraccounts with following match uuid accounts")
             });
 
             #endregion
@@ -339,7 +348,7 @@ namespace MKLP
 
             Commands.ChatCommands.Add(new Command(Config.Permissions.CMD_MKLPDiscord, CMD_MKLPDiscord, "mklpdiscord")
             {
-                HelpText = "Manage Linked Account Players"
+                HelpText = GetText("Manage Linked Account Players")
             });
 
             #endregion
@@ -349,16 +358,13 @@ namespace MKLP
             if (Config.Discord.BotToken != "NONE")
             {
                 Discordklp.Initialize();
-            } else
+            }
+            else
             {
-                MKLP_Console.SendLog_Message_DiscordBot("Discord bot token has not been set!", " {Setup} ");
+                MKLP_Console.SendLog_Message_DiscordBot(GetText("Discord bot token has not been set!"), " {Setup} ");
             }
 
-            for (int i = 0; i < Main.item.Length; i++)
-            {
-                prevItemDrops[i] = new Item();
-                prevItemDrops[i].SetDefaults(0); // Initialize as 'empty' item
-            }
+            LogKLP.InitializeLogging();
         }
 
         #endregion
@@ -371,11 +377,15 @@ namespace MKLP
                 //=====================Player===================
                 GetDataHandlers.PlayerUpdate -= OnPlayerUpdate;
 
+                ServerApi.Hooks.NetGreetPlayer.Deregister(this, OnNetGreetPlayer);
+
                 ServerApi.Hooks.ServerJoin.Deregister(this, OnPlayerJoin);
 
                 ServerApi.Hooks.ServerLeave.Deregister(this, OnPlayerLeave);
 
                 PlayerHooks.PlayerCommand -= OnPlayerCommand;
+
+                PlayerHooks.PlayerPostLogin -= OnPlayerPostLogin;
 
                 //PlayerHooks.PlayerChat -= OnPlayerChat;
                 ServerApi.Hooks.ServerChat.Deregister(this, OnChatReceived);
@@ -387,13 +397,13 @@ namespace MKLP
 
                 GetDataHandlers.TileEdit -= OnTileEdit;
 
-                GetDataHandlers.PlaceObject += OnPlaceObject;
+                GetDataHandlers.PlaceObject -= OnPlaceObject;
 
-                GetDataHandlers.PaintTile += OnPaintTile;
+                GetDataHandlers.PaintTile -= OnPaintTile;
 
-                GetDataHandlers.PaintWall += OnPaintWall;
+                GetDataHandlers.PaintWall -= OnPaintWall;
 
-                GetDataHandlers.MassWireOperation += OnMassWireOperation;
+                GetDataHandlers.MassWireOperation -= OnMassWireOperation;
 
                 GetDataHandlers.LiquidSet -= HandleLiquidInteraction;
 
@@ -405,9 +415,15 @@ namespace MKLP
 
                 ServerApi.Hooks.NpcKilled.Deregister(this, OnNPCKilled);
 
-                ServerApi.Hooks.NpcAIUpdate.Deregister(this, OnNPCAIUpdate);
+                GetDataHandlers.Sign -= OnSignChange;
 
-                ServerApi.Hooks.ProjectileAIUpdate.Deregister(this, OnProjectileAIUpdate);
+                GetDataHandlers.PlayerDamage -= OnPlayerDamage;
+
+                GetDataHandlers.KillMe -= OnKillMe;
+
+                //ServerApi.Hooks.NpcAIUpdate.Deregister(this, OnNPCAIUpdate);
+
+                //ServerApi.Hooks.ProjectileAIUpdate.Deregister(this, OnProjectileAIUpdate);
 
                 //=====================Server===================
                 //ServerApi.Hooks.GameUpdate.Deregister(this, OnUpdate);
@@ -453,7 +469,7 @@ namespace MKLP
 
         Item[] prevItemDrops = new Item[401];
         public static Dictionary<int, Item> newitemDrops = new();
-        //static Item[] lostitemDrops = null;
+        //static Item[] lostitemDrops = null;1, 4, 5, 1
         private async void OnGetData(GetDataEventArgs args)
         {
             if (args.Handled)
@@ -463,7 +479,7 @@ namespace MKLP
 
             if (args.MsgID == PacketTypes.ForceItemIntoNearestChest)
             {
-                if ((bool)Config.ManagePackets.Disable_Packet85_QuickStackChest)
+                if ((bool)Config.Main.ManagePackets.Disable_Packet85_QuickStackChest)
                 {
                     args.Handled = true;
                 }
@@ -471,11 +487,45 @@ namespace MKLP
 
             if (args.MsgID == PacketTypes.SyncExtraValue)
             {
-                if ((bool)Config.ManagePackets.Disable_Packet92_MobPickupCoin)
+                if ((bool)Config.Main.ManagePackets.Disable_Packet92_MobPickupCoin)
                 {
                     args.Handled = true;
                 }
             }
+
+            #region [ ItemDrop ]
+
+            if (args.MsgID != PacketTypes.ItemDrop)
+            {
+                if (!(bool)Config.Main.Use_OnUpdate_Func)
+                {
+                    int maxvalue = 10;
+
+                    if (Main.hardMode) maxvalue = 100;
+
+                    if ((bool)Config.Main.DisableNode.AutoClear_IllegalItemDrops_SurvivalCode1 || (bool)Config.Main.DisableNode.AutoClear_IllegalItemDrops_MainCode1)
+                    {
+                        for (int i = 0; i < Main.maxItems; i++)
+                        {
+                            if (IllegalItemProgression.ContainsKey(Main.item[i].netID) &&
+                                (bool)MKLP.Config.Main.DisableNode.Using_Survival_Code1 && (bool)Config.Main.DisableNode.AutoClear_IllegalItemDrops_SurvivalCode1 && Main.item[i].active)
+                            {
+                                Main.item[i].active = false;
+                                TSPlayer.All.SendData(PacketTypes.ItemDrop, "", i);
+                            }
+                            if ((Main.item[i].value * Main.item[i].stack) / 5000000 >= maxvalue &&
+                                Main.item[i].netID != 74
+                                && (bool)MKLP.Config.Main.DisableNode.Using_Main_Code1 && (bool)Config.Main.DisableNode.AutoClear_IllegalItemDrops_MainCode1 && Main.item[i].active)
+                            {
+                                Main.item[i].active = false;
+                                TSPlayer.All.SendData(PacketTypes.ItemDrop, "", i);
+                            }
+                        }
+                    }
+                }
+            }
+
+            #endregion
 
             #region [ ContinueConnecting2 ]
 
@@ -510,13 +560,13 @@ namespace MKLP
 
             if (args.MsgID == PacketTypes.ItemOwner)
             {
-                
+
                 if (player.ContainsData("MKLP_StartGetLatency"))
                 {
                     player.SetData("MKLP_GetLatency", (DateTime.UtcNow - player.GetData<DateTime>("MKLP_StartGetLatency")).TotalMilliseconds);
                     player.RemoveData("MKLP_StartGetLatency");
                 }
-                
+
                 /*
                 var user = TShock.Players[args.Msg.whoAmI];
                 if (user == null) return;
@@ -535,7 +585,7 @@ namespace MKLP
                 }
                 */
             }
-            
+
             #endregion
 
             #region [ Disable ]
@@ -552,7 +602,7 @@ namespace MKLP
                     args.MsgID == PacketTypes.ItemOwner ||
                     args.MsgID == PacketTypes.ClientSyncedInventory)
                     return;
-                
+
                 if (TShockAPI.Utils.Distance(value2: new Vector2((int)player.TPlayer.position.X / 16, (int)player.TPlayer.position.Y / 16), value1: new Vector2(Main.spawnTileX, Main.spawnTileY)) >= 3f)
                 {
                     player.Teleport(Main.spawnTileX * 16, Main.spawnTileY * 16);
@@ -622,7 +672,8 @@ namespace MKLP
 
                         }
                     }
-                } catch { }
+                }
+                catch { }
             }
 
             #endregion
@@ -669,7 +720,8 @@ namespace MKLP
                         player.SetData("MKLP_PrevDefenderForge", player.TPlayer.bank3.item.Clone());
                         player.SetData("MKLP_PrevVoidVault", player.TPlayer.bank4.item.Clone());
                     }
-                } else
+                }
+                else
                 {
                     if (player.ContainsData("MKLP_PrevInventory"))
                     {
@@ -684,7 +736,7 @@ namespace MKLP
                         player.SetData("MKLP_PrevInventory", player.TPlayer.inventory.Clone());
                     }
                 }
-                
+
             }
             #endregion
 
@@ -789,19 +841,19 @@ namespace MKLP
 
             if (Main.hardMode) maxvalue = 100;
 
-            if ((bool)Config.Main.AutoClear_IllegalItemDrops_SurvivalCode1 || (bool)Config.Main.AutoClear_IllegalItemDrops_MainCode1)
+            if ((bool)Config.Main.DisableNode.AutoClear_IllegalItemDrops_SurvivalCode1 || (bool)Config.Main.DisableNode.AutoClear_IllegalItemDrops_MainCode1)
             {
                 for (int i = 0; i < Main.maxItems; i++)
                 {
                     if (IllegalItemProgression.ContainsKey(Main.item[i].netID) &&
-                        (bool)MKLP.Config.Main.Using_Survival_Code1 && (bool)Config.Main.AutoClear_IllegalItemDrops_SurvivalCode1 && Main.item[i].active)
+                        (bool)MKLP.Config.Main.DisableNode.Using_Survival_Code1 && (bool)Config.Main.DisableNode.AutoClear_IllegalItemDrops_SurvivalCode1 && Main.item[i].active)
                     {
                         Main.item[i].active = false;
                         TSPlayer.All.SendData(PacketTypes.ItemDrop, "", i);
                     }
                     if ((Main.item[i].value * Main.item[i].stack) / 5000000 >= maxvalue &&
                         Main.item[i].netID != 74
-                        && (bool)MKLP.Config.Main.Using_Main_Code1 && (bool)Config.Main.AutoClear_IllegalItemDrops_MainCode1 && Main.item[i].active)
+                        && (bool)MKLP.Config.Main.DisableNode.Using_Main_Code1 && (bool)Config.Main.DisableNode.AutoClear_IllegalItemDrops_MainCode1 && Main.item[i].active)
                     {
                         Main.item[i].active = false;
                         TSPlayer.All.SendData(PacketTypes.ItemDrop, "", i);
@@ -809,9 +861,9 @@ namespace MKLP
                 }
             }
 
-            if (checklatency_interval < DateTime.UtcNow)
+            if ((DateTime.UtcNow - checklatency_interval).TotalSeconds >= 5)
             {
-                checklatency_interval.AddSeconds(5);
+                checklatency_interval = DateTime.UtcNow;
                 foreach (TSPlayer player in TShock.Players)
                 {
                     if (player == null) continue;
@@ -1053,10 +1105,26 @@ namespace MKLP
             #endregion
         }
 
+        private void OnNetGreetPlayer(GreetPlayerEventArgs args)
+        {
+            #region code
+            TSPlayer player = TShock.Players[args.Who];
+
+            if ((bool)Config.Main.AntiRaid.JoinMessage_OnlyToLoginUser)
+            {
+                player.SilentJoinInProgress = true;
+            }
+
+            #endregion
+        }
+
+
+        DateTime playerjoin_temp1_Since = DateTime.MinValue;
+        Dictionary<string, List<string>> playerjoin_temp1 = new();
         private void OnPlayerJoin(JoinEventArgs args)
         {
             #region code
-            
+
             IllegalItemProgression = SurvivalManager.GetIllegalItem();
 
             IllegalProjectileProgression = SurvivalManager.GetIllegalProjectile();
@@ -1074,10 +1142,11 @@ namespace MKLP
                 {
                     if (LockDownReason == "")
                     {
-                        player.Disconnect("You cannot join the server yet!");
-                    } else
+                        player.Disconnect(GetText("You cannot join the server yet!"));
+                    }
+                    else
                     {
-                        player.Disconnect("You cannot join the server by the reason of " + LockDownReason);
+                        player.Disconnect(GetText("You cannot join the server by the reason of") + " " + LockDownReason);
                     }
                     return;
                 }
@@ -1087,40 +1156,40 @@ namespace MKLP
                 #region Prevent
                 if (Config.Main.IllegalNames.Contains(player.Name))
                 {
-                    player.Disconnect("Illegal Name");
+                    player.Disconnect(GetText("Illegal Name"));
                     return;
                 }
                 if (player.Name.Contains(DiscordKLP.S_))
                 {
-                    player.Disconnect($"You Can't use {DiscordKLP.S_} in your Name!");
+                    player.Disconnect(GetText($"You Can't use {DiscordKLP.S_} in your Name!"));
                     return;
                 }
                 foreach (string contains in Config.Main.Ban_NameContains)
                 {
                     if (player.Name.Contains(contains))
                     {
-                        player.Disconnect($"You Can't use {contains} in your Name!");
+                        player.Disconnect(GetText($"You Can't use {contains} in your Name!"));
                         return;
                     }
                 }
                 if (player.Name.Length < (byte)Config.Main.Minimum_CharacterName)
                 {
-                    player.Disconnect($"You're Character Name has less than {(byte)Config.Main.Minimum_CharacterName}");
+                    player.Disconnect(GetText($"You're Character Name has less than {(byte)Config.Main.Minimum_CharacterName}"));
                     return;
                 }
                 if (player.Name.Length > (byte)Config.Main.Maximum_CharacterName)
                 {
-                    player.Disconnect($"You're Character Name has more than {(byte)Config.Main.Maximum_CharacterName}");
+                    player.Disconnect(GetText($"You're Character Name has more than {(byte)Config.Main.Maximum_CharacterName}"));
                     return;
                 }
                 if (!HasSymbols(player.Name) && !(bool)Config.Main.Allow_PlayerName_Symbols)
                 {
-                    player.Disconnect("Your name contains Symbols and is not allowed on this server.");
+                    player.Disconnect(GetText("Your name contains Symbols and is not allowed on this server."));
                     return;
                 }
                 if (IsIllegalName(player.Name) && !(bool)Config.Main.Allow_PlayerName_InappropriateWords)
                 {
-                    player.Disconnect("Your name contains inappropriate language and is not allowed on this server.");
+                    player.Disconnect(GetText("Your name contains inappropriate language and is not allowed on this server."));
                     return;
                 }
                 #endregion
@@ -1131,7 +1200,7 @@ namespace MKLP
                 {
                     if (!(bool)Config.BossManager.AllowJoinDuringBoss && Main.npc[i].active && Main.npc[i].boss)
                     {
-                        player.Disconnect("The current in-game players must defeat the current boss\nBefore you can join.");
+                        player.Disconnect(GetText("The current in-game players must defeat the current boss\nBefore you can join."));
                         return;
                     }
                 }
@@ -1144,17 +1213,20 @@ namespace MKLP
                 UserAccount useraccount = TShock.UserAccounts.GetUserAccountByName(player.Name);
                 if (getuuidmatch.Count != 0 && !(bool)Config.Main.Allow_User_JoinMatchUUID && useraccount == null)
                 {
+                    string message = Config.Main.Reason_User_JoinMatchUUID;
+                    string getaccountname = getuuidmatch[0].Name;
                     bool whitelisted = false;
                     try
                     {
-                        foreach (var check in (WhiteListAlt[])Config.Main.WhiteList_User_JoinMatchUUID)
+                        foreach (var check in (Config.WhiteListAlt[])Config.Main.WhiteList_User_JoinMatchUUID)
                         {
                             if (check.MainName == player.Name || check.AltNames.Contains(player.Name))
                             {
                                 whitelisted = true;
                             }
                         }
-                    } catch { }
+                    }
+                    catch { }
 
                     if ((bool)Config.Main.Target_UserMatchUUIDAndIP && !whitelisted)
                     {
@@ -1162,19 +1234,73 @@ namespace MKLP
                         {
                             if (JsonConvert.DeserializeObject<List<string>>(get.KnownIps).Contains(player.IP))
                             {
-                                player.Disconnect("( UUID|IP ) making 2 or more accounts is forbidden!");
+                                message = message.Replace("%matchtype%", "UUID & IP");
+                                message = message.Replace("%accountname%", get.Name);
+                                player.Disconnect(message);
                                 return;
                             }
                         }
-                    } else if (!whitelisted)
+                    }
+                    else if (!whitelisted)
                     {
-                        player.Disconnect("( UUID ) making 2 or more accounts is forbidden!");
+                        message = message.Replace("%matchtype%", "UUID");
+                        message = message.Replace("%accountname%", getaccountname);
+                        player.Disconnect(message);
                         return;
                     }
                 }
 
                 #endregion
 
+                #region AntiRaid Check
+
+                if ((DateTime.UtcNow - InitializeSince).Minutes >= (int)Config.Main.AntiRaid.Disable_PlayerJoin_ThreshHold_Until_Minutes && (bool)Config.Main.AntiRaid.Using_PlayerJoin_ThreshHold)
+                {
+                    if ((DateTime.UtcNow - playerjoin_temp1_Since).TotalSeconds >= (int)Config.Main.AntiRaid.PlayerJoin_ThreshHold_Seconds)
+                    {
+                        playerjoin_temp1_Since = DateTime.UtcNow;
+                        playerjoin_temp1.Clear();
+                    }
+
+                    bool add_pjt = true;
+                    foreach (var get in playerjoin_temp1)
+                    {
+                        if (get.Key == player.UUID || get.Value.Contains(player.IP))
+                        {
+                            add_pjt = false;
+                            break;
+                        }
+                    }
+                    if (add_pjt)
+                    {
+                        if (playerjoin_temp1.ContainsKey(player.UUID))
+                        {
+                            playerjoin_temp1[player.UUID].Add(player.IP);
+                        } else
+                        {
+                            playerjoin_temp1.Add(player.UUID, new() { player.IP });
+                        }
+                    }
+
+                    if (playerjoin_temp1.Count >= (int)Config.Main.AntiRaid.PlayerJoin_ThreshHold)
+                    {
+                        LockDown = true;
+                        LockDownReason = Config.Main.AntiRaid.PlayerJoin_ThreshHold_LockdownReason;
+                        foreach (var getp in TShock.Players)
+                        {
+                            if (getp == null) continue;
+                            if (playerjoin_temp1.ContainsKey(getp.UUID))
+                            {
+                                getp.Disconnect(GetText("[MKLP] AutoLockDown Due to many player's join at the same time!"));
+                            }
+                        }
+                        return;
+                    }
+                }
+
+                #endregion
+
+                #region Check Disabled
                 foreach (var check in DisabledKey)
                 {
                     if (check.Key == Identifier.Name + player.Name ||
@@ -1182,16 +1308,19 @@ namespace MKLP
                         check.Key == Identifier.UUID + player.UUID)
                     {
                         player.SetData("MKLP_IsDisabled", true);
-                        player.SendErrorMessage("Your still disabled" +
-                            "\nReason : " + check.Value);
+                        player.SendErrorMessage(GetText("Your still disabled Because of") + " " + check.Value);
                     }
                 }
+                #endregion
 
+                #region check if muted
                 if (DBManager.CheckPlayerMute(player, true))
                 {
-                    player.SendErrorMessage("You're still muted!");
+                    player.SendErrorMessage(GetText("You're still muted!"));
                 }
+                #endregion
 
+                #region check vanish players
                 foreach (TSPlayer gplayer in TShock.Players)
                 {
                     if (gplayer == null) continue;
@@ -1204,6 +1333,7 @@ namespace MKLP
                         }
                     }
                 }
+                #endregion
             }
 
             bool HasSymbols(string Name)
@@ -1243,24 +1373,31 @@ namespace MKLP
         private void OnPlayerLeave(LeaveEventArgs args)
         {
             #region code
+            TSPlayer player = TShock.Players[args.Who];
+
+            if ((bool)Config.Main.AntiRaid.JoinMessage_OnlyToLoginUser && !player.IsLoggedIn)
+            {
+                player.SilentKickInProgress = true;
+            }
+
             var godPower = Terraria.GameContent.Creative.CreativePowerManager.Instance.GetPower<Terraria.GameContent.Creative.CreativePowers.GodmodePower>();
 
-            foreach (TSPlayer player in TShock.Players)
+            foreach (TSPlayer gplayer in TShock.Players)
             {
-                if (player == null) continue;
-                if (player.ContainsData("MKLP_TargetSpy"))
+                if (gplayer == null) continue;
+                if (gplayer.ContainsData("MKLP_TargetSpy"))
                 {
-                    if (player.GetData<TSPlayer>("MKLP_TargetSpy") == TShock.Players[args.Who])
+                    if (gplayer.GetData<TSPlayer>("MKLP_TargetSpy") == player)
                     {
-                        player.Teleport(Main.spawnTileX * 16, Main.spawnTileY * 16);
+                        gplayer.Teleport(Main.spawnTileX * 16, Main.spawnTileY * 16);
 
-                        godPower.SetEnabledState(player.Index, false);
+                        godPower.SetEnabledState(gplayer.Index, false);
 
-                        TogglePlayerVanish(player, false);
+                        TogglePlayerVanish(gplayer, false);
 
-                        player.RemoveData("MKLP_TargetSpy");
+                        gplayer.RemoveData("MKLP_TargetSpy");
 
-                        player.SendInfoMessage($"You're no longer spying on someone");
+                        gplayer.SendInfoMessage(GetText($"You're no longer spying on someone"));
                     }
                 }
             }
@@ -1280,38 +1417,6 @@ namespace MKLP
             if (command == null)
                 return;
 
-            if (!args.Player.RealPlayer)
-            {
-                if (command.Name == "register" ||
-                command.Name == "login" ||
-                command.Name == "password")
-                {
-                    return;
-                }
-
-                if (Config.Discord.CommandLogChannel == null) return;
-                if (command.CanRun(args.Player))
-                {
-                    /*
-                    Discordklp.KLPBotSendMessageLog((ulong)Config.Discord.CommandLogChannel, $"(Not in a Server) Named **{args.Player.Name}** ✅Executed" +
-                        $" `/{command.Name}{((string.Join(" ", args.Parameters.ToArray(), 0, args.Parameters.Count) == "") ? "" : " ")}{string.Join(" ", args.Parameters.ToArray(), 0, args.Parameters.Count)}`");
-                    */
-                    Discordklp.KLPBotSendMessageLog((ulong)Config.Discord.CommandLogChannel, $"(Not in a Server) Named **{args.Player.Name}** ✅Executed" +
-                        $" `{args.CommandPrefix}{args.CommandText}`");
-                }
-                else
-                {
-                    /*
-                    Discordklp.KLPBotSendMessageLog((ulong)Config.Discord.CommandLogChannel, $"(Not in a Server) Named **{args.Player.Name}** ⛔Tried" +
-                        $" `/{command.Name}{((string.Join(" ", args.Parameters.ToArray(), 0, args.Parameters.Count) == "") ? "" : " ")}{string.Join(" ", args.Parameters.ToArray(), 0, args.Parameters.Count)}`");
-                    */
-                    Discordklp.KLPBotSendMessageLog((ulong)Config.Discord.CommandLogChannel, $"(Not in a Server) Named **{args.Player.Name}** ⛔Tried" +
-                        $" `{args.CommandPrefix}{args.CommandText}`");
-                }
-                return;
-            }
-
-
             if (DisabledKey.ContainsKey(Identifier.Name + args.Player.Name) ||
                 DisabledKey.ContainsKey(Identifier.IP + args.Player.IP) ||
                 DisabledKey.ContainsKey(Identifier.UUID + args.Player.UUID))
@@ -1319,8 +1424,7 @@ namespace MKLP
                 if (command.Name == "register" ||
                     command.Name == "login")
                 {
-                    args.Player.SendErrorMessage("You're currently Disabled!" +
-                    "\n you cannot perform this command");
+                    args.Player.SendErrorMessage(GetText("You're currently Disabled! you cannot perform this command."));
                     args.Handled = true;
                     return;
                 }
@@ -1328,63 +1432,56 @@ namespace MKLP
 
             if (command.Name == "register" && LockDownRegister)
             {
-                args.Player.SendErrorMessage("You do not have permission to register at the moment");
+                args.Player.SendErrorMessage(GetText("You do not have permission to register at the moment"));
                 args.Handled = true;
                 return;
             }
+            SendCommandLog(command, args.Player, args.CommandPrefix, args.CommandName, args.CommandText);
 
-            if (command.Name == "register" ||
-                command.Name == "login" ||
-                command.Name == "password")
+            void SendCommandLog(Command cmd, TSPlayer player, string cmdprefix, string cmdName, string cmdtext)
             {
-                return;
-            }
-            
-            if (Config.Discord.CommandLogChannel == null) return;
-            if (args.Player.IsLoggedIn)
-            {
-                if (command.CanRun(args.Player))
-                {
-                    /*
-                    Discordklp.KLPBotSendMessageLog((ulong)Config.Discord.CommandLogChannel, $"Player **{args.Player.Account.Name}** ✅Executed" +
-                        $" `/{command.Name}{((string.Join(" ", args.Parameters.ToArray(), 0, args.Parameters.Count) == "") ? "" : " ")}{string.Join(" ", args.Parameters.ToArray(), 0, args.Parameters.Count)}`");
-                    */
-                    Discordklp.KLPBotSendMessageLog((ulong)Config.Discord.CommandLogChannel, $"Player **{args.Player.Account.Name}** ✅Executed" +
-                        $" `{args.CommandPrefix}{args.CommandText}`");
-                }
-                else
-                {
-                    /*
-                    Discordklp.KLPBotSendMessageLog((ulong)Config.Discord.CommandLogChannel, $"Player **{args.Player.Account.Name}** ⛔Tried" +
-                        $" `/{command.Name}{((string.Join(" ", args.Parameters.ToArray(), 0, args.Parameters.Count) == "") ? "" : " ")}{string.Join(" ", args.Parameters.ToArray(), 0, args.Parameters.Count)}`");
-                    */
-                    Discordklp.KLPBotSendMessageLog((ulong)Config.Discord.CommandLogChannel, $"Player **{args.Player.Account.Name}** ⛔Tried" +
-                        $" `{args.CommandPrefix}{args.CommandText}`");
-                }
-            } else
-            {
+                if (Config.Main.Logging.CommandLog_Ignore.Contains(cmd.Name)) return;
 
-                if (command.CanRun(args.Player))
+                string IsNormal = Config.Main.Logging.CommandLog_Normal.Contains(cmd.Name) ? "☑️" : "⚠️NotNormal";
+                string TypePlayer = "";
+                string getPlayerName = args.Player.Name;
+                if (!player.RealPlayer)
                 {
-                    /*
-                    Discordklp.KLPBotSendMessageLog((ulong)Config.Discord.CommandLogChannel, $"Player **{args.Player.Account.Name}** ✅Executed" +
-                        $" `/{command.Name}{((string.Join(" ", args.Parameters.ToArray(), 0, args.Parameters.Count) == "") ? "" : " ")}{string.Join(" ", args.Parameters.ToArray(), 0, args.Parameters.Count)}`");
-                    */
-                    Discordklp.KLPBotSendMessageLog((ulong)Config.Discord.CommandLogChannel, $"(Not Logged In) Player **{args.Player.Name}** ✅Executed" +
-                        $" `{args.CommandPrefix}{args.CommandText}`");
-                }
-                else
+                    TypePlayer = "( Not in a Server )";
+                } else if (!player.IsLoggedIn)
                 {
-                    /*
-                    Discordklp.KLPBotSendMessageLog((ulong)Config.Discord.CommandLogChannel, $"Player **{args.Player.Account.Name}** ⛔Tried" +
-                        $" `/{command.Name}{((string.Join(" ", args.Parameters.ToArray(), 0, args.Parameters.Count) == "") ? "" : " ")}{string.Join(" ", args.Parameters.ToArray(), 0, args.Parameters.Count)}`");
-                    */
-                    Discordklp.KLPBotSendMessageLog((ulong)Config.Discord.CommandLogChannel, $"(Not Logged In) Player **{args.Player.Name}** ⛔Tried" +
-                        $" `{args.CommandPrefix}{args.CommandText}`");
+                    TypePlayer = "( Not Logged In )";
+                } else
+                {
+                    getPlayerName = player.Account.Name;
                 }
+
+                string getcmdtext = Config.Main.Logging.CommandLog_IgnoreARGS.Contains(cmd.Name) ? $"{cmdprefix}{cmdName} (args omitted)" : cmdprefix + cmdtext;
+                if (cmd.Name is "register" or "login" or "password") getcmdtext = $"{cmdprefix}{cmdName} (args omitted)";
+
+                Discordklp.KLPBotSendMessageLog((ulong)Config.Discord.CommandLogChannel,
+                    GetText($"{TypePlayer} Player **{getPlayerName}** {(cmd.CanRun(player) ? "✅Executed" : "⛔Tried")}|{IsNormal} `{getcmdtext}`"));
             }
             #endregion
         }
+
+        private void OnPlayerPostLogin(PlayerPostLoginEventArgs args)
+        {
+            #region code
+
+            if ((bool)Config.Main.AntiRaid.JoinMessage_OnlyToLoginUser)
+            {
+                TSPlayer.All.SendInfoMessage($"{args.Player.Name} has joined.");
+
+                Console.ResetColor();
+                Console.ForegroundColor = ConsoleColor.Yellow;
+                Console.Write($"{args.Player.Name} has joined.");
+                Console.ResetColor();
+            }
+
+            #endregion
+        }
+
 
         int NumberOfMutedPlayers = 0;
         public struct PlayerMessageThreshold
@@ -1402,64 +1499,66 @@ namespace MKLP
         {
             #region code
 
-            if (!(bool)Config.ChatMod.Using_Chat_AutoMod) return;
+            if (!(bool)Config.Main.ChatMod.Using_Chat_AutoMod) return;
 
             TSPlayer player = TShock.Players[args.Who];
 
-            foreach (string banned in Config.ChatMod.Ban_MessageContains)
+            foreach (string banned in Config.Main.ChatMod.Ban_MessageContains)
             {
                 if (args.Text.ToLower().Contains(banned.ToLower()))
                 {
-                    player.SendErrorMessage("You can not send that message!");
+                    player.SendErrorMessage(GetText("You can not send that message!"));
                     args.Handled = true;
                     return;
                 }
             }
-            if (args.Text.Length >= (int)Config.ChatMod.Maximum__MessageLength_NoSpace && !args.Text.Contains(" "))
+            if (args.Text.Length >= (int)Config.Main.ChatMod.Maximum__MessageLength_NoSpace && !args.Text.Contains(" "))
             {
-                player.SendErrorMessage("You can not send that message!");
+                player.SendErrorMessage(GetText("You can not send that message!"));
                 args.Handled = true;
                 return;
             }
 
-            if (args.Text.Length >= (int)Config.ChatMod.Maximum__MessageLength_WithSpace)
+            if (args.Text.Length >= (int)Config.Main.ChatMod.Maximum__MessageLength_WithSpace)
             {
-                player.SendErrorMessage("You can not send that message!");
+                player.SendErrorMessage(GetText("You can not send that message!"));
                 args.Handled = true;
                 return;
             }
 
-            if (args.Text.Length >= (int)Config.ChatMod.Maximum_Spammed_MessageLength_NoSpace && !args.Text.Contains(" "))
+            if (args.Text.Length >= (int)Config.Main.ChatMod.Maximum_Spammed_MessageLength_NoSpace && !args.Text.Contains(" "))
             {
                 if (player.ContainsData("MKLP_Chat_Spam_message1"))
                 {
-                    if ((DateTime.UtcNow - player.GetData<PlayerMessageThreshold>("MKLP_Chat_Spam_message1").Since).TotalMilliseconds < (int)Config.ChatMod.Millisecond_Threshold)
+                    if ((DateTime.UtcNow - player.GetData<PlayerMessageThreshold>("MKLP_Chat_Spam_message1").Since).TotalMilliseconds < (int)Config.Main.ChatMod.Millisecond_Threshold)
                     {
-                        if (player.GetData<PlayerMessageThreshold>("MKLP_Chat_Spam_message1").Threshold >= (int)Config.ChatMod.Threshold_Spammed_MessageLength_NoSpace)
+                        if (player.GetData<PlayerMessageThreshold>("MKLP_Chat_Spam_message1").Threshold >= (int)Config.Main.ChatMod.Threshold_Spammed_MessageLength_NoSpace)
                         {
                             SendWarning();
                             return;
                         }
 
                         player.SetData("MKLP_Chat_Spam_message1", new PlayerMessageThreshold(player.GetData<PlayerMessageThreshold>("MKLP_Chat_Spam_message1").Threshold + 1, DateTime.UtcNow));
-                        
-                    } else
+
+                    }
+                    else
                     {
                         player.SetData("MKLP_Chat_Spam_message1", new PlayerMessageThreshold(0, DateTime.UtcNow));
                     }
-                } else
+                }
+                else
                 {
                     player.SetData("MKLP_Chat_Spam_message1", new PlayerMessageThreshold(1, DateTime.UtcNow));
                 }
             }
 
-            if (args.Text.Length >= (int)Config.ChatMod.Maximum_Spammed_MessageLength_WithSpace)
+            if (args.Text.Length >= (int)Config.Main.ChatMod.Maximum_Spammed_MessageLength_WithSpace)
             {
                 if (player.ContainsData("MKLP_Chat_Spam_message2"))
                 {
-                    if ((DateTime.UtcNow - player.GetData<PlayerMessageThreshold>("MKLP_Chat_Spam_message2").Since).TotalMilliseconds < (int)Config.ChatMod.Millisecond_Threshold)
+                    if ((DateTime.UtcNow - player.GetData<PlayerMessageThreshold>("MKLP_Chat_Spam_message2").Since).TotalMilliseconds < (int)Config.Main.ChatMod.Millisecond_Threshold)
                     {
-                        if (player.GetData<PlayerMessageThreshold>("MKLP_Chat_Spam_message2").Threshold >= (int)Config.ChatMod.Threshold_Spammed_MessageLength_WithSpace)
+                        if (player.GetData<PlayerMessageThreshold>("MKLP_Chat_Spam_message2").Threshold >= (int)Config.Main.ChatMod.Threshold_Spammed_MessageLength_WithSpace)
                         {
                             SendWarning();
                             return;
@@ -1484,37 +1583,39 @@ namespace MKLP
                 if (player.ContainsData("MKLP_Chat_Warning_message"))
                 {
                     player.SetData("MKLP_Chat_Warning_message", player.GetData<int>("MKLP_Chat_Warning_message") + 1);
-                } else
+                }
+                else
                 {
                     player.SetData("MKLP_Chat_Warning_message", 1);
                 }
 
-                if (player.GetData<int>("MKLP_Chat_Warning_message") >= (int)Config.ChatMod.MutePlayer_AtWarning)
+                if (player.GetData<int>("MKLP_Chat_Warning_message") >= (int)Config.Main.ChatMod.MutePlayer_AtWarning)
                 {
-                    if ((bool)Config.ChatMod.PermanentDuration)
+                    if ((bool)Config.Main.ChatMod.PermanentDuration)
                     {
                         ManagePlayer.OnlineMute(false, player, "Spamming/Flooding Messages", "(Auto Chat Mod)", DateTime.MaxValue);
-                    } else
+                    }
+                    else
                     {
-                        ManagePlayer.OnlineMute(false, player, "Spamming/Flooding Messages", "(Auto Chat Mod)", DateTime.UtcNow.AddSeconds((int)Config.ChatMod.MuteDuration_Seconds));
+                        ManagePlayer.OnlineMute(false, player, "Spamming/Flooding Messages", "(Auto Chat Mod)", DateTime.UtcNow.AddSeconds((int)Config.Main.ChatMod.MuteDuration_Seconds));
                     }
                     NumberOfMutedPlayers++;
                     args.Handled = true;
 
-                    if ((bool)Config.ChatMod.EnableLockDown_When_MultipleMutes)
+                    if ((bool)Config.Main.ChatMod.EnableLockDown_When_MultipleMutes)
                     {
-                        if (NumberOfMutedPlayers >= (int)Config.ChatMod.NumberOFPlayersAutoMute_Lockdown)
+                        if (NumberOfMutedPlayers >= (int)Config.Main.ChatMod.NumberOFPlayersAutoMute_Lockdown)
                         {
-                            Discordklp.KLPBotSendMessageMainLog("Server On 🔒LockDown🔒 Due to Multiple Player Mutes🔇!");
+                            Discordklp.KLPBotSendMessageMainLog(GetText("Server On 🔒LockDown🔒 Due to Multiple Player Mutes🔇!"));
                             LockDown = true;
-                            LockDownReason = Config.ChatMod.AutoLockDown_Reason;
+                            LockDownReason = Config.Main.ChatMod.AutoLockDown_Reason;
                         }
                     }
 
                     return;
                 }
 
-                player.SendWarningMessage("Warning! please do not spam/flood the messages!");
+                player.SendWarningMessage(GetText("Warning! please do not spam/flood the messages!"));
                 args.Handled = true;
                 return;
             }
@@ -1574,16 +1675,17 @@ namespace MKLP
 
             if (args.Action == GetDataHandlers.EditAction.PlaceTile || args.Action == GetDataHandlers.EditAction.ReplaceTile)
             {
-                if (IllegalTileProgression.ContainsKey(new(Main.tile[tileX, tileY].type, args.Style)) && !args.Player.HasPermission(Config.Permissions.IgnoreSurvivalCode_3) && (bool)Config.Main.Using_Survival_Code3)
+                if (IllegalTileProgression.ContainsKey(new(Main.tile[tileX, tileY].type, args.Style)) && !SurvivalManager.MKLP_Tile.ObjectIDs[Main.tile[tileX, tileY].type] && !args.Player.HasPermission(Config.Permissions.IgnoreSurvivalCode_3) && (bool)Config.Main.DisableNode.Using_Survival_Code3)
                 {
                     if (PunishPlayer(MKLP_CodeType.Survival, 3, args.Player, $"{IllegalTileProgression[new(Main.tile[tileX, tileY].type, args.Style)]} Block Place", $"Player **{args.Player.Name}** has placed illegal tile progression `tile id: {Main.tile[tileX, tileY].type} style: {args.Style}` **{IllegalTileProgression[new(Main.tile[tileX, tileY].type, args.Style)]}**"))
                     {
                         args.Player.SendTileSquareCentered(tileX, tileY, 4);
                         args.Handled = true;
                         return;
+
                     }
                 }
-                if (IllegalTileProgression.ContainsKey(new(Main.tile[tileX, tileY].type, 0, true)) && !args.Player.HasPermission(Config.Permissions.IgnoreSurvivalCode_3) && (bool)Config.Main.Using_Survival_Code3)
+                if (IllegalTileProgression.ContainsKey(new(Main.tile[tileX, tileY].type, 0, true)) && !SurvivalManager.MKLP_Tile.ObjectIDs[Main.tile[tileX, tileY].type] && !args.Player.HasPermission(Config.Permissions.IgnoreSurvivalCode_3) && (bool)Config.Main.DisableNode.Using_Survival_Code3)
                 {
                     if (PunishPlayer(MKLP_CodeType.Survival, 3, args.Player, $"{IllegalTileProgression[new(Main.tile[tileX, tileY].type, 0, true)]} Block Place", $"Player **{args.Player.Name}** has placed illegal tile progression `tile id: {Main.tile[tileX, tileY].type} style: {args.Style}` **{IllegalTileProgression[new(Main.tile[tileX, tileY].type, 0, true)]}**"))
                     {
@@ -1598,7 +1700,7 @@ namespace MKLP
             {
                 if (IllegalWallProgression.ContainsKey(Main.tile[tileX, tileY].wall) &&
                     !args.Player.HasPermission(Config.Permissions.IgnoreSurvivalCode_4) &&
-                    (bool)Config.Main.Using_Survival_Code4)
+                    (bool)Config.Main.DisableNode.Using_Survival_Code4)
                 {
                     if (PunishPlayer(MKLP_CodeType.Survival, 4, args.Player, $"{IllegalWallProgression[Main.tile[tileX, tileY].wall]} Wall Place", $"Player **{args.Player.Name}** has placed illegal wall progression `wall id:{Main.tile[tileX, tileY].wall}` **{IllegalWallProgression[Main.tile[tileX, tileY].wall]}**"))
                     {
@@ -1619,16 +1721,16 @@ namespace MKLP
                         breakableTiles.Contains(Main.tile[tileX, tileY].type)) return;
 
 
-                    if (!args.Player.HasPermission(Config.Permissions.IgnoreAntiGrief_protectsurface_break) && (bool)Config.Main.Using_AntiGrief_Surface_Break)
+                    if (!args.Player.HasPermission(Config.Permissions.IgnoreAntiGrief_protectsurface_break) && (bool)Config.Main.AntiGrief.Using_AntiGrief_Surface_Break)
                     {
-                        args.Player.SendErrorMessage(Config.Main.Message_AntiGrief_Surface_Break);
+                        args.Player.SendErrorMessage(Config.Main.AntiGrief.Message_AntiGrief_Surface_Break);
                         args.Player.SendTileSquareCentered(tileX, tileY, 4);
                         args.Handled = true;
                         return;
                     }
                 }
 
-                
+
             }
 
             if (args.Action == GetDataHandlers.EditAction.PlaceTile ||
@@ -1638,9 +1740,9 @@ namespace MKLP
             {
                 if (tileY < (int)Main.worldSurface)
                 {
-                    if (!args.Player.HasPermission(Config.Permissions.IgnoreAntiGrief_protectsurface_place) && (bool)Config.Main.Using_AntiGrief_Surface_Place)
+                    if (!args.Player.HasPermission(Config.Permissions.IgnoreAntiGrief_protectsurface_place) && (bool)Config.Main.AntiGrief.Using_AntiGrief_Surface_Place)
                     {
-                        args.Player.SendErrorMessage(Config.Main.Message_AntiGrief_Surface_Place);
+                        args.Player.SendErrorMessage(Config.Main.AntiGrief.Message_AntiGrief_Surface_Place);
                         args.Player.SendTileSquareCentered(tileX, tileY, 4);
                         args.Handled = true;
                         return;
@@ -1686,9 +1788,9 @@ namespace MKLP
                     TileID.HallowedIce
                 };
 
-                if (infectionb.Contains(Main.tile[tileX, tileY].type) && !args.Player.HasPermission(Config.Permissions.IgnoreAntiGrief_infection) && (bool)Config.Main.Using_AntiGrief_Infection)
+                if (infectionb.Contains(Main.tile[tileX, tileY].type) && !args.Player.HasPermission(Config.Permissions.IgnoreAntiGrief_infection) && (bool)Config.Main.AntiGrief.Using_AntiGrief_Infection)
                 {
-                    args.Player.SendErrorMessage(Config.Main.Message_AntiGrief_Infection);
+                    args.Player.SendErrorMessage(Config.Main.AntiGrief.Message_AntiGrief_Infection);
                     args.Player.SendTileSquareCentered(tileX, tileY, 4);
                     args.Handled = true;
                     return;
@@ -1732,22 +1834,27 @@ namespace MKLP
                     args.Action == GetDataHandlers.EditAction.KillWire3 ||
                     args.Action == GetDataHandlers.EditAction.PlaceWire3 ||
                     args.Action == GetDataHandlers.EditAction.KillWire4 ||
-                    args.Action == GetDataHandlers.EditAction.PlaceWire4 ) &&
+                    args.Action == GetDataHandlers.EditAction.PlaceWire4) &&
                     tileY >= (int)Main.worldSurface &&
                     (bool)Config.Main.ReceivedWarning_WirePlaceUnderground
                     )
             {
                 Discordklp.KLPBotSendMessageMainLog($"Player **{args.Player.Name}** Used Wire/Actuator below surface `{tileX}, {tileY}`");
-                
+
+            }
+
+            if ((bool)Config.Main.Logging.LogTile)
+            {
+                TileLogS += $"<{DateTime.Now.ToString("s")}> {args.Player.Name} | {args.Action.ToString()}|x:{args.X}|y:{args.Y}\n";
             }
 
             #region ( Threshold )
             bool KillThreshold()
             {
-                if (!(bool)Config.Main.Using_Default_Code1) return false;
+                if (!(bool)Config.Main.DisableNode.Using_Default_Code1) return false;
                 if (args.Player.HasPermission(Config.Permissions.IgnoreDefaultCode_1)) return false;
 
-                int max = (int)Config.Main.default_code1_maxdefault;
+                int max = (int)Config.Main.DisableNode.default_code1_maxdefault;
 
                 int[] boost =
                 {
@@ -1762,7 +1869,7 @@ namespace MKLP
                 {
                     if (boost.Contains(check.netID))
                     {
-                        max = (int)Config.Main.default_code1_maxboost;
+                        max = (int)Config.Main.DisableNode.default_code1_maxboost;
                         break;
                     }
                 }
@@ -1778,7 +1885,7 @@ namespace MKLP
                 {
                     if (bomb.Contains(check.netID))
                     {
-                        max = (int)Config.Main.default_code1_maxbomb;
+                        max = (int)Config.Main.DisableNode.default_code1_maxbomb;
                         break;
                     }
                 }
@@ -1792,7 +1899,7 @@ namespace MKLP
                 {
                     if (dynamite.Contains(check.netID))
                     {
-                        max = (int)Config.Main.default_code1_maxdynamite;
+                        max = (int)Config.Main.DisableNode.default_code1_maxdynamite;
                         break;
                     }
                 }
@@ -1811,10 +1918,10 @@ namespace MKLP
 
             bool PlaceThreshold()
             {
-                if (!(bool)Config.Main.Using_Default_Code2) return false;
+                if (!(bool)Config.Main.DisableNode.Using_Default_Code2) return false;
                 if (args.Player.HasPermission(Config.Permissions.IgnoreDefaultCode_2)) return false;
 
-                int max = (int)Config.Main.default_code2_maxdefault;
+                int max = (int)Config.Main.DisableNode.default_code2_maxdefault;
 
 
                 int[] boost =
@@ -1828,7 +1935,7 @@ namespace MKLP
                 {
                     if (boost.Contains(check.netID))
                     {
-                        max = (int)Config.Main.default_code2_maxboost;
+                        max = (int)Config.Main.DisableNode.default_code2_maxboost;
                         break;
                     }
                 }
@@ -1842,7 +1949,7 @@ namespace MKLP
                 {
                     if (bomb.Contains(check.netID))
                     {
-                        max = (int)Config.Main.default_code2_maxbomb;
+                        max = (int)Config.Main.DisableNode.default_code2_maxbomb;
                         break;
                     }
                 }
@@ -1862,7 +1969,7 @@ namespace MKLP
             }
             #endregion
 
-            
+
 
             #endregion
         }
@@ -1908,7 +2015,7 @@ namespace MKLP
                 }
             }
 
-            if (IllegalTileProgression.ContainsKey(new(Main.tile[tileX, tileY].type, args.Style)) && !args.Player.HasPermission(Config.Permissions.IgnoreSurvivalCode_3) && (bool)Config.Main.Using_Survival_Code3)
+            if (IllegalTileProgression.ContainsKey(new(Main.tile[tileX, tileY].type, args.Style)) && !args.Player.HasPermission(Config.Permissions.IgnoreSurvivalCode_3) && (bool)Config.Main.DisableNode.Using_Survival_Code3)
             {
                 if (PunishPlayer(MKLP_CodeType.Survival, 3, args.Player, $"{IllegalTileProgression[new(Main.tile[tileX, tileY].type, 0, true)]} Block Place", $"Player **{args.Player.Name}** has placed illegal tile progression `tile id: {Main.tile[tileX, tileY].type} style: {args.Style}` **{IllegalTileProgression[new(Main.tile[tileX, tileY].type, 0, true)]}**"))
                 {
@@ -1917,7 +2024,7 @@ namespace MKLP
                     return;
                 }
             }
-            if (IllegalTileProgression.ContainsKey(new(Main.tile[tileX, tileY].type, 0, true)) && !args.Player.HasPermission(Config.Permissions.IgnoreSurvivalCode_3) && (bool)Config.Main.Using_Survival_Code3)
+            if (IllegalTileProgression.ContainsKey(new(Main.tile[tileX, tileY].type, 0, true)) && !args.Player.HasPermission(Config.Permissions.IgnoreSurvivalCode_3) && (bool)Config.Main.DisableNode.Using_Survival_Code3)
             {
                 if (PunishPlayer(MKLP_CodeType.Survival, 3, args.Player, $"{IllegalTileProgression[new(Main.tile[tileX, tileY].type, 0, true)]} Block Place", $"Player **{args.Player.Name}** has placed illegal tile progression `tile id: {Main.tile[tileX, tileY].type} style: {args.Style}` **{IllegalTileProgression[new(Main.tile[tileX, tileY].type, 0, true)]}**"))
                 {
@@ -1925,6 +2032,12 @@ namespace MKLP
                     args.Handled = true;
                     return;
                 }
+            }
+
+
+            if ((bool)Config.Main.Logging.LogTile)
+            {
+                TileLogS += $"<{DateTime.Now.ToString("s")}> {args.Player.Name} | PlaceObject|type:{args.Type}|style:{args.Style}|x:{args.X}|y:{args.Y}\n";
             }
 
             #region ( door near at bast statue )
@@ -1963,13 +2076,13 @@ namespace MKLP
             #endregion
 
             #region ( Threshold )
-            
+
             bool PlaceThreshold()
             {
-                if (!(bool)Config.Main.Using_Default_Code2) return false;
+                if (!(bool)Config.Main.DisableNode.Using_Default_Code2) return false;
                 if (args.Player.HasPermission(Config.Permissions.IgnoreDefaultCode_2)) return false;
 
-                int max = (int)Config.Main.default_code2_maxdefault;
+                int max = (int)Config.Main.DisableNode.default_code2_maxdefault;
 
 
                 int[] boost =
@@ -1983,7 +2096,7 @@ namespace MKLP
                 {
                     if (boost.Contains(check.netID))
                     {
-                        max = (int)Config.Main.default_code2_maxboost;
+                        max = (int)Config.Main.DisableNode.default_code2_maxboost;
                         break;
                     }
                 }
@@ -1997,7 +2110,7 @@ namespace MKLP
                 {
                     if (bomb.Contains(check.netID))
                     {
-                        max = (int)Config.Main.default_code2_maxbomb;
+                        max = (int)Config.Main.DisableNode.default_code2_maxbomb;
                         break;
                     }
                 }
@@ -2030,14 +2143,20 @@ namespace MKLP
 
             if (PaintThreshold()) return;
 
+
+            if ((bool)Config.Main.Logging.LogTile)
+            {
+                TileLogS += $"<{DateTime.Now.ToString("s")}> {args.Player.Name} | PaintTile|type:{args.type}|x:{args.X}|y:{args.Y}\n";
+            }
+
             #region ( Threshold )
 
             bool PaintThreshold()
             {
-                if (!(bool)Config.Main.Using_Default_Code3) return false;
+                if (!(bool)Config.Main.DisableNode.Using_Default_Code3) return false;
                 if (args.Player.HasPermission(Config.Permissions.IgnoreDefaultCode_3)) return false;
 
-                int max = (int)Config.Main.default_code3_maxdefault;
+                int max = (int)Config.Main.DisableNode.default_code3_maxdefault;
 
                 int[] boost =
                 {
@@ -2050,7 +2169,7 @@ namespace MKLP
                 {
                     if (boost.Contains(check.netID))
                     {
-                        max = (int)Config.Main.default_code3_maxboost;
+                        max = (int)Config.Main.DisableNode.default_code3_maxboost;
                         break;
                     }
                 }
@@ -2082,14 +2201,20 @@ namespace MKLP
 
             if (PaintThreshold()) return;
 
+
+            if ((bool)Config.Main.Logging.LogTile)
+            {
+                TileLogS += $"<{DateTime.Now.ToString("s")}> {args.Player.Name} | PaintWall|type:{args.type}|x:{args.X}|y:{args.Y}\n";
+            }
+
             #region ( Threshold )
 
             bool PaintThreshold()
             {
-                if (!(bool)Config.Main.Using_Default_Code3) return false;
+                if (!(bool)Config.Main.DisableNode.Using_Default_Code3) return false;
                 if (args.Player.HasPermission(Config.Permissions.IgnoreDefaultCode_3)) return false;
 
-                int max = (int)Config.Main.default_code3_maxdefault;
+                int max = (int)Config.Main.DisableNode.default_code3_maxdefault;
 
                 int[] boost =
                 {
@@ -2102,7 +2227,7 @@ namespace MKLP
                 {
                     if (boost.Contains(check.netID))
                     {
-                        max = (int)Config.Main.default_code3_maxboost;
+                        max = (int)Config.Main.DisableNode.default_code3_maxboost;
                         break;
                     }
                 }
@@ -2176,9 +2301,9 @@ namespace MKLP
             if (TileY < (int)Main.worldSurface && args.Type != GetDataHandlers.LiquidType.Removal)
             {
                 // Log liquid placed
-                if (!args.Player.HasPermission(Config.Permissions.IgnoreAntiGrief_protectsurface_placeliquid) && (bool)Config.Main.Using_AntiGrief_Surface_PlaceLiquid)
+                if (!args.Player.HasPermission(Config.Permissions.IgnoreAntiGrief_protectsurface_placeliquid) && (bool)Config.Main.AntiGrief.Using_AntiGrief_Surface_PlaceLiquid)
                 {
-                    args.Player.SendErrorMessage(Config.Main.Message_AntiGrief_Surface_PlaceLiquid);
+                    args.Player.SendErrorMessage(Config.Main.AntiGrief.Message_AntiGrief_Surface_PlaceLiquid);
                     args.Player.SendTileSquareCentered(TileX, TileY, 4);
                     args.Handled = true;
                     return;
@@ -2189,10 +2314,10 @@ namespace MKLP
 
             bool LiquidThreshold()
             {
-                if (!(bool)Config.Main.Using_Default_Code4) return false;
+                if (!(bool)Config.Main.DisableNode.Using_Default_Code4) return false;
                 if (args.Player.HasPermission(Config.Permissions.IgnoreDefaultCode_4)) return false;
 
-                int max = (int)Config.Main.default_code4_maxdefault;
+                int max = (int)Config.Main.DisableNode.default_code4_maxdefault;
 
                 int[] boost =
                 {
@@ -2205,7 +2330,7 @@ namespace MKLP
                 {
                     if (boost.Contains(check.netID))
                     {
-                        max = (int)Config.Main.default_code4_maxboost;
+                        max = (int)Config.Main.DisableNode.default_code4_maxboost;
                         break;
                     }
                 }
@@ -2220,7 +2345,7 @@ namespace MKLP
                 {
                     if (bomb.Contains(check.netID))
                     {
-                        max = (int)Config.Main.default_code4_maxbomb;
+                        max = (int)Config.Main.DisableNode.default_code4_maxbomb;
                         break;
                     }
                 }
@@ -2242,6 +2367,7 @@ namespace MKLP
             #endregion
         }
 
+        public static List<int> WhiteList_Projectile_Identity = new();
         private void OnNewProjectile(object sender, GetDataHandlers.NewProjectileEventArgs args)
         {
             #region code
@@ -2257,19 +2383,23 @@ namespace MKLP
                 //int index = args.Index;
                 //float[] ai = args.Ai;
 
+                if (WhiteList_Projectile_Identity.Contains(ident))
+                {
+                    WhiteList_Projectile_Identity.Remove(ident);
+                    return;
+                }
                 if (ProjectileThreshold()) return;
 
                 Dictionary<short, string> GetIllegalProj = SurvivalManager.GetIllegalProjectile();
 
-
                 if (args.Player.IsLoggedIn && IllegalProjectileProgression.ContainsKey(type) &&
                     !args.Player.HasPermission(Config.Permissions.IgnoreSurvivalCode_2) &&
-                    (bool)Config.Main.Using_Survival_Code2)
+                    (bool)Config.Main.DisableNode.Using_Survival_Code2)
                 {
                     if (PunishPlayer(MKLP_CodeType.Survival, 2, args.Player, $"{GetIllegalProj[type]} Projectile", $"Player **{args.Player.Name}** spawned illegal Projectile progression `itemheld: {args.Player.SelectedItem.netID} projectile: {Lang.GetProjectileName(type)}` **{GetIllegalProj[type]}**"))
                     {
                         args.Player.RemoveProjectile(ident, owner);
-                        args.Handled = true;
+                        argsHandled();
                         return;
                     }
                 }
@@ -2286,14 +2416,12 @@ namespace MKLP
                     ProjectileID.UnholyWater,
                     ProjectileID.HolyWater
                 };
-
                 if (InfectionProj.Contains(type))
                 {
-                    if (!args.Player.HasPermission(Config.Permissions.IgnoreAntiGrief_infection) && (bool)Config.Main.Using_AntiGrief_Infection)
+                    if (!args.Player.HasPermission(Config.Permissions.IgnoreAntiGrief_infection) && (bool)Config.Main.AntiGrief.Using_AntiGrief_Infection)
                     {
-                        args.Player.SendErrorMessage(Config.Main.Message_AntiGrief_Infection);
-                        args.Player.RemoveProjectile(ident, owner);
-                        args.Handled = true;
+                        args.Player.SendErrorMessage(Config.Main.AntiGrief.Message_AntiGrief_Infection);
+                        argsHandled();
                         return;
                     }
                 }
@@ -2312,11 +2440,10 @@ namespace MKLP
 
                 if (SprayProj.Contains(type))
                 {
-                    if (!args.Player.HasPermission(Config.Permissions.IgnoreAntiGrief_spray) && (bool)Config.Main.Using_AntiGrief_Spray)
+                    if (!args.Player.HasPermission(Config.Permissions.IgnoreAntiGrief_spray) && (bool)Config.Main.AntiGrief.Using_AntiGrief_Spray)
                     {
-                        args.Player.SendErrorMessage(Config.Main.Message_AntiGrief_Spray);
-                        args.Player.RemoveProjectile(ident, owner);
-                        args.Handled = true;
+                        args.Player.SendErrorMessage(Config.Main.AntiGrief.Message_AntiGrief_Spray);
+                        argsHandled();
                         return;
                     }
                 }
@@ -2374,42 +2501,65 @@ namespace MKLP
 
                     if (!explosives.Contains(type)) return;
 
-                    if (!args.Player.HasPermission(Config.Permissions.IgnoreAntiGrief_protectsurface_explosive) && (bool)Config.Main.Using_AntiGrief_Surface_Explosive)
+                    if (!args.Player.HasPermission(Config.Permissions.IgnoreAntiGrief_protectsurface_explosive) && (bool)Config.Main.AntiGrief.Using_AntiGrief_Surface_Explosive)
                     {
-                        args.Player.SendErrorMessage(Config.Main.Message_AntiGrief_Surface_Explosive);
-                        args.Player.RemoveProjectile(ident, owner);
-                        args.Handled = true;
+                        args.Player.SendErrorMessage(Config.Main.AntiGrief.Message_AntiGrief_Surface_Explosive);
+                        argsHandled();
                         return;
                     }
                 }
 
+                if (!(bool)Config.Main.Allow_Players_MultipleFishingBobber && Main.projectile[ident].bobber)
+                {
+                    foreach (var get in Main.projectile)
+                    {
+                        if (get.identity == ident) continue;
+                        if (get.owner != owner) continue;
+                        if (get.bobber)
+                        {
+                            argsHandled();
+                            return;
+                        }
+                    }
+                }
 
                 bool ProjectileThreshold()
                 {
-                    if (!(bool)Config.Main.Using_Default_Code5) return false;
+                    if (!(bool)Config.Main.DisableNode.Using_Default_Code5) return false;
                     if (args.Player.HasPermission(Config.Permissions.IgnoreDefaultCode_5)) return false;
 
-                    int max = (int)Config.Main.default_code5_maxdefault;
+                    int max = (int)Config.Main.DisableNode.default_code5_maxdefault;
 
-                    if (Main.hardMode) max = (int)Config.Main.default_code5_maxHM;
+                    if (Main.hardMode) max = (int)Config.Main.DisableNode.default_code5_maxHM;
 
                     if (args.Player.ProjectileThreshold >= max)
                     {
                         if (PunishPlayer(MKLP_CodeType.Default, 5, args.Player, $"Spawning too many projectiles at onces!", $"Player **{args.Player.Name}** Spawned to many projectile at onces! `itemheld: {args.Player.SelectedItem.netID} projectile id: {type}` `Threshold: {max}`"))
                         {
-                            args.Player.RemoveProjectile(ident, owner);
-                            args.Handled = true;
+                            argsHandled();
                             return true;
                         }
                     }
 
                     return false;
                 }
-            } catch (OutOfMemoryException e)
+
+                void argsHandled()
+                {
+
+                    args.Player.RemoveProjectile(ident, owner);
+                    Main.projectile[ident].active = false;
+                    TSPlayer.All.SendData(PacketTypes.ProjectileNew, "", ident);
+                    //TSPlayer.All.SendData(PacketTypes.ProjectileDestroy, "", ident, owner);
+                    args.Handled = true;
+                }
+            }
+            catch (OutOfMemoryException e)
             {
                 MKLP_Console.SendLog_Exception(e);
+                args.Handled = true;
             }
-            
+
             #endregion
         }
 
@@ -2420,12 +2570,12 @@ namespace MKLP
 
             bool HealOtherThreshold()
             {
-                if (!(bool)Config.Main.Using_Default_Code6) return false;
+                if (!(bool)Config.Main.DisableNode.Using_Default_Code6) return false;
                 if (args.Player.HasPermission(Config.Permissions.IgnoreDefaultCode_6)) return false;
 
-                int max = (int)Config.Main.default_code6_maxdefault;
+                int max = (int)Config.Main.DisableNode.default_code6_maxdefault;
 
-                if (NPC.downedPlantBoss) max = (int)Config.Main.default_code6_maxPlant;
+                if (NPC.downedPlantBoss) max = (int)Config.Main.DisableNode.default_code6_maxPlant;
 
                 foreach (TSPlayer player in TShock.Players)
                 {
@@ -2441,7 +2591,7 @@ namespace MKLP
                     }
                     if (head && chestplate && leggings)
                     {
-                        max += (int)Config.Main.default_code6_addmax_spectrehood;
+                        max += (int)Config.Main.DisableNode.default_code6_addmax_spectrehood;
                     }
                 }
 
@@ -2463,12 +2613,34 @@ namespace MKLP
         {
             #region code
 
-            if (!Main.npc[args.NpcId].boss) return;
+            int[] BossIDs =
+            {
+                50, // King Slime
+			    4, // Eye of Cthulu			
+			    222, // Queen Bee
+			    13, // Eater of Worlds	
+			    266, // Brain of Cthulu
+			    35, // Skeletron
+			    668, // Deerclops
+			    113, // Wall of Flesh
+			    657, // Queen Slime
+			    125, // Retinazer
+			    127, // Skeletron Prime	
+			    134, // The Destroyer
+			    262, // Plantera
+			    245, // Golem
+			    636, // Empress Of Light
+			    370, // Duke Fishron
+			    439, // Lunatic Cultist
+			    396 // Moon Lord
+		    };
+
+            if (!BossIDs.Contains(Main.npc[args.NpcId].type)) return;
 
             for (int i = 0; i < Main.maxNPCs; i++)
             {
                 NPC npc = Main.npc[i];
-                
+
                 if ((bool)Config.BossManager.PreventIllegalBoss)
                 {
                     if (!Main.hardMode && (
@@ -2502,13 +2674,13 @@ namespace MKLP
                     if (!(bool)Config.BossManager.AllowKingSlime)
                     {
                         DespawnNPC();
-                        TShock.Utils.Broadcast("King Slime isn't allowed yet!", Color.MediumPurple);
+                        TShock.Utils.Broadcast(GetText("King Slime isn't allowed yet!"), Color.MediumPurple);
                     }
                     if (TShock.Utils.GetActivePlayerCount() < (int)Config.BossManager.KingSlime_RequiredPlayersforBoss)
                     {
                         DespawnNPC();
-                        TShock.Utils.Broadcast("There aren't enough players to fight King Slime!" +
-                            $"\nPlayers Needed: {(int)Config.BossManager.KingSlime_RequiredPlayersforBoss}", Color.MediumPurple);
+                        TShock.Utils.Broadcast(GetText("There aren't enough players to fight King Slime!") +
+                            GetText($"\nPlayers Needed: {(int)Config.BossManager.KingSlime_RequiredPlayersforBoss}"), Color.MediumPurple);
                     }
                 }
 
@@ -2517,28 +2689,28 @@ namespace MKLP
                     if (!(bool)Config.BossManager.AllowEyeOfCthulhu)
                     {
                         DespawnNPC();
-                        TShock.Utils.Broadcast("Eye of Cthulhu isn't allowed yet!", Color.MediumPurple);
+                        TShock.Utils.Broadcast(GetText("Eye of Cthulhu isn't allowed yet!"), Color.MediumPurple);
                     }
                     if (TShock.Utils.GetActivePlayerCount() < (int)Config.BossManager.EyeOfCthulhu_RequiredPlayersforBoss)
                     {
                         DespawnNPC();
-                        TShock.Utils.Broadcast("There aren't enough players to fight Eye of Cthulhu!" +
-                            $"\nPlayers Needed: {(int)Config.BossManager.EyeOfCthulhu_RequiredPlayersforBoss}", Color.MediumPurple);
+                        TShock.Utils.Broadcast(GetText("There aren't enough players to fight Eye of Cthulhu!") +
+                            GetText($"\nPlayers Needed: {(int)Config.BossManager.EyeOfCthulhu_RequiredPlayersforBoss}"), Color.MediumPurple);
                     }
                 }
 
-                if (!NPC.downedBoss2 && npc.type == NPCID.EaterofWorldsHead) // Eater of Worlds
+                if (!NPC.downedBoss2 && (npc.type is NPCID.EaterofWorldsHead or NPCID.EaterofWorldsBody or NPCID.EaterofWorldsTail)) // Eater of Worlds
                 {
                     if (!(bool)Config.BossManager.AllowEaterOfWorlds)
                     {
                         DespawnNPC();
-                        TShock.Utils.Broadcast("Eater of Worlds isn't allowed yet!", Color.MediumPurple);
+                        TShock.Utils.Broadcast(GetText("Eater of Worlds isn't allowed yet!"), Color.MediumPurple);
                     }
                     if (TShock.Utils.GetActivePlayerCount() < (int)Config.BossManager.EaterOfWorlds_RequiredPlayersforBoss)
                     {
                         DespawnNPC();
-                        TShock.Utils.Broadcast("There aren't enough players to fight Eater of Worlds!" +
-                            $"\nPlayers Needed: {(int)Config.BossManager.EaterOfWorlds_RequiredPlayersforBoss}", Color.MediumPurple);
+                        TShock.Utils.Broadcast(GetText("There aren't enough players to fight Eater of Worlds!") +
+                            GetText($"\nPlayers Needed: {(int)Config.BossManager.EaterOfWorlds_RequiredPlayersforBoss}"), Color.MediumPurple);
                     }
                 }
 
@@ -2547,13 +2719,13 @@ namespace MKLP
                     if (!(bool)Config.BossManager.AllowBrainOfCthulhu)
                     {
                         DespawnNPC();
-                        TShock.Utils.Broadcast("Brain of Cthulhu isn't allowed yet!", Color.MediumPurple);
+                        TShock.Utils.Broadcast(GetText("Brain of Cthulhu isn't allowed yet!"), Color.MediumPurple);
                     }
                     if (TShock.Utils.GetActivePlayerCount() < (int)Config.BossManager.BrainOfCthulhu_RequiredPlayersforBoss)
                     {
                         DespawnNPC();
-                        TShock.Utils.Broadcast("There aren't enough players to fight Brain of Cthulhu!" +
-                            $"\nPlayers Needed: {(int)Config.BossManager.BrainOfCthulhu_RequiredPlayersforBoss}", Color.MediumPurple);
+                        TShock.Utils.Broadcast(GetText("There aren't enough players to fight Brain of Cthulhu!") +
+                            GetText($"\nPlayers Needed: {(int)Config.BossManager.BrainOfCthulhu_RequiredPlayersforBoss}"), Color.MediumPurple);
                     }
                 }
 
@@ -2562,13 +2734,13 @@ namespace MKLP
                     if (!(bool)Config.BossManager.AllowQueenBee)
                     {
                         DespawnNPC();
-                        TShock.Utils.Broadcast("Queen Bee isn't allowed yet!", Color.MediumPurple);
+                        TShock.Utils.Broadcast(GetText("Queen Bee isn't allowed yet!"), Color.MediumPurple);
                     }
                     if (TShock.Utils.GetActivePlayerCount() < (int)Config.BossManager.QueenBee_RequiredPlayersforBoss)
                     {
                         DespawnNPC();
-                        TShock.Utils.Broadcast("There aren't enough players to fight Queen Bee!" +
-                            $"\nPlayers Needed: {(int)Config.BossManager.QueenBee_RequiredPlayersforBoss}", Color.MediumPurple);
+                        TShock.Utils.Broadcast(GetText("There aren't enough players to fight Queen Bee!") +
+                            GetText($"\nPlayers Needed: {(int)Config.BossManager.QueenBee_RequiredPlayersforBoss}"), Color.MediumPurple);
                     }
                 }
 
@@ -2577,13 +2749,13 @@ namespace MKLP
                     if (!(bool)Config.BossManager.AllowSkeletron)
                     {
                         DespawnNPC();
-                        TShock.Utils.Broadcast("Skeletron isn't allowed yet!", Color.MediumPurple);
+                        TShock.Utils.Broadcast(GetText("Skeletron isn't allowed yet!"), Color.MediumPurple);
                     }
                     if (TShock.Utils.GetActivePlayerCount() < (int)Config.BossManager.Skeletron_RequiredPlayersforBoss)
                     {
                         DespawnNPC();
-                        TShock.Utils.Broadcast("There aren't enough players to fight Skeletron!" +
-                            $"\nPlayers Needed: {(int)Config.BossManager.Skeletron_RequiredPlayersforBoss}", Color.MediumPurple);
+                        TShock.Utils.Broadcast(GetText("There aren't enough players to fight Skeletron!") +
+                            GetText($"\nPlayers Needed: {(int)Config.BossManager.Skeletron_RequiredPlayersforBoss}"), Color.MediumPurple);
                     }
                 }
 
@@ -2592,13 +2764,13 @@ namespace MKLP
                     if (!(bool)Config.BossManager.AllowDeerclops)
                     {
                         DespawnNPC();
-                        TShock.Utils.Broadcast("Deerclops isn't allowed yet!", Color.MediumPurple);
+                        TShock.Utils.Broadcast(GetText("Deerclops isn't allowed yet!"), Color.MediumPurple);
                     }
                     if (TShock.Utils.GetActivePlayerCount() < (int)Config.BossManager.Deerclops_RequiredPlayersforBoss)
                     {
                         DespawnNPC();
-                        TShock.Utils.Broadcast("There aren't enough players to fight Deerclops!" +
-                            $"\nPlayers Needed: {(int)Config.BossManager.Deerclops_RequiredPlayersforBoss}", Color.MediumPurple);
+                        TShock.Utils.Broadcast(GetText("There aren't enough players to fight Deerclops!") +
+                            GetText($"\nPlayers Needed: {(int)Config.BossManager.Deerclops_RequiredPlayersforBoss}"), Color.MediumPurple);
                     }
                 }
 
@@ -2607,13 +2779,13 @@ namespace MKLP
                     if (!(bool)Config.BossManager.AllowWallOfFlesh)
                     {
                         DespawnNPC();
-                        TShock.Utils.Broadcast("Wall of Flesh isn't allowed yet!", Color.MediumPurple);
+                        TShock.Utils.Broadcast(GetText("Wall of Flesh isn't allowed yet!"), Color.MediumPurple);
                     }
                     if (TShock.Utils.GetActivePlayerCount() < (int)Config.BossManager.WallOfFlesh_RequiredPlayersforBoss)
                     {
                         DespawnNPC();
-                        TShock.Utils.Broadcast("There aren't enough players to fight Wall of Flesh!" +
-                            $"\nPlayers Needed: {(int)Config.BossManager.WallOfFlesh_RequiredPlayersforBoss}", Color.MediumPurple);
+                        TShock.Utils.Broadcast(GetText("There aren't enough players to fight Wall of Flesh!") +
+                            GetText($"\nPlayers Needed: {(int)Config.BossManager.WallOfFlesh_RequiredPlayersforBoss}"), Color.MediumPurple);
                     }
                 }
 
@@ -2622,13 +2794,13 @@ namespace MKLP
                     if (!(bool)Config.BossManager.AllowQueenSlime)
                     {
                         DespawnNPC();
-                        TShock.Utils.Broadcast("Queen Slime isn't allowed yet!", Color.MediumPurple);
+                        TShock.Utils.Broadcast(GetText("Queen Slime isn't allowed yet!"), Color.MediumPurple);
                     }
                     if (TShock.Utils.GetActivePlayerCount() < (int)Config.BossManager.QueenSlime_RequiredPlayersforBoss)
                     {
                         DespawnNPC();
-                        TShock.Utils.Broadcast("There aren't enough players to fight Queen Slime!" +
-                            $"\nPlayers Needed: {(int)Config.BossManager.QueenSlime_RequiredPlayersforBoss}", Color.MediumPurple);
+                        TShock.Utils.Broadcast(GetText("There aren't enough players to fight Queen Slime!") +
+                            GetText($"\nPlayers Needed: {(int)Config.BossManager.QueenSlime_RequiredPlayersforBoss}"), Color.MediumPurple);
                     }
                 }
 
@@ -2636,36 +2808,38 @@ namespace MKLP
                 {
                     if ((!NPC.downedMechBoss1 && !NPC.downedMechBoss2 && !NPC.downedMechBoss1) &&
                         (npc.type == NPCID.Retinazer || npc.type == NPCID.Spazmatism || (npc.type == NPCID.TheDestroyer || npc.type == NPCID.TheDestroyerBody || npc.type == NPCID.TheDestroyerTail) || npc.type == NPCID.SkeletronPrime)
-                        )
+                         && NPC_Is_Active(new int[] { NPCID.Retinazer, NPCID.Spazmatism, NPCID.TheDestroyer, NPCID.TheDestroyerBody, NPCID.TheDestroyerTail, NPCID.SkeletronPrime })
+                         )
                     {
                         if (!(bool)Config.BossManager.AllowMechdusa)
                         {
                             await Task.Delay(700);
                             DespawnNPC();
-                            TShock.Utils.Broadcast("Mechdusa isn't allowed yet!", Color.MediumPurple);
+                            TShock.Utils.Broadcast(GetText("Mechdusa isn't allowed yet!"), Color.MediumPurple);
                         }
                         if (TShock.Utils.GetActivePlayerCount() < (int)Config.BossManager.Mechdusa_RequiredPlayersforBoss)
                         {
                             await Task.Delay(700);
                             DespawnNPC();
-                            TShock.Utils.Broadcast("There aren't enough players to fight Mechdusa!" +
-                            $"\nPlayers Needed: {(int)Config.BossManager.Mechdusa_RequiredPlayersforBoss}", Color.MediumPurple);
+                            TShock.Utils.Broadcast(GetText("There aren't enough players to fight Mechdusa!") +
+                            GetText($"\nPlayers Needed: {(int)Config.BossManager.Mechdusa_RequiredPlayersforBoss}"), Color.MediumPurple);
                         }
                     }
-                } else
+                }
+                else
                 {
                     if (!NPC.downedMechBoss2 && (npc.type == NPCID.Retinazer || npc.type == NPCID.Spazmatism)) // The Twins
                     {
                         if (!(bool)Config.BossManager.AllowTheTwins)
                         {
                             DespawnNPC();
-                            TShock.Utils.Broadcast("The Twins isn't allowed yet!", Color.MediumPurple);
+                            TShock.Utils.Broadcast(GetText("The Twins isn't allowed yet!"), Color.MediumPurple);
                         }
                         if (TShock.Utils.GetActivePlayerCount() < (int)Config.BossManager.TheTwins_RequiredPlayersforBoss)
                         {
                             DespawnNPC();
-                            TShock.Utils.Broadcast("There aren't enough players to fight The Twins!" +
-                            $"\nPlayers Needed: {(int)Config.BossManager.TheTwins_RequiredPlayersforBoss}", Color.MediumPurple);
+                            TShock.Utils.Broadcast(GetText("There aren't enough players to fight The Twins!") +
+                            GetText($"\nPlayers Needed: {(int)Config.BossManager.TheTwins_RequiredPlayersforBoss}"), Color.MediumPurple);
                         }
                     }
 
@@ -2674,13 +2848,13 @@ namespace MKLP
                         if (!(bool)Config.BossManager.AllowTheDestroyer)
                         {
                             DespawnNPC();
-                            TShock.Utils.Broadcast("The Destroyer isn't allowed yet!", Color.MediumPurple);
+                            TShock.Utils.Broadcast(GetText("The Destroyer isn't allowed yet!"), Color.MediumPurple);
                         }
                         if (TShock.Utils.GetActivePlayerCount() < (int)Config.BossManager.TheDestroyer_RequiredPlayersforBoss)
                         {
                             DespawnNPC();
-                            TShock.Utils.Broadcast("There aren't enough players to fight The Destroyer!" +
-                            $"\nPlayers Needed: {(int)Config.BossManager.TheDestroyer_RequiredPlayersforBoss}", Color.MediumPurple);
+                            TShock.Utils.Broadcast(GetText("There aren't enough players to fight The Destroyer!") +
+                            GetText($"\nPlayers Needed: {(int)Config.BossManager.TheDestroyer_RequiredPlayersforBoss}"), Color.MediumPurple);
                         }
                     }
 
@@ -2689,31 +2863,31 @@ namespace MKLP
                         if (!(bool)Config.BossManager.AllowSkeletronPrime)
                         {
                             DespawnNPC();
-                            TShock.Utils.Broadcast("Skeletron Prime isn't allowed yet!", Color.MediumPurple);
+                            TShock.Utils.Broadcast(GetText("Skeletron Prime isn't allowed yet!"), Color.MediumPurple);
                         }
                         if (TShock.Utils.GetActivePlayerCount() < (int)Config.BossManager.SkeletronPrime_RequiredPlayersforBoss)
                         {
                             DespawnNPC();
-                            TShock.Utils.Broadcast("There aren't enough players to fight Skeletron Prime!" +
-                            $"\nPlayers Needed: {(int)Config.BossManager.SkeletronPrime_RequiredPlayersforBoss}", Color.MediumPurple);
+                            TShock.Utils.Broadcast(GetText("There aren't enough players to fight Skeletron Prime!") +
+                            GetText($"\nPlayers Needed: {(int)Config.BossManager.SkeletronPrime_RequiredPlayersforBoss}"), Color.MediumPurple);
                         }
                     }
                 }
 
-                
+
 
                 if (!NPC.downedPlantBoss && npc.type == NPCID.Plantera) // Plantera
                 {
                     if (!(bool)Config.BossManager.AllowPlantera)
                     {
                         DespawnNPC();
-                        TShock.Utils.Broadcast("Plantera isn't allowed yet!", Color.MediumPurple);
+                        TShock.Utils.Broadcast(GetText("Plantera isn't allowed yet!"), Color.MediumPurple);
                     }
                     if (TShock.Utils.GetActivePlayerCount() < (int)Config.BossManager.Plantera_RequiredPlayersforBoss)
                     {
                         DespawnNPC();
-                        TShock.Utils.Broadcast("There aren't enough players to fight Plantera!" +
-                            $"\nPlayers Needed: {(int)Config.BossManager.Plantera_RequiredPlayersforBoss}", Color.MediumPurple);
+                        TShock.Utils.Broadcast(GetText("There aren't enough players to fight Plantera!") +
+                            GetText($"\nPlayers Needed: {(int)Config.BossManager.Plantera_RequiredPlayersforBoss}"), Color.MediumPurple);
                     }
                 }
 
@@ -2722,13 +2896,13 @@ namespace MKLP
                     if (!(bool)Config.BossManager.AllowGolem)
                     {
                         DespawnNPC();
-                        TShock.Utils.Broadcast("Golem isn't allowed yet!", Color.MediumPurple);
+                        TShock.Utils.Broadcast(GetText("Golem isn't allowed yet!"), Color.MediumPurple);
                     }
                     if (TShock.Utils.GetActivePlayerCount() < (int)Config.BossManager.Golem_RequiredPlayersforBoss)
                     {
                         DespawnNPC();
-                        TShock.Utils.Broadcast("There aren't enough players to fight Golem!" +
-                            $"\nPlayers Needed: {(int)Config.BossManager.Golem_RequiredPlayersforBoss}", Color.MediumPurple);
+                        TShock.Utils.Broadcast(GetText("There aren't enough players to fight Golem!") +
+                            GetText($"\nPlayers Needed: {(int)Config.BossManager.Golem_RequiredPlayersforBoss}"), Color.MediumPurple);
                     }
                 }
 
@@ -2737,13 +2911,13 @@ namespace MKLP
                     if (!(bool)Config.BossManager.AllowDukeFishron)
                     {
                         DespawnNPC();
-                        TShock.Utils.Broadcast("Duke Fishron isn't allowed yet!", Color.MediumPurple);
+                        TShock.Utils.Broadcast(GetText("Duke Fishron isn't allowed yet!"), Color.MediumPurple);
                     }
                     if (TShock.Utils.GetActivePlayerCount() < (int)Config.BossManager.DukeFishron_RequiredPlayersforBoss)
                     {
                         DespawnNPC();
-                        TShock.Utils.Broadcast("There aren't enough players to fight Duke Fishron!" +
-                            $"\nPlayers Needed: {(int)Config.BossManager.DukeFishron_RequiredPlayersforBoss}", Color.MediumPurple);
+                        TShock.Utils.Broadcast(GetText("There aren't enough players to fight Duke Fishron!") +
+                            GetText($"\nPlayers Needed: {(int)Config.BossManager.DukeFishron_RequiredPlayersforBoss}"), Color.MediumPurple);
                     }
                 }
 
@@ -2752,13 +2926,13 @@ namespace MKLP
                     if (!(bool)Config.BossManager.AllowEmpressOfLight)
                     {
                         DespawnNPC();
-                        TShock.Utils.Broadcast("Empress of Light isn't allowed yet!", Color.MediumPurple);
+                        TShock.Utils.Broadcast(GetText("Empress of Light isn't allowed yet!"), Color.MediumPurple);
                     }
                     if (TShock.Utils.GetActivePlayerCount() < (int)Config.BossManager.EmpressOfLight_RequiredPlayersforBoss)
                     {
                         DespawnNPC();
-                        TShock.Utils.Broadcast("There aren't enough players to fight Empress of Light!" +
-                            $"\nPlayers Needed: {(int)Config.BossManager.EmpressOfLight_RequiredPlayersforBoss}", Color.MediumPurple);
+                        TShock.Utils.Broadcast(GetText("There aren't enough players to fight Empress of Light!") +
+                            GetText($"\nPlayers Needed: {(int)Config.BossManager.EmpressOfLight_RequiredPlayersforBoss}"), Color.MediumPurple);
                     }
                 }
 
@@ -2767,13 +2941,13 @@ namespace MKLP
                     if (!(bool)Config.BossManager.AllowLunaticCultist)
                     {
                         DespawnNPC();
-                        TShock.Utils.Broadcast("Lunatic Cultist isn't allowed yet!", Color.MediumPurple);
+                        TShock.Utils.Broadcast(GetText("Lunatic Cultist isn't allowed yet!"), Color.MediumPurple);
                     }
                     if (TShock.Utils.GetActivePlayerCount() < (int)Config.BossManager.LunaticCultist_RequiredPlayersforBoss)
                     {
                         DespawnNPC();
-                        TShock.Utils.Broadcast("There aren't enough players to fight Lunatic Cultist!" +
-                            $"\nPlayers Needed: {(int)Config.BossManager.LunaticCultist_RequiredPlayersforBoss}", Color.MediumPurple);
+                        TShock.Utils.Broadcast(GetText("There aren't enough players to fight Lunatic Cultist!") +
+                            GetText($"\nPlayers Needed: {(int)Config.BossManager.LunaticCultist_RequiredPlayersforBoss}"), Color.MediumPurple);
                     }
                 }
 
@@ -2782,13 +2956,13 @@ namespace MKLP
                     if (!(bool)Config.BossManager.AllowMoonLord)
                     {
                         DespawnNPC();
-                        TShock.Utils.Broadcast("Moon Lord isn't allowed yet!", Color.MediumPurple);
+                        TShock.Utils.Broadcast(GetText("Moon Lord isn't allowed yet!"), Color.MediumPurple);
                     }
                     if (TShock.Utils.GetActivePlayerCount() < (int)Config.BossManager.MoonLord_RequiredPlayersforBoss)
                     {
                         DespawnNPC();
-                        TShock.Utils.Broadcast("There aren't enough players to fight Moon Lord!" +
-                            $"\nPlayers Needed: {(int)Config.BossManager.MoonLord_RequiredPlayersforBoss}", Color.MediumPurple);
+                        TShock.Utils.Broadcast(GetText("There aren't enough players to fight Moon Lord!") +
+                            GetText($"\nPlayers Needed: {(int)Config.BossManager.MoonLord_RequiredPlayersforBoss}"), Color.MediumPurple);
                     }
                 }
 
@@ -2799,8 +2973,53 @@ namespace MKLP
                     Main.npc[i].type = 0;
                     TSPlayer.All.SendData(PacketTypes.NpcUpdate, "", i);
                 }
+
+                bool DespawnNPCs(int[] npcIDs)
+                {
+                    List<int> result = new();
+                    foreach (int get in npcIDs)
+                    {
+                        result.Add(get);
+                    }
+
+                    foreach (var gnpc in Main.npc)
+                    {
+                        if (gnpc == null) continue;
+                        if (!gnpc.active) continue;
+                        if (result.Contains(gnpc.netID))
+                        {
+                            result.Remove(gnpc.netID);
+                            Main.npc[gnpc.whoAmI].active = false;
+                            Main.npc[gnpc.whoAmI].type = 0;
+                            TSPlayer.All.SendData(PacketTypes.NpcUpdate, "", gnpc.whoAmI);
+                        }
+                    }
+
+                    return result.Count <= 0;
+                }
+
+                bool NPC_Is_Active(int[] npcIDs)
+                {
+                    List<int> result = new();
+                    foreach (int get in npcIDs)
+                    {
+                        result.Add(get);
+                    }
+
+                    foreach (var gnpc in Main.npc)
+                    {
+                        if (gnpc == null) continue;
+                        if (!gnpc.active) continue;
+                        if (result.Contains(gnpc.netID))
+                        {
+                            result.Remove(gnpc.netID);
+                        }
+                    }
+
+                    return result.Count <= 0;
+                }
             }
-            
+
             #endregion
         }
 
@@ -2809,7 +3028,6 @@ namespace MKLP
         {
             #region code
             OnCheckIllegal = true;
-            /*
             int[] BossIDs =
             {
                 50, // King Slime
@@ -2831,9 +3049,9 @@ namespace MKLP
 			    439, // Lunatic Cultist
 			    396 // Moon Lord
 		    };
-            */
 
-            if (args.npc.boss)
+            //if (args.npc.boss)
+            if (!BossIDs.Contains(args.npc.type))
             {
                 IllegalItemProgression = SurvivalManager.GetIllegalItem();
 
@@ -2871,369 +3089,10 @@ namespace MKLP
                 npcid = getnpc.type;
             }
 
-            
-            if (npcid == -16)
-            {
-                if (!(bool)Config.BossManager.AllowMechdusa)
-                {
-                    TShock.Utils.Broadcast("Mechdusa isn't allowed yet!", Color.MediumPurple);
-                    return false;
-                }
-                if (TShock.Utils.GetActivePlayerCount() < (int)Config.BossManager.Mechdusa_RequiredPlayersforBoss)
-                {
-                    TShock.Utils.Broadcast("There aren't enough players to fight Mechdusa!" +
-                    $"\nPlayers Needed: {(int)Config.BossManager.Mechdusa_RequiredPlayersforBoss}", Color.MediumPurple);
-                    return false;
-                }
-            }
-            if (npcid == -8)
-            {
-                if (!(bool)Config.BossManager.AllowMoonLord)
-                {
-                    TShock.Utils.Broadcast("Moon Lord isn't allowed yet!", Color.MediumPurple);
-                    return false;
-                }
-                if (TShock.Utils.GetActivePlayerCount() < (int)Config.BossManager.MoonLord_RequiredPlayersforBoss)
-                {
-                    TShock.Utils.Broadcast("There aren't enough players to fight Moon Lord!" +
-                        $"\nPlayers Needed: {(int)Config.BossManager.MoonLord_RequiredPlayersforBoss}", Color.MediumPurple);
-                    return false;
-                }
-            }
-            #region bossmanager
-            
-            if ((bool)Config.BossManager.PreventIllegalBoss)
-            {
-                if (!Main.hardMode && (
-                    npcid == NPCID.QueenSlimeBoss ||
-                    npcid == NPCID.TheDestroyer ||
-                    npcid == NPCID.Retinazer ||
-                    npcid == NPCID.Spazmatism ||
-                    npcid == NPCID.SkeletronPrime ||
-                    npcid == NPCID.DukeFishron))
-                {
-                    //args.Player.SendErrorMessage("Illegal Boss Spawn!");
-                    return false;
-                }
-
-                if (!NPC.downedMechBoss1 && !NPC.downedMechBoss2 && !NPC.downedMechBoss3 && (npcid == NPCID.Plantera))
-                {
-                    //args.Player.SendErrorMessage("Illegal Boss Spawn!");
-                    return false;
-                }
-                if (!NPC.downedPlantBoss && (npcid == NPCID.HallowBoss || npcid == NPCID.EmpressButterfly || npcid == NPCID.Golem))
-                {
-                    //args.Player.SendErrorMessage("Illegal Boss Spawn!");
-                    return false;
-                }
-                if (!NPC.downedGolemBoss && (npcid == NPCID.CultistBoss || npcid == NPCID.MoonLordCore || npcid == -8))
-                {
-                    //args.Player.SendErrorMessage("Illegal Boss Spawn!");
-                    return false;
-                }
-            }
-
-
-            if (!NPC.downedSlimeKing && npcid == NPCID.KingSlime) // King Slime
-            {
-                if (!(bool)Config.BossManager.AllowKingSlime)
-                {
-                    //TShock.Utils.Broadcast("King Slime isn't allowed yet!", Color.MediumPurple);
-                    return false;
-                }
-                if (TShock.Utils.GetActivePlayerCount() < (int)Config.BossManager.KingSlime_RequiredPlayersforBoss)
-                {
-                    //TShock.Utils.Broadcast("There aren't enough players to fight King Slime!" +
-                    //    $"\nPlayers Needed: {(int)Config.BossManager.KingSlime_RequiredPlayersforBoss}", Color.MediumPurple);
-                    return false;
-                }
-            }
-
-            if (!NPC.downedBoss1 && npcid == NPCID.EyeofCthulhu) // Eye of Cthulhu
-            {
-                if (!(bool)Config.BossManager.AllowEyeOfCthulhu)
-                {
-                    //TShock.Utils.Broadcast("Eye of Cthulhu isn't allowed yet!", Color.MediumPurple);
-                    return false;
-                }
-                if (TShock.Utils.GetActivePlayerCount() < (int)Config.BossManager.EyeOfCthulhu_RequiredPlayersforBoss)
-                {
-                    //TShock.Utils.Broadcast("There aren't enough players to fight Eye of Cthulhu!" +
-                    //    $"\nPlayers Needed: {(int)Config.BossManager.EyeOfCthulhu_RequiredPlayersforBoss}", Color.MediumPurple);
-                    return false;
-                }
-            }
-
-            if (!NPC.downedBoss2 && npcid == NPCID.EaterofWorldsHead) // Eater of Worlds
-            {
-                if (!(bool)Config.BossManager.AllowEaterOfWorlds)
-                {
-                    //TShock.Utils.Broadcast("Eater of Worlds isn't allowed yet!", Color.MediumPurple);
-                    return false;
-                }
-                if (TShock.Utils.GetActivePlayerCount() < (int)Config.BossManager.EaterOfWorlds_RequiredPlayersforBoss)
-                {
-                    //TShock.Utils.Broadcast("There aren't enough players to fight Eater of Worlds!" +
-                    //    $"\nPlayers Needed: {(int)Config.BossManager.EaterOfWorlds_RequiredPlayersforBoss}", Color.MediumPurple);
-                    return false;
-                }
-            }
-
-            if (!NPC.downedBoss2 && npcid == NPCID.BrainofCthulhu) // Brain of Cthulhu
-            {
-                if (!(bool)Config.BossManager.AllowBrainOfCthulhu)
-                {
-                    //TShock.Utils.Broadcast("Brain of Cthulhu isn't allowed yet!", Color.MediumPurple);
-                    return false;
-                }
-                if (TShock.Utils.GetActivePlayerCount() < (int)Config.BossManager.BrainOfCthulhu_RequiredPlayersforBoss)
-                {
-                    //TShock.Utils.Broadcast("There aren't enough players to fight Brain of Cthulhu!" +
-                    //    $"\nPlayers Needed: {(int)Config.BossManager.BrainOfCthulhu_RequiredPlayersforBoss}", Color.MediumPurple);
-                    return false;
-                }
-            }
-
-            if (!NPC.downedQueenBee && npcid == NPCID.QueenBee) // Queen Bee
-            {
-                if (!(bool)Config.BossManager.AllowQueenBee)
-                {
-                    //TShock.Utils.Broadcast("Queen Bee isn't allowed yet!", Color.MediumPurple);
-                    return false;
-                }
-                if (TShock.Utils.GetActivePlayerCount() < (int)Config.BossManager.QueenBee_RequiredPlayersforBoss)
-                {
-                    //TShock.Utils.Broadcast("There aren't enough players to fight Queen Bee!" +
-                    //    $"\nPlayers Needed: {(int)Config.BossManager.QueenBee_RequiredPlayersforBoss}", Color.MediumPurple);
-                    return false;
-                }
-            }
-
-            if (!NPC.downedBoss3 && npcid == NPCID.SkeletronHead) // Skeletron
-            {
-                if (!(bool)Config.BossManager.AllowSkeletron)
-                {
-                    //TShock.Utils.Broadcast("Skeletron isn't allowed yet!", Color.MediumPurple);
-                    return false;
-                }
-                if (TShock.Utils.GetActivePlayerCount() < (int)Config.BossManager.Skeletron_RequiredPlayersforBoss)
-                {
-                    //TShock.Utils.Broadcast("There aren't enough players to fight Skeletron!" +
-                    //    $"\nPlayers Needed: {(int)Config.BossManager.Skeletron_RequiredPlayersforBoss}", Color.MediumPurple);
-                    return false;
-                }
-            }
-
-            if (!NPC.downedDeerclops && npcid == NPCID.Deerclops) // Deerclops
-            {
-                if (!(bool)Config.BossManager.AllowDeerclops)
-                {
-                    //TShock.Utils.Broadcast("Deerclops isn't allowed yet!", Color.MediumPurple);
-                    return false;
-                }
-                if (TShock.Utils.GetActivePlayerCount() < (int)Config.BossManager.Deerclops_RequiredPlayersforBoss)
-                {
-                    //TShock.Utils.Broadcast("There aren't enough players to fight Deerclops!" +
-                    //    $"\nPlayers Needed: {(int)Config.BossManager.Deerclops_RequiredPlayersforBoss}", Color.MediumPurple);
-                    return false;
-                }
-            }
-
-            if (!Main.hardMode && npcid == NPCID.WallofFlesh) // Wall of Flesh
-            {
-                if (!(bool)Config.BossManager.AllowWallOfFlesh)
-                {
-                    //TShock.Utils.Broadcast("Wall of Flesh isn't allowed yet!", Color.MediumPurple);
-                    return false;
-                }
-                if (TShock.Utils.GetActivePlayerCount() < (int)Config.BossManager.WallOfFlesh_RequiredPlayersforBoss)
-                {
-                    //TShock.Utils.Broadcast("There aren't enough players to fight Wall of Flesh!" +
-                    //    $"\nPlayers Needed: {(int)Config.BossManager.WallOfFlesh_RequiredPlayersforBoss}", Color.MediumPurple);
-                    return false;
-                }
-            }
-
-            if (!NPC.downedQueenSlime && npcid == NPCID.QueenSlimeBoss) // Queen Slime
-            {
-                if (!(bool)Config.BossManager.AllowQueenSlime)
-                {
-                    //TShock.Utils.Broadcast("Queen Slime isn't allowed yet!", Color.MediumPurple);
-                    return false;
-                }
-                if (TShock.Utils.GetActivePlayerCount() < (int)Config.BossManager.QueenSlime_RequiredPlayersforBoss)
-                {
-                    //TShock.Utils.Broadcast("There aren't enough players to fight Queen Slime!" +
-                    //    $"\nPlayers Needed: {(int)Config.BossManager.QueenSlime_RequiredPlayersforBoss}", Color.MediumPurple);
-                    return false;
-                }
-            }
-
-            if (Main.zenithWorld)
-            {
-                if ((!NPC.downedMechBoss1 && !NPC.downedMechBoss2 && !NPC.downedMechBoss1) &&
-                    (npcid == NPCID.Retinazer || npcid == NPCID.Spazmatism || npcid == NPCID.TheDestroyer || npcid == NPCID.SkeletronPrime)
-                    )
-                {
-                    if (!(bool)Config.BossManager.AllowMechdusa)
-                    {
-                        //TShock.Utils.Broadcast("Mechdusa isn't allowed yet!", Color.MediumPurple);
-                        return false;
-                    }
-                    if (TShock.Utils.GetActivePlayerCount() < (int)Config.BossManager.Mechdusa_RequiredPlayersforBoss)
-                    {
-                        //TShock.Utils.Broadcast("There aren't enough players to fight Mechdusa!" +
-                        //  $"\nPlayers Needed: {(int)Config.BossManager.Mechdusa_RequiredPlayersforBoss}", Color.MediumPurple);
-                        return false;
-                    }
-                }
-            }
-            else
-            {
-                if (!NPC.downedMechBoss2 && (npcid == NPCID.Retinazer || npcid == NPCID.Spazmatism)) // The Twins
-                {
-                    if (!(bool)Config.BossManager.AllowTheTwins)
-                    {
-                        //TShock.Utils.Broadcast("The Twins isn't allowed yet!", Color.MediumPurple);
-                        return false;
-                    }
-                    if (TShock.Utils.GetActivePlayerCount() < (int)Config.BossManager.TheTwins_RequiredPlayersforBoss)
-                    {
-                        //TShock.Utils.Broadcast("There aren't enough players to fight The Twins!" +
-                        //  $"\nPlayers Needed: {(int)Config.BossManager.TheTwins_RequiredPlayersforBoss}", Color.MediumPurple);
-                        return false;
-                    }
-                }
-
-                if (!NPC.downedMechBoss1 && npcid == NPCID.TheDestroyer) // The Destroyer
-                {
-                    if (!(bool)Config.BossManager.AllowTheDestroyer)
-                    {
-                        //TShock.Utils.Broadcast("The Destroyer isn't allowed yet!", Color.MediumPurple);
-                        return false;
-                    }
-                    if (TShock.Utils.GetActivePlayerCount() < (int)Config.BossManager.TheDestroyer_RequiredPlayersforBoss)
-                    {
-                        //TShock.Utils.Broadcast("There aren't enough players to fight The Destroyer!" +
-                        //  $"\nPlayers Needed: {(int)Config.BossManager.TheDestroyer_RequiredPlayersforBoss}", Color.MediumPurple);
-                        return false;
-                    }
-                }
-
-                if (!NPC.downedMechBoss3 && npcid == NPCID.SkeletronPrime) // Skeletron Prime
-                {
-                    if (!(bool)Config.BossManager.AllowSkeletronPrime)
-                    {
-                        //TShock.Utils.Broadcast("Skeletron Prime isn't allowed yet!", Color.MediumPurple);
-                        return false;
-                    }
-                    if (TShock.Utils.GetActivePlayerCount() < (int)Config.BossManager.SkeletronPrime_RequiredPlayersforBoss)
-                    {
-                        //TShock.Utils.Broadcast("There aren't enough players to fight Skeletron Prime!" +
-                        //  $"\nPlayers Needed: {(int)Config.BossManager.SkeletronPrime_RequiredPlayersforBoss}", Color.MediumPurple);
-                        return false;
-                    }
-                }
-            }
-
-
-
-            if (!NPC.downedPlantBoss && npcid == NPCID.Plantera) // Plantera
-            {
-                if (!(bool)Config.BossManager.AllowPlantera)
-                {
-                    //TShock.Utils.Broadcast("Plantera isn't allowed yet!", Color.MediumPurple);
-                    return false;
-                }
-                if (TShock.Utils.GetActivePlayerCount() < (int)Config.BossManager.Plantera_RequiredPlayersforBoss)
-                {
-                    //TShock.Utils.Broadcast("There aren't enough players to fight Plantera!" +
-                    //    $"\nPlayers Needed: {(int)Config.BossManager.Plantera_RequiredPlayersforBoss}", Color.MediumPurple);
-                    return false;
-                }
-            }
-
-            if (!NPC.downedGolemBoss && npcid == NPCID.Golem) // Golem
-            {
-                if (!(bool)Config.BossManager.AllowGolem)
-                {
-                    //TShock.Utils.Broadcast("Golem isn't allowed yet!", Color.MediumPurple);
-                    return false;
-                }
-                if (TShock.Utils.GetActivePlayerCount() < (int)Config.BossManager.Golem_RequiredPlayersforBoss)
-                {
-                    //TShock.Utils.Broadcast("There aren't enough players to fight Golem!" +
-                    //    $"\nPlayers Needed: {(int)Config.BossManager.Golem_RequiredPlayersforBoss}", Color.MediumPurple);
-                    return false;
-                }
-            }
-
-            if (!NPC.downedFishron && npcid == NPCID.DukeFishron) // Duke Fishron
-            {
-                if (!(bool)Config.BossManager.AllowDukeFishron)
-                {
-                    //TShock.Utils.Broadcast("Duke Fishron isn't allowed yet!", Color.MediumPurple);
-                    return false;
-                }
-                if (TShock.Utils.GetActivePlayerCount() < (int)Config.BossManager.DukeFishron_RequiredPlayersforBoss)
-                {
-                    //TShock.Utils.Broadcast("There aren't enough players to fight Duke Fishron!" +
-                    //    $"\nPlayers Needed: {(int)Config.BossManager.DukeFishron_RequiredPlayersforBoss}", Color.MediumPurple);
-                    return false;
-                }
-            }
-
-            if (!NPC.downedEmpressOfLight && npcid == NPCID.HallowBoss) // Empress of Light
-            {
-                if (!(bool)Config.BossManager.AllowEmpressOfLight)
-                {
-                    //TShock.Utils.Broadcast("Empress of Light isn't allowed yet!", Color.MediumPurple);
-                    return false;
-                }
-                if (TShock.Utils.GetActivePlayerCount() < (int)Config.BossManager.EmpressOfLight_RequiredPlayersforBoss)
-                {
-                    //TShock.Utils.Broadcast("There aren't enough players to fight Empress of Light!" +
-                    //    $"\nPlayers Needed: {(int)Config.BossManager.EmpressOfLight_RequiredPlayersforBoss}", Color.MediumPurple);
-                    return false;
-                }
-            }
-
-            if (!NPC.downedAncientCultist && npcid == NPCID.CultistBoss) // Lunatic Cultist
-            {
-                if (!(bool)Config.BossManager.AllowLunaticCultist)
-                {
-                    //TShock.Utils.Broadcast("Lunatic Cultist isn't allowed yet!", Color.MediumPurple);
-                    return false;
-                }
-                if (TShock.Utils.GetActivePlayerCount() < (int)Config.BossManager.LunaticCultist_RequiredPlayersforBoss)
-                {
-                    //TShock.Utils.Broadcast("There aren't enough players to fight Lunatic Cultist!" +
-                    //    $"\nPlayers Needed: {(int)Config.BossManager.LunaticCultist_RequiredPlayersforBoss}", Color.MediumPurple);
-                    return false;
-                }
-            }
-
-            if (!NPC.downedMoonlord && npcid == NPCID.MoonLordCore) // Moon Lord
-            {
-                if (!(bool)Config.BossManager.AllowMoonLord)
-                {
-                    //TShock.Utils.Broadcast("Moon Lord isn't allowed yet!", Color.MediumPurple);
-                    return false;
-                }
-                if (TShock.Utils.GetActivePlayerCount() < (int)Config.BossManager.MoonLord_RequiredPlayersforBoss)
-                {
-                    //TShock.Utils.Broadcast("There aren't enough players to fight Moon Lord!" +
-                    //    $"\nPlayers Needed: {(int)Config.BossManager.MoonLord_RequiredPlayersforBoss}", Color.MediumPurple);
-                    return false;
-                }
-            }
-            
-            #endregion
-
             if (plr != args.Player.Index)
                 return true;
 
-            if (args.Player.HasPermission(Config.Permissions.IgnoreMainCode_2) || !(bool)Config.Main.Using_Main_Code2) return false;
+            if (args.Player.HasPermission(Config.Permissions.IgnoreMainCode_2) || !(bool)Config.Main.DisableNode.Using_Main_Code2) return false;
 
             switch (thingType)
             {
@@ -3347,11 +3206,11 @@ namespace MKLP
 
                         return false;
                     }
-                
+
                 default:
                     NPC npc = new NPC();
                     npc.SetDefaults(thingType);
-                    
+
                     switch (npc.netID)
                     {
                         case 50: //king slime
@@ -3382,7 +3241,7 @@ namespace MKLP
                                 }
                                 if (args.Player.SelectedItem.type != 70)
                                 {
-                                    return PunishPlayer(MKLP_CodeType.Main, 2, args.Player, $"null item boss/invasion spawn",$"Player **{args.Player.Name}** had triggered null item boss/event spawn `itemheld: {args.Player.SelectedItem.Name}` `boss: Eater Of Worlds`");
+                                    return PunishPlayer(MKLP_CodeType.Main, 2, args.Player, $"null item boss/invasion spawn", $"Player **{args.Player.Name}** had triggered null item boss/event spawn `itemheld: {args.Player.SelectedItem.Name}` `boss: Eater Of Worlds`");
                                 }
 
                                 break;
@@ -3574,7 +3433,7 @@ namespace MKLP
                     }
 
                     break;
-                    
+
             }
 
             return false;
@@ -3620,6 +3479,25 @@ namespace MKLP
             #endregion
         }
 
+        private void OnSignChange(object? sender, GetDataHandlers.SignEventArgs args)
+        {
+            #region code
+            // Reading the data
+            args.Data.Seek(0, SeekOrigin.Begin);
+            int signId = args.Data.ReadInt16();
+            int posX = args.Data.ReadInt16();
+            int posY = args.Data.ReadInt16();
+            string newText = args.Data.ReadString();
+
+            if ((bool)Config.Main.Logging.LogSign)
+            {
+                SignLogS += $"<{DateTime.Now.ToString("s")}> {args.Player.Name} | ChangeSign|x:{posX}|y:{posY}|text : {newText}\n";
+            }
+            #endregion
+        }
+
+        #region later
+        /*
         public struct GetPlayerIG
         {
             public int PreviousHealth;
@@ -3640,7 +3518,6 @@ namespace MKLP
         private void OnNPCAIUpdate(NpcAiUpdateEventArgs args)
         {
             #region code
-            /*
             if ((bool)Config.Main.ServerSideDamage)
             {
                 foreach (TSPlayer player in TShock.Players)
@@ -3697,7 +3574,6 @@ namespace MKLP
                     }
                 }
             }
-            */
             #endregion
         }
 
@@ -3705,7 +3581,6 @@ namespace MKLP
         private void OnProjectileAIUpdate(ProjectileAiUpdateEventArgs args)
         {
             #region code
-            /*
             if (!args.Projectile.hostile) return;
 
             if ((bool)Config.Main.ServerSideDamage)
@@ -3761,7 +3636,38 @@ namespace MKLP
                     }
                 }
             }
-            */
+            #endregion
+        }
+        */
+        #endregion
+
+        private void OnPlayerDamage(object sender, GetDataHandlers.PlayerDamageEventArgs args)
+        {
+            #region code
+
+            if ((bool)Config.Main.AntiRaid.DeathMessage_OnlyToLoginUser && args.Player.IsLoggedIn && args.ID != args.Player.Index && args.PlayerDeathReason._sourceOtherIndex != 16 &&
+                (args.PlayerDeathReason._sourcePlayerIndex == -1 || args.PlayerDeathReason._sourceNPCIndex != -1 || args.PlayerDeathReason._sourceOtherIndex != -1 || args.PlayerDeathReason._sourceCustomReason != null))
+            {
+                args.Handled = true;
+                return;
+            }
+
+            #endregion
+        }
+
+        private void OnKillMe(object sender, GetDataHandlers.KillMeEventArgs args)
+        {
+            #region code
+
+            if (args.PlayerDeathReason != null)
+            {
+                if ((bool)Config.Main.AntiRaid.DeathMessage_OnlyToLoginUser && args.Player.IsLoggedIn && args.PlayerDeathReason._sourceCustomReason != null)
+                {
+                    args.Handled = true;
+                    return;
+                }
+            }
+
             #endregion
         }
 
@@ -3777,7 +3683,7 @@ namespace MKLP
             if (args.Message._substitutions?.Length > 0)
                 literalText = string.Format(literalText, args.Message._substitutions);
 
-            
+
             if (
                 literalText.EndsWith(" has joined.") ||
                 literalText.EndsWith(" has left.")
@@ -3824,16 +3730,19 @@ namespace MKLP
         {
             Config = Config.Read();
             LinkAccountManager.ReloadConfig();
-            args.Player.SendMessage("MKLP config reloaded!", Microsoft.Xna.Framework.Color.Purple);
+            args.Player.SendMessage(GetText("MKLP config reloaded!"), Microsoft.Xna.Framework.Color.Purple);
 
             if (!HasBanGuardPlugin && ((bool)Config.BanGuard.UsingBanGuard && (bool)Config.BanGuard.UsingPlugin))
             {
                 Config.BanGuard.UsingBanGuard = false;
-                args.Player.SendWarningMessage("Warning: BanGuard plugin doesn't Exist on 'ServerPlugins' Folder!");
-                MKLP_Console.SendLog_Warning("Warning: BanGuard plugin doesn't Exist on \"ServerPlugins\" Folder!");
+                args.Player.SendWarningMessage(GetText("Warning: BanGuard plugin doesn't Exist on 'ServerPlugins' Folder!"));
+                MKLP_Console.SendLog_Warning(GetText("Warning: BanGuard plugin doesn't Exist on \"ServerPlugins\" Folder!"));
             }
         }
 
+
+        string TileLogS = "";
+        string SignLogS = "";
         private void OnWorldSave(WorldSaveEventArgs args)
         {
             checkplayers();
@@ -3848,12 +3757,23 @@ namespace MKLP
                 InformLatestVersion();
             }
             catch { }
+
+            if ((bool)Config.Main.Logging.LogTile)
+            {
+                LogKLP.Log_Tile(TileLogS);
+            }
+            TileLogS = "";
+            if ((bool)Config.Main.Logging.LogSign)
+            {
+                LogKLP.Log_Sign(SignLogS);
+            }
+            SignLogS = "";
         }
 
         #endregion
 
         #region { Auto Check }
-        
+
         private void OnServerStart(EventArgs args)
         {
             #region code
@@ -3975,7 +3895,8 @@ namespace MKLP
                     changed = true;
                     Discordklp.KLPBotSendMessage_BossEnabled("Mechdusa");
                 }
-            } else
+            }
+            else
             {
                 if (DateTime.UtcNow > (DateTime)Config.BossManager.ScheduleAllowTheTwins && !(bool)Config.BossManager.AllowTheTwins)
                 {
@@ -4053,12 +3974,13 @@ namespace MKLP
                 try
                 {
                     DBManager.CheckPlayerMute(player, true);
-                } catch { }
+                }
+                catch { }
             }
             #endregion
         }
 
-        
+
         #endregion
 
         #endregion
@@ -4073,17 +3995,17 @@ namespace MKLP
             #region code
             string result = "";
 
-            
+
             foreach (TSPlayer player in TShock.Players)
             {
                 if (player == null) continue;
                 result += $"{player.Name} : {player.GetData<double>("MKLP_GetLatency")}ms\n";
             }
-            
 
-            if (result == "") result = "No Latency has been check...";
 
-            args.Player.SendMessage("List Of Players Latency:\n\n" +
+            if (result == "") result = GetText("No Latency has been check...");
+
+            args.Player.SendMessage(GetText("List Of Players Latency:\n\n") +
                 result, Color.Yellow);
 
             #endregion
@@ -4392,7 +4314,7 @@ namespace MKLP
             #region { stringdefeatedbosses2 }
             string GetListDefeatedBoss2()
             {
-                CONFIG_BOSSES getenabledboss = Config.BossManager;
+                Config.CONFIG_BOSSES getenabledboss = Config.BossManager;
                 Dictionary<string, bool> defeatedbosses = new();
                 if ((bool)getenabledboss.AllowKingSlime)
                 {
@@ -4678,7 +4600,8 @@ namespace MKLP
                     if (boss.Value)
                     {
                         getdefeatedboss += $"{boss.Key},";
-                    } else
+                    }
+                    else
                     {
                         getenableboss += $"{boss.Key},";
                     }
@@ -4958,8 +4881,8 @@ namespace MKLP
             #endregion
 
             args.Player.SendMessage(
-                $"List Of Bosses:" +
-                $"\n{GetListDefeatedBoss2()}{GetNextBossSchedule()}",
+                GetText($"List Of Bosses:") +
+                GetText($"\n{GetListDefeatedBoss2()}{GetNextBossSchedule()}"),
                 Color.Gray);
 
             #endregion
@@ -4971,9 +4894,8 @@ namespace MKLP
             #region code
             if (args.Parameters.Count == 0)
             {
-                args.Player.SendErrorMessage($"Usage: {Commands.Specifier}report <message>" +
-                    $"\nor you can use '{Commands.Specifier}report <player> <message>'" +
-                    $"\nexample: {Commands.Specifier}report {args.Player.Name} is cheating");
+                args.Player.SendErrorMessage(GetText($"Usage: {Commands.Specifier}report <type> <message>") +
+                    GetText($"\nmore information at '{Commands.Specifier}report help'"));
                 return;
             }
 
@@ -4985,7 +4907,7 @@ namespace MKLP
                     int cdtotal_sec = ((int)(DateTime.UtcNow - ReportCD[args.Player.Account.Name]).TotalSeconds - 60) * -1;
                     if ((DateTime.UtcNow - ReportCD[args.Player.Name]).TotalMinutes < 10)
                     {
-                        args.Player.SendErrorMessage($"You can report again in {(cdtotal_min == 0 ? $"{(cdtotal_sec <= 1 ? $"{cdtotal_sec} second" : $"{cdtotal_sec} seconds" )}" : $"{(cdtotal_min <= 1 ? $"{cdtotal_min} minute" : $"{cdtotal_min} minutes")}" )}");
+                        args.Player.SendErrorMessage(GetText($"You can report again in {(cdtotal_min == 0 ? $"{(cdtotal_sec <= 1 ? $"{cdtotal_sec} second" : $"{cdtotal_sec} seconds")}" : $"{(cdtotal_min <= 1 ? $"{cdtotal_min} minute" : $"{cdtotal_min} minutes")}")}"));
                         return;
                     }
                 }
@@ -4998,102 +4920,206 @@ namespace MKLP
                     int cdtotal_sec = (int)(DateTime.UtcNow - ReportCD[args.Player.Name]).TotalSeconds;
                     if ((DateTime.UtcNow - ReportCD[args.Player.Name]).TotalMinutes < 10)
                     {
-                        args.Player.SendErrorMessage($"You can report again in {(cdtotal_min == 0 ? $"{(cdtotal_sec <= 1 ? $"{cdtotal_sec} second" : $"{cdtotal_sec} seconds")}" : $"{(cdtotal_min <= 1 ? $"{cdtotal_min} minute" : $"{cdtotal_min} minutes")}")}");
+                        args.Player.SendErrorMessage(GetText($"You can report again in {(cdtotal_min == 0 ? $"{(cdtotal_sec <= 1 ? $"{cdtotal_sec} second" : $"{cdtotal_sec} seconds")}" : $"{(cdtotal_min <= 1 ? $"{cdtotal_min} minute" : $"{cdtotal_min} minutes")}")}"));
                         return;
                     }
                 }
+            }
+
+            bool istemp = true;
+            string getexecutername = args.Player.Name;
+            if (args.Player.Account != null)
+            {
+                istemp = false;
+                getexecutername = args.Player.Account.Name;
             }
 
             string get_target_name = "";
             bool isAccount = false;
             int get_target_index = -1;
 
-            var targetplayers = TSPlayer.FindByNameOrID(args.Parameters[0]);
-
-            string report_message = string.Join(" ", args.Parameters.ToArray(), 0, args.Parameters.Count);
-
-            if (targetplayers.Count == 1)
+            string playernames = "";
+            foreach (TSPlayer player in TShock.Players)
             {
-                if (targetplayers[0].Account != null)
-                {
-                    get_target_name = targetplayers[0].Account.Name;
-                    isAccount = true;
-                } else
-                {
-                    get_target_name = targetplayers[0].Name;
-                }
-
-                get_target_index = targetplayers[0].Index;
-
-                if (args.Parameters.Count == 1)
-                {
-                    report_message = "no message";
-                } else
-                {
-                    report_message = string.Join(" ", args.Parameters.ToArray(), 1, args.Parameters.Count - 1);
-                }
+                if (player == null) continue;
+                playernames += player.Name + DiscordKLP.S_;
             }
+            playernames.TrimEnd(DiscordKLP.S_);
 
-            if (get_target_name == "") get_target_name = $"{DiscordKLP.S_}none{DiscordKLP.S_}";
 
-            /*
-            if (get_target_name == "")
+            string report_message = string.Join(" ", args.Parameters.ToArray(), 1, args.Parameters.Count - 1);
+
+            switch (args.Parameters[0].ToLower())
             {
-                foreach (var targetplayer in TShock.Players)
-                {
-                    if (report_message.Contains(targetplayer.Name))
+                case "help":
+                    #region [ sub-command | Help ]
                     {
-                        get_target_name = targetplayer.Name;
-                        break;
+                        args.Player.SendMessage(
+                            $"Usage: {Commands.Specifier}report <type> <message>" +
+                            $"\n" +
+                            $"\n=== Sub-Command ===" +
+                            $"\n'{Commands.Specifier}report normal <message>' : a normal report message" +
+                            $"\n'{Commands.Specifier}report player <playername> <message>' : report a player" +
+                            $"\n'{Commands.Specifier}report bug <message>' : report a bug" +
+                            $"\n'{Commands.Specifier}report staff <playername> <message>' : report a staff",
+                            Color.WhiteSmoke);
+                        return;
                     }
-                }
+                #endregion
+                case "na":
+                case "message":
+                case "normal":
+                    #region [ sub-command | NormalReport ]
+                    {
+                        if (args.Parameters.Count < 2)
+                        {
+                            args.Player.SendErrorMessage(GetText($"Proper Usage: {Commands.Specifier}report normal <player> <message>"));
+                            return;
+                        }
+
+                        int id = -1;
+                        if (!istemp) id = DBManager.AddReport(MKLP_Report.RType.NormalReport, args.Player.Account.Name, "", report_message, DateTime.UtcNow, $"{args.Player.TileX}, {args.Player.TileY}", playernames);
+                        Discordklp.KLPBotSendMessage_Report_Main(id, "", args.Player.Account.Name, report_message, DateTime.UtcNow, $"{args.Player.TileX}, {args.Player.TileY}", playernames);
+                        SendStaffMessage(GetText($"[{(istemp ? "Temporary-" : "")}Report] from {args.Player.Account.Name}" +
+                            "\nMessage: {0}", report_message), Color.OrangeRed);
+                        args.Player.SendSuccessMessage(GetText($"{(istemp ? "Temporary-" : "")}Report Sent!" +
+                            "\nmessage: {0}", report_message));
+                        return;
+                    }
+                #endregion
+                case "player":
+                    #region [ sub-command | PlayerReport ]
+                    {
+                        if (args.Parameters.Count < 3)
+                        {
+                            args.Player.SendErrorMessage(GetText($"Proper Usage: {Commands.Specifier}report player <player> <message>"));
+                            return;
+                        }
+
+                        report_message = string.Join(" ", args.Parameters.ToArray(), 2, args.Parameters.Count - 2);
+
+                        var targetplayers = TSPlayer.FindByNameOrID(args.Parameters[1]);
+
+                        if (targetplayers.Count == 1)
+                        {
+                            if (targetplayers[0].Account != null)
+                            {
+                                get_target_name = targetplayers[0].Account.Name;
+                                isAccount = true;
+                            }
+                            else
+                            {
+                                get_target_name = targetplayers[0].Name;
+                            }
+
+                            get_target_index = targetplayers[0].Index;
+                        }
+                        int id = -1;
+
+                        if (!istemp) id = DBManager.AddReport(MKLP_Report.RType.PlayerReport, args.Player.Account.Name, get_target_name, report_message, DateTime.UtcNow, $"{args.Player.TileX}, {args.Player.TileY}", playernames);
+                        Discordklp.KLPBotSendMessage_Report_Player(id, args.Player.Account.Name, get_target_name, report_message, DateTime.UtcNow, $"{args.Player.TileX}, {args.Player.TileY}", playernames);
+                        SendStaffMessage(GetText($"[{(istemp ? "Temporary " : "")}Player-Report] from {args.Player.Account.Name}" +
+                            "\nTarget: {0}" +
+                            "\nMessage: {1}",
+                            (get_target_name == "" ? $"{DiscordKLP.S_}none{DiscordKLP.S_}" : $"{get_target_name} {(isAccount ? "(Account) " : "")} {(get_target_index == -1 ? "" : get_target_index)}"),
+                            report_message), Color.OrangeRed);
+                        args.Player.SendSuccessMessage(GetText($"{(istemp ? "[Temporary] " : "")}Player Report Sent!" +
+                            "\ntarget: {0}" +
+                            "\nmessage: {1}",
+                            (get_target_name == "" ? $"{DiscordKLP.S_}none{DiscordKLP.S_}" : $"{get_target_name} {(isAccount ? "(Account) " : "")} {(get_target_index == -1 ? "" : get_target_index)}"),
+                            report_message));
+                        return;
+                    }
+                #endregion
+                case "bug":
+                    #region [ sub-command | BugReport ]
+                    {
+                        if (args.Parameters.Count < 2)
+                        {
+                            args.Player.SendErrorMessage(GetText($"Proper Usage: {Commands.Specifier}report bug <message>"));
+                            return;
+                        }
+
+                        int id = -1;
+
+                        if (!istemp) id = DBManager.AddReport(MKLP_Report.RType.BugReport, args.Player.Account.Name, "", report_message, DateTime.UtcNow, $"{args.Player.TileX}, {args.Player.TileY}", playernames);
+                        Discordklp.KLPBotSendMessage_Report_Main(id, "🐛Bug ", args.Player.Account.Name, report_message, DateTime.UtcNow, $"{args.Player.TileX}, {args.Player.TileY}", playernames);
+                        SendStaffMessage(GetText($"[{(istemp ? "Temporary " : "")}Bug-Report] from {args.Player.Account.Name}" +
+                            "\nMessage: {0}",
+                            report_message), Color.OrangeRed);
+                        args.Player.SendSuccessMessage(GetText($"{(istemp ? "[Temporary] " : "")}Bug Report Sent!" +
+                            "\nmessage: {0}",
+                            report_message));
+                        return;
+                    }
+                #endregion
+                case "staff":
+                    #region [ sub-command | StaffPlayerReport ]
+                    {
+                        if (args.Parameters.Count < 3)
+                        {
+                            args.Player.SendErrorMessage(GetText($"Proper Usage: {Commands.Specifier}report staff <player> <message>"));
+                            return;
+                        }
+
+                        report_message = string.Join(" ", args.Parameters.ToArray(), 2, args.Parameters.Count - 2);
+
+                        var targetplayers = TSPlayer.FindByNameOrID(args.Parameters[1]);
+
+                        if (targetplayers.Count == 1)
+                        {
+                            if (targetplayers[0].Account != null)
+                            {
+                                get_target_name = targetplayers[0].Account.Name;
+                                isAccount = true;
+                            }
+                            else
+                            {
+                                get_target_name = targetplayers[0].Name;
+                            }
+
+                            get_target_index = targetplayers[0].Index;
+                        }
+                        int id = -1;
+
+                        if (!istemp) id = DBManager.AddReport(MKLP_Report.RType.StaffReport, getexecutername, get_target_name, report_message, DateTime.UtcNow, $"{args.Player.TileX}, {args.Player.TileY}", playernames);
+                        Discordklp.KLPBotSendMessage_Report_Staff(id, getexecutername, get_target_name, report_message, DateTime.UtcNow, $"{args.Player.TileX}, {args.Player.TileY}", playernames);
+                        args.Player.SendSuccessMessage(GetText($"{(istemp ? "[Temporary] " : "")}Staff Report Sent!" +
+                            "\ntarget: {0}" +
+                            "\nmessage: {1}",
+                            (get_target_name == "" ? $"{DiscordKLP.S_}none{DiscordKLP.S_}" : $"{get_target_name} {(isAccount ? "(Account) " : "")} {(get_target_index == -1 ? "" : get_target_index)}"),
+                            report_message));
+                        return;
+                    }
+                #endregion
+                default:
+                    {
+                        args.Player.SendErrorMessage(GetText($"invalid sub-command" +
+                            $"\nmore info at '{Commands.Specifier}report help'"));
+                        return;
+                    }
             }
-            */
 
-            if (args.Player.Account != null)
-            {
-                if (ReportCD.ContainsKey(args.Player.Account.Name))
-                {
-                    ReportCD[args.Player.Account.Name] = DateTime.UtcNow;
-                } else { ReportCD.Add(args.Player.Account.Name, DateTime.Now); }
 
-            } else
+            void ToggleCooldown()
             {
-                if (ReportCD.ContainsKey(args.Player.Name))
+                if (args.Player.Account != null)
                 {
-                    ReportCD[args.Player.Name] = DateTime.UtcNow;
+                    if (ReportCD.ContainsKey(args.Player.Account.Name))
+                    {
+                        ReportCD[args.Player.Account.Name] = DateTime.UtcNow;
+                    }
+                    else { ReportCD.Add(args.Player.Account.Name, DateTime.Now); }
+
                 }
-                else { ReportCD.Add(args.Player.Name, DateTime.Now); }
-            }
-
-            if (args.Player.Account != null)
-            {
-                string playernames = "";
-                foreach (TSPlayer player in TShock.Players)
+                else
                 {
-                    if (player == null) continue;
-                    playernames += player.Name + DiscordKLP.S_;
+                    if (ReportCD.ContainsKey(args.Player.Name))
+                    {
+                        ReportCD[args.Player.Name] = DateTime.UtcNow;
+                    }
+                    else { ReportCD.Add(args.Player.Name, DateTime.Now); }
                 }
-                playernames.TrimEnd(DiscordKLP.S_);
-
-                int id = DBManager.AddReport(args.Player.Account.Name, get_target_name, report_message, DateTime.UtcNow, $"{args.Player.TileX}, {args.Player.TileY}", playernames);
-                Discordklp.KLPBotSendMessage_Report(id, args.Player.Account.Name, get_target_name, report_message, DateTime.UtcNow, $"{args.Player.TileX}, {args.Player.TileY}", playernames);
-                SendStaffMessage($"[Report] from {args.Player.Account.Name}" +
-                    $"\nTarget: {(get_target_name == "" ? $"{DiscordKLP.S_}none{DiscordKLP.S_}" : $"{get_target_name} {(isAccount ? "(Account) " : "")} {(get_target_index == -1 ? "" : get_target_index)}")}" +
-                    $"\nMessage: {report_message}", Color.OrangeRed);
-                args.Player.SendSuccessMessage("Reported Sent!" +
-                    $"\ntarget: {(get_target_name == "" ? $"{DiscordKLP.S_}none{DiscordKLP.S_}" : $"{get_target_name} {(isAccount ? "(Account) " : "")} {(get_target_index == -1 ? "" : get_target_index)}")}" +
-                    $"\nmessage: {report_message}");
-                return;
-            } else
-            {
-                SendStaffMessage($"[Temporary-Report] from {args.Player.Name}" +
-                    $"\nTarget: {(get_target_name == "" ? $"{DiscordKLP.S_}none{DiscordKLP.S_}" : $"{get_target_name} {(isAccount ? "(Account) " : "")} {(get_target_index == -1 ? "" : get_target_index)}")}" +
-                    $"\nMessage: {report_message}", Color.OrangeRed);
-                args.Player.SendSuccessMessage("Temporary Reported Sent!" +
-                    $"\ntarget: {(get_target_name == "" ? $"{DiscordKLP.S_}none{DiscordKLP.S_}" : $"{get_target_name} {(isAccount ? "(Account) " : "")} {(get_target_index == -1 ? "" : get_target_index)}")}" +
-                    $"\nmessage: {report_message}");
-                return;
             }
             #endregion
         }
@@ -5107,15 +5133,15 @@ namespace MKLP
             #region code
             if (args.Parameters.Count == 0)
             {
-                args.Player.SendErrorMessage($"Usage: {Commands.Specifier}staffchat <message>" +
-                    $"\nshortcuts: {Commands.Specifier}staff, {Commands.Specifier}#");
+                args.Player.SendErrorMessage(GetText($"Proper Usage: {Commands.Specifier}staffchat <message>" +
+                    $"\nshortcuts: {Commands.Specifier}staff, {Commands.Specifier}#"));
                 return;
             }
 
-            CONFIG_COLOR_RBG Config_messagecolor = (CONFIG_COLOR_RBG)Config.Main.StaffChat_MessageRecieved_InGame_RBG;
+            Config.CONFIG_COLOR_RBG Config_messagecolor = (Config.CONFIG_COLOR_RBG)Config.Main.StaffChat.StaffChat_MessageRecieved_InGame_RBG;
 
-            SendStaffMessage(GetSendMessageInGameResult(args.Player, Config.Main.StaffChat_MessageSend_Discord, string.Join(" ", args.Parameters.ToArray(), 0, args.Parameters.Count)), new(Config_messagecolor.R, Config_messagecolor.G, Config_messagecolor.B));
-            Discordklp.KLPBotSendMessageMain(GetMessageInGameResult(args.Player, Config.Main.StaffChat_MessageRecieved_InGame, string.Join(" ", args.Parameters.ToArray(), 0, args.Parameters.Count)));
+            SendStaffMessage(GetSendMessageInGameResult(args.Player, Config.Main.StaffChat.StaffChat_MessageSend_Discord, string.Join(" ", args.Parameters.ToArray(), 0, args.Parameters.Count)), new(Config_messagecolor.R, Config_messagecolor.G, Config_messagecolor.B));
+            Discordklp.KLPBotSendMessageMain(GetMessageInGameResult(args.Player, Config.Main.StaffChat.StaffChat_MessageRecieved_InGame, string.Join(" ", args.Parameters.ToArray(), 0, args.Parameters.Count)));
             MKLP_Console.SendLog_Message_StaffChat_InGame(args.Player.Name, string.Join(" ", args.Parameters.ToArray(), 0, args.Parameters.Count));
 
             #region GetMessageInGameResult
@@ -5129,7 +5155,8 @@ namespace MKLP
                     if (tsplayer.Name != tsplayer.Account.Name)
                     {
                         Context = Context.Replace("%ingameaccountnameifname%", tsplayer.Account.Name);
-                    } else
+                    }
+                    else
                     {
                         Context = Context.Replace("%ingameaccountnameifname%", tsplayer.Name);
                     }
@@ -5139,7 +5166,7 @@ namespace MKLP
                         ulong getuserid = (bool)Config.DataBaseDLink.Target_UserAccount_ID ? LinkAccountManager.GetUserIDByAccountID(tsplayer.Account.ID) : LinkAccountManager.GetUserIDByAccountName(tsplayer.Account.Name);
 
                         Context = Context.Replace("%ingamelinkedusername%", Discordklp.GetUser(getuserid).Username);
-                        Context = Context.Replace("%ingamelinkedicon%", Config.Main.StaffChat_Message_ingamelinkedicon);
+                        Context = Context.Replace("%ingamelinkedicon%", Config.Main.StaffChat.StaffChat_Message_ingamelinkedicon);
                     }
                     catch (NullReferenceException)
                     {
@@ -5158,7 +5185,7 @@ namespace MKLP
                         ulong getuserid = (bool)Config.DataBaseDLink.Target_UserAccount_ID ? LinkAccountManager.GetUserIDByAccountID(tsplayer.Account.ID) : LinkAccountManager.GetUserIDByAccountName(tsplayer.Account.Name);
 
                         Context = Context.Replace("%ingamelinkedusername%", Discordklp.GetUser(getuserid).Username);
-                        Context = Context.Replace("%ingamelinkedicon%", Config.Main.StaffChat_Message_ingamelinkedicon);
+                        Context = Context.Replace("%ingamelinkedicon%", Config.Main.StaffChat.StaffChat_Message_ingamelinkedicon);
                     }
                     catch (NullReferenceException)
                     {
@@ -5167,13 +5194,14 @@ namespace MKLP
                     }
                 }
 
-                
+
                 if (tsplayer.Group != null)
                 {
                     Context = Context.Replace("%groupname%", tsplayer.Group.Name);
                     Context = Context.Replace("%groupprefix%", tsplayer.Group.Prefix);
                     Context = Context.Replace("%groupsuffix%", tsplayer.Group.Suffix);
-                } else
+                }
+                else
                 {
                     Context = Context.Replace("%groupname%", "");
                     Context = Context.Replace("%groupprefix%", "");
@@ -5185,7 +5213,8 @@ namespace MKLP
                     Context = Context.Replace("%tempgroupname%", tsplayer.tempGroup.Name);
                     Context = Context.Replace("%tempgroupprefix%", tsplayer.tempGroup.Prefix);
                     Context = Context.Replace("%tempgroupsuffix%", tsplayer.tempGroup.Suffix);
-                } else
+                }
+                else
                 {
                     Context = Context.Replace("%tempgroupname%", "");
                     Context = Context.Replace("%tempgroupprefix%", "");
@@ -5220,7 +5249,7 @@ namespace MKLP
                         ulong getuserid = (bool)Config.DataBaseDLink.Target_UserAccount_ID ? LinkAccountManager.GetUserIDByAccountID(tsplayer.Account.ID) : LinkAccountManager.GetUserIDByAccountName(tsplayer.Account.Name);
 
                         Context = Context.Replace("%ingamelinkedusername%", Discordklp.GetUser((ulong)getuserid).Username);
-                        Context = Context.Replace("%discordacclinkedicon%", Config.Main.StaffChat_Message_discordacclinkedicon);
+                        Context = Context.Replace("%discordacclinkedicon%", Config.Main.StaffChat.StaffChat_Message_discordacclinkedicon);
 
                     }
                     catch (NullReferenceException)
@@ -5239,7 +5268,7 @@ namespace MKLP
                         ulong getuserid = getuserid = (bool)Config.DataBaseDLink.Target_UserAccount_ID ? LinkAccountManager.GetUserIDByAccountID(tsplayer.Account.ID) : LinkAccountManager.GetUserIDByAccountName(tsplayer.Account.Name);
 
                         Context = Context.Replace("%ingamelinkedusername%", Discordklp.GetUser((ulong)getuserid).Username);
-                        Context = Context.Replace("%discordacclinkedicon%", Config.Main.StaffChat_Message_discordacclinkedicon);
+                        Context = Context.Replace("%discordacclinkedicon%", Config.Main.StaffChat.StaffChat_Message_discordacclinkedicon);
 
                     }
                     catch (NullReferenceException)
@@ -5289,8 +5318,8 @@ namespace MKLP
                 TSPlayer.All.SendMessage("\n\n\n\n", Color.Black);
             }
 
-            args.Player.SendSuccessMessage("Message Cleared!");
-            
+            args.Player.SendSuccessMessage(GetText("Message Cleared!"));
+
             #endregion
         }
 
@@ -5302,23 +5331,24 @@ namespace MKLP
                 if (args.Parameters.Count == 0)
                 {
                     LockDown = true;
-                    TShock.Utils.Broadcast("Server is on LockDown!", Color.OrangeRed);
-                    Discordklp.KLPBotSendMessageMainLog($"**🔒{args.Player.Name}🔒** Server is on lockdown!");
+                    TShock.Utils.Broadcast(GetText("Server is on LockDown!"), Color.OrangeRed);
+                    Discordklp.KLPBotSendMessageMainLog($"**🔒{args.Player.Name}🔒** " + GetText("Server is on lockdown!"));
                 }
                 else
                 {
                     LockDown = true;
                     LockDownReason = string.Join(" ", args.Parameters.ToArray(), 0, args.Parameters.Count);
-                    TShock.Utils.Broadcast("Server is on LockDown by the reason of " + LockDownReason, Color.OrangeRed);
-                    Discordklp.KLPBotSendMessageMainLog($"**🔒{args.Player.Name}🔒** Server is on lockdown! `reason: {LockDownReason}`");
+                    TShock.Utils.Broadcast(GetText("Server is on LockDown by the reason of") + " " + LockDownReason, Color.OrangeRed);
+                    Discordklp.KLPBotSendMessageMainLog($"**🔒{args.Player.Name}🔒** " + GetText("Server is on lockdown! `reason: {0}`", LockDownReason));
                 }
-            } else
+            }
+            else
             {
                 LockDown = false;
-                TShock.Utils.Broadcast("Server is no longer on LockDown!", Color.LightGreen);
-                Discordklp.KLPBotSendMessageMainLog($"**🔓{args.Player.Name}🔓** Server is no longer on lockdown!");
+                TShock.Utils.Broadcast(GetText("Server is no longer on LockDown!"), Color.LightGreen);
+                Discordklp.KLPBotSendMessageMainLog($"**🔓{args.Player.Name}🔓** " + GetText("Server is no longer on lockdown!"));
             }
-            
+
 
             #endregion
         }
@@ -5329,14 +5359,14 @@ namespace MKLP
             if (!LockDownRegister)
             {
                 LockDownRegister = true;
-                args.Player.SendSuccessMessage("Guest can no longer resgister!");
-                Discordklp.KLPBotSendMessageMainLog($"**🔒{args.Player.Name}🔒** Guest can no longer register!");
+                args.Player.SendSuccessMessage(GetText("Guest can no longer resgister!"));
+                Discordklp.KLPBotSendMessageMainLog($"**🔒{args.Player.Name}🔒** " + GetText("Guest can no longer register!"));
             }
             else
             {
                 LockDownRegister = false;
-                args.Player.SendSuccessMessage("Guest can now resgister!");
-                Discordklp.KLPBotSendMessageMainLog($"**🔓{args.Player.Name}🔓** Guest can now register!");
+                args.Player.SendSuccessMessage(GetText("Guest can now resgister!"));
+                Discordklp.KLPBotSendMessageMainLog($"**🔓{args.Player.Name}🔓** " + GetText("Guest can now register!"));
             }
 
 
@@ -5349,19 +5379,19 @@ namespace MKLP
             if (!args.Player.ContainsData("MKLP-Map_Ping_TP"))
             {
                 args.Player.SetData("MKLP-Map_Ping_TP", true);
-                args.Player.SendSuccessMessage("you're now able to tp ping");
+                args.Player.SendSuccessMessage(GetText("you're now able to tp ping"));
             }
             else
             {
                 if (args.Player.GetData<bool>("MKLP-Map_Ping_TP"))
                 {
                     args.Player.SetData("MKLP-Map_Ping_TP", false);
-                    args.Player.SendSuccessMessage("you can no longer able to tp ping");
+                    args.Player.SendSuccessMessage(GetText("you can no longer able to tp ping"));
                 }
                 else
                 {
                     args.Player.SetData("MKLP-Map_Ping_TP", true);
-                    args.Player.SendSuccessMessage("you're now able to tp ping");
+                    args.Player.SendSuccessMessage(GetText("you're now able to tp ping"));
                 }
             }
             #endregion
@@ -5440,10 +5470,13 @@ namespace MKLP
                 }
             }
 
-            TShock.Utils.Broadcast($"[MKLP] ClearLag - {args.Player.Name} Removed" +
-                $" {(ClearedItems >= 2 ? $"{ClearedItems} Items" : $"{ClearedItems} Item")}" +
-                $" {(ClearedProjectile >= 2 ? $"{ClearedProjectile} Projectiles" : $"{ClearedProjectile} Projectile")}" +
-                $" {(ClearedNPC >= 2 ? $"{ClearedNPC} Entities" : $"{ClearedNPC} Entity")}", Color.Yellow);
+            TShock.Utils.Broadcast(GetText($"[MKLP] ClearLag - {args.Player.Name} Removed" +
+                $" {(ClearedItems >= 2 ? "{0} Items" : "{0} Item")}" +
+                $" {(ClearedProjectile >= 2 ? "{1} Projectiles" : "{1} Projectile")}" +
+                $" {(ClearedNPC >= 2 ? "{2} Entities" : "{2} Entity")}",
+                ClearedItems,
+                ClearedProjectile,
+                ClearedNPC), Color.Yellow);
             #endregion
         }
 
@@ -5453,8 +5486,8 @@ namespace MKLP
 
             if (args.Parameters.Count == 0)
             {
-                args.Player.SendErrorMessage($"Proper usage: {Commands.Specifier}manageboss <type> <args...>" +
-                    $"\ndo '{Commands.Specifier}manageboss help' for more details");
+                args.Player.SendErrorMessage(GetText($"Proper usage: {Commands.Specifier}manageboss <type> <args...>" +
+                    $"\ndo '{Commands.Specifier}manageboss help' for more details"));
                 return;
             }
 
@@ -5463,7 +5496,7 @@ namespace MKLP
                 #region [ Help Text ]
                 case "help":
                     {
-                        args.Player.SendMessage($"Proper Usage: [c/31ff77:{Commands.Specifier}manageboss <type> <args...>]" +
+                        args.Player.SendMessage(GetText($"Proper Usage: [c/31ff77:{Commands.Specifier}manageboss <type> <args...>]" +
                             "\n[c/ffd531:== Available Sub-Command ==]" +
                             "\n'enable <boss name>' : Enable a boss" +
                             "\n[c/b6b6b6:'disable <boss name>' : Disable a boss to prevent it from spawning]" +
@@ -5475,7 +5508,7 @@ namespace MKLP
                             "\n[c/b6b6b6:'disablesched <boss name> : cancel a specific boss schedule]" +
                             "\n'disableschedall' : cancel all boss schedule" +
                             "\n[c/b6b6b6:'usingschedule <yes/no>' : activate or deactivate boss schedule]" +
-                            "\n'resetschedule' : Restart the whole boss schedule to day 0 and assign the bosses each days on config file"
+                            "\n'resetschedule' : Restart the whole boss schedule to day 0 and assign the bosses each days on config file")
                             , Color.WhiteSmoke);
                         return;
                     }
@@ -5492,12 +5525,12 @@ namespace MKLP
                                 {
                                     if ((bool)Config.BossManager.AllowKingSlime)
                                     {
-                                        args.Player.SendErrorMessage("King Slime is already Enabled!");
+                                        args.Player.SendErrorMessage(GetText("King Slime is already Enabled!"));
                                         return;
                                     }
 
                                     Config.BossManager.AllowKingSlime = true;
-                                    args.Player.SendInfoMessage("King Slime is now enabled");
+                                    args.Player.SendInfoMessage(GetText("King Slime is now enabled"));
                                     Discordklp.KLPBotSendMessage_BossEnabled("King Slime", args.Player.Name);
                                     break;
                                 }
@@ -5508,12 +5541,12 @@ namespace MKLP
                                 {
                                     if ((bool)Config.BossManager.AllowEyeOfCthulhu)
                                     {
-                                        args.Player.SendErrorMessage("Eye Of Cthulhu is already Enabled!");
+                                        args.Player.SendErrorMessage(GetText("Eye Of Cthulhu is already Enabled!"));
                                         return;
                                     }
 
                                     Config.BossManager.AllowEyeOfCthulhu = true;
-                                    args.Player.SendInfoMessage("Eye Of Cthulhu is now enabled");
+                                    args.Player.SendInfoMessage(GetText("Eye Of Cthulhu is now enabled"));
                                     Discordklp.KLPBotSendMessage_BossEnabled("Eye of Cthulhu", args.Player.Name);
                                     break;
                                 }
@@ -5522,13 +5555,13 @@ namespace MKLP
                                 {
                                     if ((bool)Config.BossManager.AllowEaterOfWorlds && (bool)Config.BossManager.AllowBrainOfCthulhu)
                                     {
-                                        args.Player.SendErrorMessage("Eater Of Worlds & Brain Of Cthulhu is already Enabled!");
+                                        args.Player.SendErrorMessage(GetText("Eater Of Worlds & Brain Of Cthulhu is already Enabled!"));
                                         return;
                                     }
 
                                     Config.BossManager.AllowEaterOfWorlds = true;
                                     Config.BossManager.AllowBrainOfCthulhu = true;
-                                    args.Player.SendInfoMessage("Eater Of Worlds & Brain Of Cthulhu is now enabled");
+                                    args.Player.SendInfoMessage(GetText("Eater Of Worlds & Brain Of Cthulhu is now enabled"));
                                     Discordklp.KLPBotSendMessage_BossEnabled("Eater of Worlds & Brain of Cthulhu", args.Player.Name);
                                     break;
                                 }
@@ -5539,12 +5572,12 @@ namespace MKLP
                                 {
                                     if ((bool)Config.BossManager.AllowEaterOfWorlds)
                                     {
-                                        args.Player.SendErrorMessage("Eater Of Worlds is already Enabled!");
+                                        args.Player.SendErrorMessage(GetText("Eater Of Worlds is already Enabled!"));
                                         return;
                                     }
 
                                     Config.BossManager.AllowEaterOfWorlds = true;
-                                    args.Player.SendInfoMessage("Eater Of Worlds is now enabled");
+                                    args.Player.SendInfoMessage(GetText("Eater Of Worlds is now enabled"));
                                     Discordklp.KLPBotSendMessage_BossEnabled("Eater of Worlds", args.Player.Name);
                                     break;
                                 }
@@ -5555,12 +5588,12 @@ namespace MKLP
                                 {
                                     if ((bool)Config.BossManager.AllowBrainOfCthulhu)
                                     {
-                                        args.Player.SendErrorMessage("Brain Of Cthulhu is already Enabled!");
+                                        args.Player.SendErrorMessage(GetText("Brain Of Cthulhu is already Enabled!"));
                                         return;
                                     }
 
                                     Config.BossManager.AllowBrainOfCthulhu = true;
-                                    args.Player.SendInfoMessage("Brain Of Cthulhu is now enabled");
+                                    args.Player.SendInfoMessage(GetText("Brain Of Cthulhu is now enabled"));
                                     Discordklp.KLPBotSendMessage_BossEnabled("Brain of Cthulhu", args.Player.Name);
                                     break;
                                 }
@@ -5569,12 +5602,12 @@ namespace MKLP
                                 {
                                     if ((bool)Config.BossManager.AllowSkeletron)
                                     {
-                                        args.Player.SendErrorMessage("Skeletron is already Enabled!");
+                                        args.Player.SendErrorMessage(GetText("Skeletron is already Enabled!"));
                                         return;
                                     }
 
                                     Config.BossManager.AllowSkeletron = true;
-                                    args.Player.SendInfoMessage("Skeletron is now enabled");
+                                    args.Player.SendInfoMessage(GetText("Skeletron is now enabled"));
                                     Discordklp.KLPBotSendMessage_BossEnabled("Skeletron", args.Player.Name);
                                     break;
                                 }
@@ -5584,12 +5617,12 @@ namespace MKLP
                                 {
                                     if ((bool)Config.BossManager.AllowQueenBee)
                                     {
-                                        args.Player.SendErrorMessage("Queen Bee is already Enabled!");
+                                        args.Player.SendErrorMessage(GetText("Queen Bee is already Enabled!"));
                                         return;
                                     }
 
                                     Config.BossManager.AllowQueenBee = true;
-                                    args.Player.SendInfoMessage("Queen Bee is now enabled");
+                                    args.Player.SendInfoMessage(GetText("Queen Bee is now enabled"));
                                     Discordklp.KLPBotSendMessage_BossEnabled("Queen Bee", args.Player.Name);
                                     break;
                                 }
@@ -5599,12 +5632,12 @@ namespace MKLP
                                 {
                                     if ((bool)Config.BossManager.AllowDeerclops)
                                     {
-                                        args.Player.SendErrorMessage("Deerclops is already Enabled!");
+                                        args.Player.SendErrorMessage(GetText("Deerclops is already Enabled!"));
                                         return;
                                     }
 
                                     Config.BossManager.AllowDeerclops = true;
-                                    args.Player.SendInfoMessage("Deerclops is now enabled");
+                                    args.Player.SendInfoMessage(GetText("Deerclops is now enabled"));
                                     Discordklp.KLPBotSendMessage_BossEnabled("Deerclops", args.Player.Name);
                                     break;
                                 }
@@ -5614,12 +5647,12 @@ namespace MKLP
                                 {
                                     if ((bool)Config.BossManager.AllowWallOfFlesh)
                                     {
-                                        args.Player.SendErrorMessage("Wall Of Flesh is already Enabled!");
+                                        args.Player.SendErrorMessage(GetText("Wall Of Flesh is already Enabled!"));
                                         return;
                                     }
 
                                     Config.BossManager.AllowWallOfFlesh = true;
-                                    args.Player.SendInfoMessage("Wall Of Flesh is now enabled");
+                                    args.Player.SendInfoMessage(GetText("Wall Of Flesh is now enabled"));
                                     Discordklp.KLPBotSendMessage_BossEnabled("Wall of Flesh", args.Player.Name);
                                     break;
                                 }
@@ -5629,12 +5662,12 @@ namespace MKLP
                                 {
                                     if ((bool)Config.BossManager.AllowQueenSlime)
                                     {
-                                        args.Player.SendErrorMessage("Queen Slime is already Enabled!");
+                                        args.Player.SendErrorMessage(GetText("Queen Slime is already Enabled!"));
                                         return;
                                     }
 
                                     Config.BossManager.AllowQueenSlime = true;
-                                    args.Player.SendInfoMessage("Queen Slime is now enabled");
+                                    args.Player.SendInfoMessage(GetText("Queen Slime is now enabled"));
                                     Discordklp.KLPBotSendMessage_BossEnabled("Queen Slime", args.Player.Name);
                                     break;
                                 }
@@ -5647,23 +5680,23 @@ namespace MKLP
                                     {
                                         if ((bool)Config.BossManager.AllowMechdusa)
                                         {
-                                            args.Player.SendErrorMessage("Mechdusa is already Enabled!");
+                                            args.Player.SendErrorMessage(GetText("Mechdusa is already Enabled!"));
                                             return;
                                         }
 
                                         Config.BossManager.AllowMechdusa = false;
-                                        args.Player.SendInfoMessage("Mechdusa is now enabled");
+                                        args.Player.SendInfoMessage(GetText("Mechdusa is now enabled"));
                                         Discordklp.KLPBotSendMessage_BossEnabled("Mechdusa", args.Player.Name);
                                         break;
                                     }
                                     if ((bool)Config.BossManager.AllowTheDestroyer)
                                     {
-                                        args.Player.SendErrorMessage("The Destroyer is already Enabled!");
+                                        args.Player.SendErrorMessage(GetText("The Destroyer is already Enabled!"));
                                         return;
                                     }
 
                                     Config.BossManager.AllowTheDestroyer = true;
-                                    args.Player.SendInfoMessage("The Destroyer is now enabled");
+                                    args.Player.SendInfoMessage(GetText("The Destroyer is now enabled"));
                                     Discordklp.KLPBotSendMessage_BossEnabled("Destroyer", args.Player.Name);
                                     break;
                                 }
@@ -5676,23 +5709,23 @@ namespace MKLP
                                     {
                                         if ((bool)Config.BossManager.AllowMechdusa)
                                         {
-                                            args.Player.SendErrorMessage("Mechdusa is already Enabled!");
+                                            args.Player.SendErrorMessage(GetText("Mechdusa is already Enabled!"));
                                             return;
                                         }
 
                                         Config.BossManager.AllowMechdusa = false;
-                                        args.Player.SendInfoMessage("Mechdusa is now enabled");
+                                        args.Player.SendInfoMessage(GetText("Mechdusa is now enabled"));
                                         Discordklp.KLPBotSendMessage_BossEnabled("Mechdusa", args.Player.Name);
                                         break;
                                     }
                                     if ((bool)Config.BossManager.AllowTheTwins)
                                     {
-                                        args.Player.SendErrorMessage("The Twins is already Enabled!");
+                                        args.Player.SendErrorMessage(GetText("The Twins is already Enabled!"));
                                         return;
                                     }
 
                                     Config.BossManager.AllowTheTwins = true;
-                                    args.Player.SendInfoMessage("The Twins is now enabled");
+                                    args.Player.SendInfoMessage(GetText("The Twins is now enabled"));
                                     Discordklp.KLPBotSendMessage_BossEnabled("The Twins", args.Player.Name);
                                     break;
                                 }
@@ -5705,23 +5738,23 @@ namespace MKLP
                                     {
                                         if ((bool)Config.BossManager.AllowMechdusa)
                                         {
-                                            args.Player.SendErrorMessage("Mechdusa is already Enabled!");
+                                            args.Player.SendErrorMessage(GetText("Mechdusa is already Enabled!"));
                                             return;
                                         }
 
                                         Config.BossManager.AllowMechdusa = false;
-                                        args.Player.SendInfoMessage("Mechdusa is now enabled");
+                                        args.Player.SendInfoMessage(GetText("Mechdusa is now enabled"));
                                         Discordklp.KLPBotSendMessage_BossEnabled("Mechdusa", args.Player.Name);
                                         break;
                                     }
                                     if ((bool)Config.BossManager.AllowSkeletronPrime)
                                     {
-                                        args.Player.SendErrorMessage("Skeletron Prime is already Enabled!");
+                                        args.Player.SendErrorMessage(GetText("Skeletron Prime is already Enabled!"));
                                         return;
                                     }
 
                                     Config.BossManager.AllowSkeletronPrime = true;
-                                    args.Player.SendInfoMessage("Skeletron Prime is now enabled");
+                                    args.Player.SendInfoMessage(GetText("Skeletron Prime is now enabled"));
                                     Discordklp.KLPBotSendMessage_BossEnabled("Skeletron Prime", args.Player.Name);
                                     break;
                                 }
@@ -5729,18 +5762,18 @@ namespace MKLP
                                 {
                                     if (!Main.zenithWorld)
                                     {
-                                        args.Player.SendErrorMessage("Mechdusa is only available on zenith seed!");
+                                        args.Player.SendErrorMessage(GetText("Mechdusa is only available on zenith seed!"));
                                         return;
                                     }
 
                                     if ((bool)Config.BossManager.AllowMechdusa)
                                     {
-                                        args.Player.SendErrorMessage("Mechdusa is already Enabled!");
+                                        args.Player.SendErrorMessage(GetText("Mechdusa is already Enabled!"));
                                         return;
                                     }
 
                                     Config.BossManager.AllowMechdusa = false;
-                                    args.Player.SendInfoMessage("Mechdusa is now enabled");
+                                    args.Player.SendInfoMessage(GetText("Mechdusa is now enabled"));
                                     Discordklp.KLPBotSendMessage_BossEnabled("Mechdusa", args.Player.Name);
                                     break;
                                 }
@@ -5748,12 +5781,12 @@ namespace MKLP
                                 {
                                     if ((bool)Config.BossManager.AllowPlantera)
                                     {
-                                        args.Player.SendErrorMessage("Plantera is already Enabled!");
+                                        args.Player.SendErrorMessage(GetText("Plantera is already Enabled!"));
                                         return;
                                     }
 
                                     Config.BossManager.AllowPlantera = true;
-                                    args.Player.SendInfoMessage("Plantera is now enabled");
+                                    args.Player.SendInfoMessage(GetText("Plantera is now enabled"));
                                     Discordklp.KLPBotSendMessage_BossEnabled("Plantera", args.Player.Name);
                                     break;
                                 }
@@ -5761,12 +5794,12 @@ namespace MKLP
                                 {
                                     if ((bool)Config.BossManager.AllowGolem)
                                     {
-                                        args.Player.SendErrorMessage("Golem is already Enabled!");
+                                        args.Player.SendErrorMessage(GetText("Golem is already Enabled!"));
                                         return;
                                     }
 
                                     Config.BossManager.AllowGolem = true;
-                                    args.Player.SendInfoMessage("Golem is now enabled");
+                                    args.Player.SendInfoMessage(GetText("Golem is now enabled"));
                                     Discordklp.KLPBotSendMessage_BossEnabled("Golem", args.Player.Name);
                                     break;
                                 }
@@ -5777,12 +5810,12 @@ namespace MKLP
                                 {
                                     if ((bool)Config.BossManager.AllowDukeFishron)
                                     {
-                                        args.Player.SendErrorMessage("Duke Fishron is already Enabled!");
+                                        args.Player.SendErrorMessage(GetText("Duke Fishron is already Enabled!"));
                                         return;
                                     }
 
                                     Config.BossManager.AllowDukeFishron = true;
-                                    args.Player.SendInfoMessage("Duke Fishron is now enabled");
+                                    args.Player.SendInfoMessage(GetText("Duke Fishron is now enabled"));
                                     Discordklp.KLPBotSendMessage_BossEnabled("Duke Fishron", args.Player.Name);
                                     break;
                                 }
@@ -5793,12 +5826,12 @@ namespace MKLP
                                 {
                                     if ((bool)Config.BossManager.AllowLunaticCultist)
                                     {
-                                        args.Player.SendErrorMessage("Lunatic Cultist is already Enabled!");
+                                        args.Player.SendErrorMessage(GetText("Lunatic Cultist is already Enabled!"));
                                         return;
                                     }
 
                                     Config.BossManager.AllowLunaticCultist = true;
-                                    args.Player.SendInfoMessage("Lunatic Cultist is now enabled");
+                                    args.Player.SendInfoMessage(GetText("Lunatic Cultist is now enabled"));
                                     Discordklp.KLPBotSendMessage_BossEnabled("Lunatic Cultist", args.Player.Name);
                                     break;
                                 }
@@ -5810,12 +5843,12 @@ namespace MKLP
                                 {
                                     if ((bool)Config.BossManager.AllowEmpressOfLight)
                                     {
-                                        args.Player.SendErrorMessage("Empress Of Light is already Enabled!");
+                                        args.Player.SendErrorMessage(GetText("Empress Of Light is already Enabled!"));
                                         return;
                                     }
 
                                     Config.BossManager.AllowEmpressOfLight = true;
-                                    args.Player.SendInfoMessage("Empress Of Light is now enabled");
+                                    args.Player.SendInfoMessage(GetText("Empress Of Light is now enabled"));
                                     Discordklp.KLPBotSendMessage_BossEnabled("Empress of Light", args.Player.Name);
                                     break;
                                 }
@@ -5825,18 +5858,18 @@ namespace MKLP
                                 {
                                     if ((bool)Config.BossManager.AllowMoonLord)
                                     {
-                                        args.Player.SendErrorMessage("Moon Lord is already Enabled!");
+                                        args.Player.SendErrorMessage(GetText("Moon Lord is already Enabled!"));
                                         return;
                                     }
 
                                     Config.BossManager.AllowMoonLord = true;
-                                    args.Player.SendInfoMessage("Moon Lord is now enabled");
+                                    args.Player.SendInfoMessage(GetText("Moon Lord is now enabled"));
                                     Discordklp.KLPBotSendMessage_BossEnabled("Moon Lord", args.Player.Name);
                                     break;
                                 }
                             default:
                                 {
-                                    args.Player.SendErrorMessage("Please specify the boss!");
+                                    args.Player.SendErrorMessage(GetText("Please specify the boss!"));
                                     return;
                                 }
                         }
@@ -5857,12 +5890,12 @@ namespace MKLP
                                 {
                                     if (!(bool)Config.BossManager.AllowKingSlime)
                                     {
-                                        args.Player.SendErrorMessage("King Slime is already Disabled!");
+                                        args.Player.SendErrorMessage(GetText("King Slime is already Disabled!"));
                                         return;
                                     }
 
                                     Config.BossManager.AllowKingSlime = false;
-                                    args.Player.SendInfoMessage("King Slime is now disabled");
+                                    args.Player.SendInfoMessage(GetText("King Slime is now disabled"));
                                     break;
                                 }
                             case "eyeofcthulhu":
@@ -5872,12 +5905,12 @@ namespace MKLP
                                 {
                                     if (!(bool)Config.BossManager.AllowEyeOfCthulhu)
                                     {
-                                        args.Player.SendErrorMessage("Eye Of Cthulhu is already Disabled!");
+                                        args.Player.SendErrorMessage(GetText("Eye Of Cthulhu is already Disabled!"));
                                         return;
                                     }
 
                                     Config.BossManager.AllowEyeOfCthulhu = false;
-                                    args.Player.SendInfoMessage("Eye Of Cthulhu is now disabled");
+                                    args.Player.SendInfoMessage(GetText("Eye Of Cthulhu is now disabled"));
                                     break;
                                 }
                             case "evilboss":
@@ -5885,13 +5918,13 @@ namespace MKLP
                                 {
                                     if (!(bool)Config.BossManager.AllowEaterOfWorlds && !(bool)Config.BossManager.AllowBrainOfCthulhu)
                                     {
-                                        args.Player.SendErrorMessage("Eater Of Worlds & Brain Of Cthulhu is already Disabled!");
+                                        args.Player.SendErrorMessage(GetText("Eater Of Worlds & Brain Of Cthulhu is already Disabled!"));
                                         return;
                                     }
 
                                     Config.BossManager.AllowEaterOfWorlds = false;
                                     Config.BossManager.AllowBrainOfCthulhu = false;
-                                    args.Player.SendInfoMessage("Eater Of Worlds & Brain Of Cthulhu is now disabled");
+                                    args.Player.SendInfoMessage(GetText("Eater Of Worlds & Brain Of Cthulhu is now disabled"));
                                     break;
                                 }
                             case "eow":
@@ -5901,12 +5934,12 @@ namespace MKLP
                                 {
                                     if (!(bool)Config.BossManager.AllowEaterOfWorlds)
                                     {
-                                        args.Player.SendErrorMessage("Eater Of Worlds is already Disabled!");
+                                        args.Player.SendErrorMessage(GetText("Eater Of Worlds is already Disabled!"));
                                         return;
                                     }
 
                                     Config.BossManager.AllowEaterOfWorlds = false;
-                                    args.Player.SendInfoMessage("Eater Of Worlds is now disabled");
+                                    args.Player.SendInfoMessage(GetText("Eater Of Worlds is now disabled"));
                                     break;
                                 }
                             case "boc":
@@ -5916,12 +5949,12 @@ namespace MKLP
                                 {
                                     if (!(bool)Config.BossManager.AllowBrainOfCthulhu)
                                     {
-                                        args.Player.SendErrorMessage("Brain Of Cthulhu is already Disabled!");
+                                        args.Player.SendErrorMessage(GetText("Brain Of Cthulhu is already Disabled!"));
                                         return;
                                     }
 
                                     Config.BossManager.AllowBrainOfCthulhu = false;
-                                    args.Player.SendInfoMessage("Brain Of Cthulhu is now disabled");
+                                    args.Player.SendInfoMessage(GetText("Brain Of Cthulhu is now disabled"));
                                     break;
                                 }
                             case "skeletron":
@@ -5929,12 +5962,12 @@ namespace MKLP
                                 {
                                     if (!(bool)Config.BossManager.AllowSkeletron)
                                     {
-                                        args.Player.SendErrorMessage("Skeletron is already Disabled!");
+                                        args.Player.SendErrorMessage(GetText("Skeletron is already Disabled!"));
                                         return;
                                     }
 
                                     Config.BossManager.AllowSkeletron = false;
-                                    args.Player.SendInfoMessage("Skeletron is now disabled");
+                                    args.Player.SendInfoMessage(GetText("Skeletron is now disabled"));
                                     break;
                                 }
                             case "queenbee":
@@ -5943,12 +5976,12 @@ namespace MKLP
                                 {
                                     if (!(bool)Config.BossManager.AllowQueenBee)
                                     {
-                                        args.Player.SendErrorMessage("Queen Bee is already Disabled!");
+                                        args.Player.SendErrorMessage(GetText("Queen Bee is already Disabled!"));
                                         return;
                                     }
 
                                     Config.BossManager.AllowQueenBee = false;
-                                    args.Player.SendInfoMessage("Queen Bee is now disabled");
+                                    args.Player.SendInfoMessage(GetText("Queen Bee is now disabled"));
                                     break;
                                 }
                             case "deerclops":
@@ -5957,12 +5990,12 @@ namespace MKLP
                                 {
                                     if (!(bool)Config.BossManager.AllowDeerclops)
                                     {
-                                        args.Player.SendErrorMessage("Deerclops is already Disabled!");
+                                        args.Player.SendErrorMessage(GetText("Deerclops is already Disabled!"));
                                         return;
                                     }
 
                                     Config.BossManager.AllowDeerclops = false;
-                                    args.Player.SendInfoMessage("Deerclops is now disabled");
+                                    args.Player.SendInfoMessage(GetText("Deerclops is now disabled"));
                                     break;
                                 }
                             case "wall of flesh":
@@ -5971,12 +6004,12 @@ namespace MKLP
                                 {
                                     if (!(bool)Config.BossManager.AllowWallOfFlesh)
                                     {
-                                        args.Player.SendErrorMessage("Wall Of Flesh is already Disabled!");
+                                        args.Player.SendErrorMessage(GetText("Wall Of Flesh is already Disabled!"));
                                         return;
                                     }
 
                                     Config.BossManager.AllowWallOfFlesh = false;
-                                    args.Player.SendInfoMessage("Wall Of Flesh is now disabled");
+                                    args.Player.SendInfoMessage(GetText("Wall Of Flesh is now disabled"));
                                     break;
                                 }
                             case "queenslime":
@@ -5985,12 +6018,12 @@ namespace MKLP
                                 {
                                     if (!(bool)Config.BossManager.AllowQueenSlime)
                                     {
-                                        args.Player.SendErrorMessage("Queen Slime is already Disabled!");
+                                        args.Player.SendErrorMessage(GetText("Queen Slime is already Disabled!"));
                                         return;
                                     }
 
                                     Config.BossManager.AllowQueenSlime = false;
-                                    args.Player.SendInfoMessage("Queen Slime is now disabled");
+                                    args.Player.SendInfoMessage(GetText("Queen Slime is now disabled"));
                                     break;
                                 }
                             case "mech1":
@@ -6002,22 +6035,22 @@ namespace MKLP
                                     {
                                         if (!(bool)Config.BossManager.AllowMechdusa)
                                         {
-                                            args.Player.SendErrorMessage("Mechdusa is already Disabled!");
+                                            args.Player.SendErrorMessage(GetText("Mechdusa is already Disabled!"));
                                             return;
                                         }
 
                                         Config.BossManager.AllowMechdusa = false;
-                                        args.Player.SendInfoMessage("Mechdusa is now disabled");
+                                        args.Player.SendInfoMessage(GetText("Mechdusa is now disabled"));
                                         break;
                                     }
                                     if (!(bool)Config.BossManager.AllowTheDestroyer)
                                     {
-                                        args.Player.SendErrorMessage("The Destroyer is already Disabled!");
+                                        args.Player.SendErrorMessage(GetText("The Destroyer is already Disabled!"));
                                         return;
                                     }
 
                                     Config.BossManager.AllowTheDestroyer = false;
-                                    args.Player.SendInfoMessage("The Destroyer is now disabled");
+                                    args.Player.SendInfoMessage(GetText("The Destroyer is now disabled"));
                                     break;
                                 }
                             case "mech2":
@@ -6029,22 +6062,22 @@ namespace MKLP
                                     {
                                         if (!(bool)Config.BossManager.AllowMechdusa)
                                         {
-                                            args.Player.SendErrorMessage("Mechdusa is already Disabled!");
+                                            args.Player.SendErrorMessage(GetText("Mechdusa is already Disabled!"));
                                             return;
                                         }
 
                                         Config.BossManager.AllowMechdusa = false;
-                                        args.Player.SendInfoMessage("Mechdusa is now disabled");
+                                        args.Player.SendInfoMessage(GetText("Mechdusa is now disabled"));
                                         break;
                                     }
                                     if (!(bool)Config.BossManager.AllowTheTwins)
                                     {
-                                        args.Player.SendErrorMessage("The Twins is already Disabled!");
+                                        args.Player.SendErrorMessage(GetText("The Twins is already Disabled!"));
                                         return;
                                     }
 
                                     Config.BossManager.AllowTheTwins = false;
-                                    args.Player.SendInfoMessage("The Twins is now disabled");
+                                    args.Player.SendInfoMessage(GetText("The Twins is now disabled"));
                                     break;
                                 }
                             case "mech3":
@@ -6056,64 +6089,64 @@ namespace MKLP
                                     {
                                         if (!(bool)Config.BossManager.AllowMechdusa)
                                         {
-                                            args.Player.SendErrorMessage("Mechdusa is already Disabled!");
+                                            args.Player.SendErrorMessage(GetText("Mechdusa is already Disabled!"));
                                             return;
                                         }
 
                                         Config.BossManager.AllowMechdusa = false;
-                                        args.Player.SendInfoMessage("Mechdusa is now disabled");
+                                        args.Player.SendInfoMessage(GetText("Mechdusa is now disabled"));
                                         break;
                                     }
                                     if (!(bool)Config.BossManager.AllowSkeletronPrime)
                                     {
-                                        args.Player.SendErrorMessage("Skeletron Prime is already Disabled!");
+                                        args.Player.SendErrorMessage(GetText("Skeletron Prime is already Disabled!"));
                                         return;
                                     }
 
                                     Config.BossManager.AllowSkeletronPrime = false;
-                                    args.Player.SendInfoMessage("Skeletron Prime is now disabled");
+                                    args.Player.SendInfoMessage(GetText("Skeletron Prime is now disabled"));
                                     break;
                                 }
                             case "mechdusa":
                                 {
                                     if (!Main.zenithWorld)
                                     {
-                                        args.Player.SendErrorMessage("Mechdusa is only available on zenith seed!");
+                                        args.Player.SendErrorMessage(GetText("Mechdusa is only available on zenith seed!"));
                                         return;
                                     }
 
                                     if (!(bool)Config.BossManager.AllowMechdusa)
                                     {
-                                        args.Player.SendErrorMessage("Mechdusa is already Disabled!");
+                                        args.Player.SendErrorMessage(GetText("Mechdusa is already Disabled!"));
                                         return;
                                     }
 
                                     Config.BossManager.AllowMechdusa = false;
-                                    args.Player.SendInfoMessage("Mechdusa is now disabled");
+                                    args.Player.SendInfoMessage(GetText("Mechdusa is now disabled"));
                                     break;
                                 }
                             case "plantera":
                                 {
                                     if (!(bool)Config.BossManager.AllowPlantera)
                                     {
-                                        args.Player.SendErrorMessage("Plantera is already Disabled!");
+                                        args.Player.SendErrorMessage(GetText("Plantera is already Disabled!"));
                                         return;
                                     }
 
                                     Config.BossManager.AllowPlantera = false;
-                                    args.Player.SendInfoMessage("Plantera is now disabled");
+                                    args.Player.SendInfoMessage(GetText("Plantera is now disabled"));
                                     break;
                                 }
                             case "golem":
                                 {
                                     if (!(bool)Config.BossManager.AllowGolem)
                                     {
-                                        args.Player.SendErrorMessage("Golem is already Disabled!");
+                                        args.Player.SendErrorMessage(GetText("Golem is already Disabled!"));
                                         return;
                                     }
 
                                     Config.BossManager.AllowGolem = false;
-                                    args.Player.SendInfoMessage("Golem is now disabled");
+                                    args.Player.SendInfoMessage(GetText("Golem is now disabled"));
                                     break;
                                 }
                             case "duke":
@@ -6123,12 +6156,12 @@ namespace MKLP
                                 {
                                     if (!(bool)Config.BossManager.AllowDukeFishron)
                                     {
-                                        args.Player.SendErrorMessage("Duke Fish is already Disabled!");
+                                        args.Player.SendErrorMessage(GetText("Duke Fish is already Disabled!"));
                                         return;
                                     }
 
                                     Config.BossManager.AllowDukeFishron = false;
-                                    args.Player.SendInfoMessage("Duke Fish is now disable");
+                                    args.Player.SendInfoMessage(GetText("Duke Fish is now disable"));
                                     break;
                                 }
                             case "cultist":
@@ -6138,12 +6171,12 @@ namespace MKLP
                                 {
                                     if (!(bool)Config.BossManager.AllowLunaticCultist)
                                     {
-                                        args.Player.SendErrorMessage("Lunatic Cultist is already Disabled!");
+                                        args.Player.SendErrorMessage(GetText("Lunatic Cultist is already Disabled!"));
                                         return;
                                     }
 
                                     Config.BossManager.AllowLunaticCultist = false;
-                                    args.Player.SendInfoMessage("Lunatic Cultist is now disabled");
+                                    args.Player.SendInfoMessage(GetText("Lunatic Cultist is now disabled"));
                                     break;
                                 }
 
@@ -6154,12 +6187,12 @@ namespace MKLP
                                 {
                                     if (!(bool)Config.BossManager.AllowEmpressOfLight)
                                     {
-                                        args.Player.SendErrorMessage("Empress Of Light is already Disabled!");
+                                        args.Player.SendErrorMessage(GetText("Empress Of Light is already Disabled!"));
                                         return;
                                     }
 
                                     Config.BossManager.AllowEmpressOfLight = false;
-                                    args.Player.SendInfoMessage("Empress Of Light is now disabled");
+                                    args.Player.SendInfoMessage(GetText("Empress Of Light is now disabled"));
                                     break;
                                 }
                             case "moonlord":
@@ -6168,17 +6201,17 @@ namespace MKLP
                                 {
                                     if (!(bool)Config.BossManager.AllowMoonLord)
                                     {
-                                        args.Player.SendErrorMessage("Moon Lord is already Disabled!");
+                                        args.Player.SendErrorMessage(GetText("Moon Lord is already Disabled!"));
                                         return;
                                     }
 
                                     Config.BossManager.AllowMoonLord = false;
-                                    args.Player.SendInfoMessage("Moon Lord is now disabled");
+                                    args.Player.SendInfoMessage(GetText("Moon Lord is now disabled"));
                                     break;
                                 }
                             default:
                                 {
-                                    args.Player.SendErrorMessage("Please specify the boss!");
+                                    args.Player.SendErrorMessage(GetText("Please specify the boss!"));
                                     return;
                                 }
                         }
@@ -6210,7 +6243,7 @@ namespace MKLP
                         Config.BossManager.AllowLunaticCultist = true;
                         Config.BossManager.AllowMoonLord = true;
 
-                        args.Player.SendInfoMessage("All Bosses are enabled");
+                        args.Player.SendInfoMessage(GetText("All Bosses are enabled"));
                         Discordklp.KLPBotSendMessage_BossEnabled("All Bosses", args.Player.Name);
                         Config.Changeall();
                         Config.Read();
@@ -6240,7 +6273,7 @@ namespace MKLP
                         Config.BossManager.AllowLunaticCultist = false;
                         Config.BossManager.AllowMoonLord = false;
 
-                        args.Player.SendInfoMessage("All Bosses are disabled!");
+                        args.Player.SendInfoMessage(GetText("All Bosses are disabled!"));
                         Config.Changeall();
                         Config.Read();
                         return;
@@ -6252,7 +6285,7 @@ namespace MKLP
                     {
                         if (!args.Player.HasPermission(Config.Permissions.CMD_ManageBoss_SetKilled))
                         {
-                            args.Player.SendErrorMessage("You do not have permission to set bosses as kill or not!");
+                            args.Player.SendErrorMessage(GetText("You do not have permission to set bosses as kill or not!"));
                             return;
                         }
                         switch (args.Parameters[1].ToLower())
@@ -6263,7 +6296,7 @@ namespace MKLP
                             case "ks":
                                 {
                                     NPC.downedSlimeKing = !NPC.downedSlimeKing;
-                                    args.Player.SendInfoMessage($"Set King Slime as {(NPC.downedSlimeKing ? "[c/FF0000:Killed]" : "[c/00FF00:Not Killed]")}!");
+                                    args.Player.SendInfoMessage(GetText($"Set King Slime as {(NPC.downedSlimeKing ? "[c/FF0000:Killed]" : "[c/00FF00:Not Killed]")}!"));
                                     return;
                                 }
                             case "eyeofcthulhu":
@@ -6272,7 +6305,7 @@ namespace MKLP
                             case "eoc":
                                 {
                                     NPC.downedBoss1 = !NPC.downedBoss1;
-                                    args.Player.SendInfoMessage($"Set Eye of Cthulhu as {(NPC.downedBoss1 ? "[c/FF0000:Killed]" : "[c/00FF00:Not Killed]")}!");
+                                    args.Player.SendInfoMessage(GetText($"Set Eye of Cthulhu as {(NPC.downedBoss1 ? "[c/FF0000:Killed]" : "[c/00FF00:Not Killed]")}!"));
                                     return;
                                 }
                             case "evilboss":
@@ -6287,14 +6320,14 @@ namespace MKLP
                             case "eater":
                                 {
                                     NPC.downedBoss2 = !NPC.downedBoss2;
-                                    args.Player.SendInfoMessage($"Set {(WorldGen.crimson ? "Brain of Cthulhu" : "Eater of Worlds")} as {(NPC.downedBoss2 ? "[c/FF0000:Killed]" : "[c/00FF00:Not Killed]")}!");
+                                    args.Player.SendInfoMessage(GetText($"Set {(WorldGen.crimson ? "Brain of Cthulhu" : "Eater of Worlds")} as {(NPC.downedBoss2 ? "[c/FF0000:Killed]" : "[c/00FF00:Not Killed]")}!"));
                                     return;
                                 }
                             case "skeletron":
                             case "sans":
                                 {
                                     NPC.downedBoss3 = !NPC.downedBoss3;
-                                    args.Player.SendInfoMessage($"Set Skeletron as {(NPC.downedBoss3 ? "[c/FF0000:Killed]" : "[c/00FF00:Not Killed]")}!");
+                                    args.Player.SendInfoMessage(GetText($"Set Skeletron as {(NPC.downedBoss3 ? "[c/FF0000:Killed]" : "[c/00FF00:Not Killed]")}!"));
                                     return;
                                 }
                             case "queenbee":
@@ -6302,7 +6335,7 @@ namespace MKLP
                             case "qb":
                                 {
                                     NPC.downedQueenBee = !NPC.downedQueenBee;
-                                    args.Player.SendInfoMessage($"Set Queen Bee as {(NPC.downedQueenBee ? "[c/FF0000:Killed]" : "[c/00FF00:Not Killed]")}!");
+                                    args.Player.SendInfoMessage(GetText($"Set Queen Bee as {(NPC.downedQueenBee ? "[c/FF0000:Killed]" : "[c/00FF00:Not Killed]")}!"));
                                     return;
                                 }
                             case "deerclops":
@@ -6310,7 +6343,7 @@ namespace MKLP
                             case "deer":
                                 {
                                     NPC.downedDeerclops = !NPC.downedDeerclops;
-                                    args.Player.SendInfoMessage($"Set Deerclops as {(NPC.downedDeerclops ? "[c/FF0000:Killed]" : "[c/00FF00:Not Killed]")}!");
+                                    args.Player.SendInfoMessage(GetText($"Set Deerclops as {(NPC.downedDeerclops ? "[c/FF0000:Killed]" : "[c/00FF00:Not Killed]")}!"));
                                     return;
                                 }
                             case "hardmode":
@@ -6319,8 +6352,8 @@ namespace MKLP
                             case "wof":
                                 {
                                     Main.hardMode = !Main.hardMode;
-                                    args.Player.SendInfoMessage($"Set Wall of Flesh (Hardmode) as {(Main.hardMode ? "[c/FF0000:Killed]" : "[c/00FF00:Not Killed]")}!");
-                                    args.Player.SendInfoMessage("Note: This is the same as the '/hardmode' command.");
+                                    args.Player.SendInfoMessage(GetText($"Set Wall of Flesh (Hardmode) as {(Main.hardMode ? "[c/FF0000:Killed]" : "[c/00FF00:Not Killed]")}!"));
+                                    args.Player.SendInfoMessage(GetText("Note: This is the same as the '/hardmode' command."));
                                     return;
                                 }
                             case "queenslime":
@@ -6328,7 +6361,7 @@ namespace MKLP
                             case "qs":
                                 {
                                     NPC.downedQueenSlime = !NPC.downedQueenSlime;
-                                    args.Player.SendInfoMessage($"Set Queen Slime as {(NPC.downedQueenSlime ? "[c/FF0000:Killed]" : "[c/00FF00:Not Killed]")}!");
+                                    args.Player.SendInfoMessage(GetText($"Set Queen Slime as {(NPC.downedQueenSlime ? "[c/FF0000:Killed]" : "[c/00FF00:Not Killed]")}!"));
                                     return;
                                 }
                             case "mech1":
@@ -6337,7 +6370,7 @@ namespace MKLP
                             case "destroyer":
                                 {
                                     NPC.downedMechBoss1 = !NPC.downedMechBoss1;
-                                    args.Player.SendInfoMessage($"Set The Destroyer as {(NPC.downedMechBoss1 ? "[c/FF0000:Killed]" : "[c/00FF00:Not Killed]")}!");
+                                    args.Player.SendInfoMessage(GetText($"Set The Destroyer as {(NPC.downedMechBoss1 ? "[c/FF0000:Killed]" : "[c/00FF00:Not Killed]")}!"));
                                     return;
                                 }
                             case "mech2":
@@ -6346,7 +6379,7 @@ namespace MKLP
                             case "twins":
                                 {
                                     NPC.downedMechBoss2 = !NPC.downedMechBoss2;
-                                    args.Player.SendInfoMessage($"Set The Twins as {(NPC.downedMechBoss2 ? "[c/FF0000:Killed]" : "[c/00FF00:Not Killed]")}!");
+                                    args.Player.SendInfoMessage(GetText($"Set The Twins as {(NPC.downedMechBoss2 ? "[c/FF0000:Killed]" : "[c/00FF00:Not Killed]")}!"));
                                     return;
                                 }
                             case "mech3":
@@ -6355,19 +6388,19 @@ namespace MKLP
                             case "prime":
                                 {
                                     NPC.downedMechBoss3 = !NPC.downedMechBoss3;
-                                    args.Player.SendInfoMessage($"Set Skeletron Prime as {(NPC.downedMechBoss3 ? "[c/FF0000:Killed]" : "[c/00FF00:Not Killed]")}!");
+                                    args.Player.SendInfoMessage(GetText($"Set Skeletron Prime as {(NPC.downedMechBoss3 ? "[c/FF0000:Killed]" : "[c/00FF00:Not Killed]")}!"));
                                     return;
                                 }
                             case "plantera":
                                 {
                                     NPC.downedPlantBoss = !NPC.downedPlantBoss;
-                                    args.Player.SendInfoMessage($"Set Plantera as {(NPC.downedPlantBoss ? "[c/FF0000:Killed]" : "[c/00FF00:Not Killed]")}!");
+                                    args.Player.SendInfoMessage(GetText($"Set Plantera as {(NPC.downedPlantBoss ? "[c/FF0000:Killed]" : "[c/00FF00:Not Killed]")}!"));
                                     return;
                                 }
                             case "golem":
                                 {
                                     NPC.downedGolemBoss = !NPC.downedGolemBoss;
-                                    args.Player.SendInfoMessage($"Set Golem as {(NPC.downedGolemBoss ? "[c/FF0000:Killed]" : "[c/00FF00:Not Killed]")}!");
+                                    args.Player.SendInfoMessage(GetText($"Set Golem as {(NPC.downedGolemBoss ? "[c/FF0000:Killed]" : "[c/00FF00:Not Killed]")}!"));
                                     return;
                                 }
                             case "duke":
@@ -6376,7 +6409,7 @@ namespace MKLP
                             case "duke fishron":
                                 {
                                     NPC.downedFishron = !NPC.downedFishron;
-                                    args.Player.SendInfoMessage($"Set Duke Fishron as {(NPC.downedFishron ? "[c/FF0000:Killed]" : "[c/00FF00:Not Killed]")}!");
+                                    args.Player.SendInfoMessage(GetText($"Set Duke Fishron as {(NPC.downedFishron ? "[c/FF0000:Killed]" : "[c/00FF00:Not Killed]")}!"));
                                     return;
                                 }
                             case "cultist":
@@ -6385,7 +6418,7 @@ namespace MKLP
                             case "lunatic cultist":
                                 {
                                     NPC.downedAncientCultist = !NPC.downedAncientCultist;
-                                    args.Player.SendInfoMessage($"Set Lunatic Cultist as {(NPC.downedAncientCultist ? "[c/FF0000:Killed]" : "[c/00FF00:Not Killed]")}!");
+                                    args.Player.SendInfoMessage(GetText($"Set Lunatic Cultist as {(NPC.downedAncientCultist ? "[c/FF0000:Killed]" : "[c/00FF00:Not Killed]")}!"));
                                     return;
                                 }
 
@@ -6395,7 +6428,7 @@ namespace MKLP
                             case "empress of light":
                                 {
                                     NPC.downedEmpressOfLight = !NPC.downedEmpressOfLight;
-                                    args.Player.SendInfoMessage($"Set Empress of Light as {(NPC.downedEmpressOfLight ? "[c/FF0000:Killed]" : "[c/00FF00:Not Killed]")}!");
+                                    args.Player.SendInfoMessage(GetText($"Set Empress of Light as {(NPC.downedEmpressOfLight ? "[c/FF0000:Killed]" : "[c/00FF00:Not Killed]")}!"));
                                     return;
                                 }
                             case "moonlord":
@@ -6403,13 +6436,13 @@ namespace MKLP
                             case "ml":
                                 {
                                     NPC.downedMoonlord = !NPC.downedMoonlord;
-                                    args.Player.SendInfoMessage($"Set Moonlord as {(NPC.downedMoonlord ? "[c/FF0000:Killed]" : "[c/00FF00:Not Killed]")}!");
+                                    args.Player.SendInfoMessage(GetText($"Set Moonlord as {(NPC.downedMoonlord ? "[c/FF0000:Killed]" : "[c/00FF00:Not Killed]")}!"));
                                     return;
                                 }
                             default:
                                 {
-                                    args.Player.SendErrorMessage("Please specify which boss to toggle!");
-                                    args.Player.SendInfoMessage("eg. /undoboss king - toggle king slime");
+                                    args.Player.SendErrorMessage(GetText("Please specify which boss to setkilled!"));
+                                    args.Player.SendInfoMessage(GetText("ex. /mboss setkilled king - sets King Slime killed or not"));
                                     return;
                                 }
                         }
@@ -6428,7 +6461,7 @@ namespace MKLP
                             args.Player.SendErrorMessage("Invalid DateTime Schedule!");
                             return;
                         }
-                        string[] getmonth_str = { 
+                        string[] getmonth_str = {
                             "Jan",
                             "feb",
                             "Mar",
@@ -6443,7 +6476,7 @@ namespace MKLP
                             "Dec"
                         };
 
-                        string stringsched = 
+                        string stringsched =
                             $"> target: {schedule.Hour}:{schedule.Minute} {getmonth_str[schedule.Month - 1]} {schedule.Day} {schedule.Year}" +
                             $"\n> server time: {DateTime.UtcNow.Hour}:{DateTime.UtcNow.Minute} {getmonth_str[DateTime.UtcNow.Month - 1]} {DateTime.UtcNow.Day} {DateTime.UtcNow.Year}";
                         //TShock.Utils.TryParseTime()
@@ -6455,8 +6488,8 @@ namespace MKLP
                             case "ks":
                                 {
                                     Config.BossManager.ScheduleAllowKingSlime = schedule;
-                                    args.Player.SendInfoMessage("set King Slime Schedule" +
-                                        $"\n{stringsched}");
+                                    args.Player.SendInfoMessage(GetText("set King Slime Schedule" +
+                                        $"\n{stringsched}"));
                                     break;
                                 }
                             case "eyeofcthulhu":
@@ -6465,8 +6498,8 @@ namespace MKLP
                             case "eoc":
                                 {
                                     Config.BossManager.ScheduleAllowEyeOfCthulhu = schedule;
-                                    args.Player.SendInfoMessage("set Eye Of Cthulhu Schedule" +
-                                        $"\n{stringsched}");
+                                    args.Player.SendInfoMessage(GetText("set Eye Of Cthulhu Schedule" +
+                                        $"\n{stringsched}"));
                                     break;
                                 }
                             case "evilboss":
@@ -6474,8 +6507,8 @@ namespace MKLP
                                 {
                                     Config.BossManager.ScheduleAllowEaterOfWorlds = schedule;
                                     Config.BossManager.ScheduleAllowBrainOfCthulhu = schedule;
-                                    args.Player.SendInfoMessage("set Eater Of Worlds & Brain Of Cthulhu Schedule" +
-                                        $"\n{stringsched}");
+                                    args.Player.SendInfoMessage(GetText("set Eater Of Worlds & Brain Of Cthulhu Schedule" +
+                                        $"\n{stringsched}"));
                                     break;
                                 }
                             case "eow":
@@ -6484,8 +6517,8 @@ namespace MKLP
                             case "eater":
                                 {
                                     Config.BossManager.ScheduleAllowEaterOfWorlds = schedule;
-                                    args.Player.SendInfoMessage("set Eater Of Worlds Schedule" +
-                                        $"\n{stringsched}");
+                                    args.Player.SendInfoMessage(GetText("set Eater Of Worlds Schedule" +
+                                        $"\n{stringsched}"));
                                     break;
                                 }
                             case "boc":
@@ -6494,16 +6527,16 @@ namespace MKLP
                             case "brain":
                                 {
                                     Config.BossManager.ScheduleAllowBrainOfCthulhu = schedule;
-                                    args.Player.SendInfoMessage("set Brain Of Cthulhu Schedule" +
-                                        $"\n{stringsched}");
+                                    args.Player.SendInfoMessage(GetText("set Brain Of Cthulhu Schedule" +
+                                        $"\n{stringsched}"));
                                     break;
                                 }
                             case "skeletron":
                             case "sans":
                                 {
                                     Config.BossManager.ScheduleAllowSkeletron = schedule;
-                                    args.Player.SendInfoMessage("set Skeletron Schedule" +
-                                        $"\n{stringsched}");
+                                    args.Player.SendInfoMessage(GetText("set Skeletron Schedule" +
+                                        $"\n{stringsched}"));
                                     break;
                                 }
                             case "queenbee":
@@ -6511,8 +6544,8 @@ namespace MKLP
                             case "qb":
                                 {
                                     Config.BossManager.ScheduleAllowQueenBee = schedule;
-                                    args.Player.SendInfoMessage("set Queen Bee Schedule" +
-                                        $"\n{stringsched}");
+                                    args.Player.SendInfoMessage(GetText("set Queen Bee Schedule" +
+                                        $"\n{stringsched}"));
                                     break;
                                 }
                             case "deerclops":
@@ -6520,8 +6553,8 @@ namespace MKLP
                             case "deer":
                                 {
                                     Config.BossManager.ScheduleAllowDeerclops = schedule;
-                                    args.Player.SendInfoMessage("set Deerclops Schedule" +
-                                        $"\n{stringsched}");
+                                    args.Player.SendInfoMessage(GetText("set Deerclops Schedule" +
+                                        $"\n{stringsched}"));
                                     break;
                                 }
                             case "wall of flesh":
@@ -6529,8 +6562,8 @@ namespace MKLP
                             case "wof":
                                 {
                                     Config.BossManager.ScheduleAllowSkeletron = schedule;
-                                    args.Player.SendInfoMessage("set Wall Of Flesh Schedule" +
-                                        $"\n{stringsched}");
+                                    args.Player.SendInfoMessage(GetText("set Wall Of Flesh Schedule" +
+                                        $"\n{stringsched}"));
                                     break;
                                 }
                             case "queenslime":
@@ -6538,8 +6571,8 @@ namespace MKLP
                             case "qs":
                                 {
                                     Config.BossManager.ScheduleAllowQueenSlime = schedule;
-                                    args.Player.SendInfoMessage("set Queen Slime Schedule" +
-                                        $"\n{stringsched}");
+                                    args.Player.SendInfoMessage(GetText("set Queen Slime Schedule" +
+                                        $"\n{stringsched}"));
                                     break;
                                 }
                             case "mech1":
@@ -6550,13 +6583,13 @@ namespace MKLP
                                     if (Main.zenithWorld)
                                     {
                                         Config.BossManager.ScheduleAllowMechdusa = schedule;
-                                        args.Player.SendInfoMessage("set Mechdusa Schedule" +
-                                            $"\n{stringsched}");
+                                        args.Player.SendInfoMessage(GetText("set Mechdusa Schedule" +
+                                            $"\n{stringsched}"));
                                         break;
                                     }
                                     Config.BossManager.ScheduleAllowTheDestroyer = schedule;
-                                    args.Player.SendInfoMessage("set the Destroyer Schedule" +
-                                        $"\n{stringsched}");
+                                    args.Player.SendInfoMessage(GetText("set the Destroyer Schedule" +
+                                        $"\n{stringsched}"));
                                     break;
                                 }
                             case "mech2":
@@ -6567,13 +6600,13 @@ namespace MKLP
                                     if (Main.zenithWorld)
                                     {
                                         Config.BossManager.ScheduleAllowMechdusa = schedule;
-                                        args.Player.SendInfoMessage("set Mechdusa Schedule" +
-                                            $"\n{stringsched}");
+                                        args.Player.SendInfoMessage(GetText("set Mechdusa Schedule" +
+                                            $"\n{stringsched}"));
                                         break;
                                     }
                                     Config.BossManager.ScheduleAllowTheTwins = schedule;
-                                    args.Player.SendInfoMessage("set The Twins Schedule" +
-                                        $"\n{stringsched}");
+                                    args.Player.SendInfoMessage(GetText("set The Twins Schedule" +
+                                        $"\n{stringsched}"));
                                     break;
                                 }
                             case "mech3":
@@ -6584,39 +6617,39 @@ namespace MKLP
                                     if (Main.zenithWorld)
                                     {
                                         Config.BossManager.ScheduleAllowMechdusa = schedule;
-                                        args.Player.SendInfoMessage("set Mechdusa Schedule" +
-                                            $"\n{stringsched}");
+                                        args.Player.SendInfoMessage(GetText("set Mechdusa Schedule" +
+                                            $"\n{stringsched}"));
                                         break;
                                     }
                                     Config.BossManager.ScheduleAllowSkeletronPrime = schedule;
-                                    args.Player.SendInfoMessage("set Skeletron Prime Schedule" +
-                                        $"\n{stringsched}");
+                                    args.Player.SendInfoMessage(GetText("set Skeletron Prime Schedule" +
+                                        $"\n{stringsched}"));
                                     break;
                                 }
                             case "mechdusa":
                                 {
                                     if (!Main.zenithWorld)
                                     {
-                                        args.Player.SendErrorMessage("Mechdusa is only available on zenith seed!");
+                                        args.Player.SendErrorMessage(GetText("Mechdusa is only available on zenith seed!"));
                                         return;
                                     }
                                     Config.BossManager.ScheduleAllowMechdusa = schedule;
-                                    args.Player.SendInfoMessage("set Mechdusa Schedule" +
-                                        $"\n{stringsched}");
+                                    args.Player.SendInfoMessage(GetText("set Mechdusa Schedule" +
+                                        $"\n{stringsched}"));
                                     break;
                                 }
                             case "plantera":
                                 {
                                     Config.BossManager.ScheduleAllowPlantera = schedule;
-                                    args.Player.SendInfoMessage("set Plantera Schedule" +
-                                        $"\n{stringsched}");
+                                    args.Player.SendInfoMessage(GetText("set Plantera Schedule" +
+                                        $"\n{stringsched}"));
                                     break;
                                 }
                             case "golem":
                                 {
                                     Config.BossManager.ScheduleAllowGolem = schedule;
-                                    args.Player.SendInfoMessage("set Golem Schedule" +
-                                        $"\n{stringsched}");
+                                    args.Player.SendInfoMessage(GetText("set Golem Schedule" +
+                                        $"\n{stringsched}"));
                                     break;
                                 }
                             case "duke":
@@ -6625,8 +6658,8 @@ namespace MKLP
                             case "duke fishron":
                                 {
                                     Config.BossManager.ScheduleAllowDukeFishron = schedule;
-                                    args.Player.SendInfoMessage("set Duke Fishron Schedule" +
-                                        $"\n{stringsched}");
+                                    args.Player.SendInfoMessage(GetText("set Duke Fishron Schedule" +
+                                        $"\n{stringsched}"));
                                     break;
                                 }
                             case "cultist":
@@ -6635,8 +6668,8 @@ namespace MKLP
                             case "lunatic cultist":
                                 {
                                     Config.BossManager.ScheduleAllowLunaticCultist = schedule;
-                                    args.Player.SendInfoMessage("set Lunatic Cultist Schedule" +
-                                        $"\n{stringsched}");
+                                    args.Player.SendInfoMessage(GetText("set Lunatic Cultist Schedule" +
+                                        $"\n{stringsched}"));
                                     break;
                                 }
                             case "empress":
@@ -6645,8 +6678,8 @@ namespace MKLP
                             case "empress of light":
                                 {
                                     Config.BossManager.ScheduleAllowEmpressOfLight = schedule;
-                                    args.Player.SendInfoMessage("set Empress Of Light Schedule" +
-                                        $"\n{stringsched}");
+                                    args.Player.SendInfoMessage(GetText("set Empress Of Light Schedule" +
+                                        $"\n{stringsched}"));
                                     break;
                                 }
                             case "moonlord":
@@ -6654,13 +6687,13 @@ namespace MKLP
                             case "ml":
                                 {
                                     Config.BossManager.ScheduleAllowMoonLord = schedule;
-                                    args.Player.SendInfoMessage("set Moon Lord Schedule" +
-                                        $"\n{stringsched}");
+                                    args.Player.SendInfoMessage(GetText("set Moon Lord Schedule" +
+                                        $"\n{stringsched}"));
                                     break;
                                 }
                             default:
                                 {
-                                    args.Player.SendErrorMessage("Please specify the boss!");
+                                    args.Player.SendErrorMessage(GetText("Please specify the boss!"));
                                     return;
                                 }
                         }
@@ -6681,7 +6714,7 @@ namespace MKLP
                             case "ks":
                                 {
                                     Config.BossManager.ScheduleAllowKingSlime = DateTime.MaxValue;
-                                    args.Player.SendInfoMessage("Cancled King Slime Schedule");
+                                    args.Player.SendInfoMessage(GetText("Cancelled King Slime Schedule"));
                                     break;
                                 }
                             case "eyeofcthulhu":
@@ -6690,7 +6723,7 @@ namespace MKLP
                             case "eoc":
                                 {
                                     Config.BossManager.ScheduleAllowEyeOfCthulhu = DateTime.MaxValue;
-                                    args.Player.SendInfoMessage("Cancled Eye Of Cthulhu Schedule");
+                                    args.Player.SendInfoMessage(GetText("Cancelled Eye Of Cthulhu Schedule"));
                                     break;
                                 }
                             case "evilboss":
@@ -6698,7 +6731,7 @@ namespace MKLP
                                 {
                                     Config.BossManager.ScheduleAllowEaterOfWorlds = DateTime.MaxValue;
                                     Config.BossManager.ScheduleAllowBrainOfCthulhu = DateTime.MaxValue;
-                                    args.Player.SendInfoMessage("Canceled Eater Of Worlds & Brain Of Cthulhu Schedule");
+                                    args.Player.SendInfoMessage(GetText("Cancelled Eater Of Worlds & Brain Of Cthulhu Schedule"));
                                     break;
                                 }
                             case "eow":
@@ -6707,7 +6740,7 @@ namespace MKLP
                             case "eater":
                                 {
                                     Config.BossManager.ScheduleAllowEaterOfWorlds = DateTime.MaxValue;
-                                    args.Player.SendInfoMessage("Canceled Eater Of Worlds Schedule");
+                                    args.Player.SendInfoMessage(GetText("Cancelled Eater Of Worlds Schedule"));
                                     break;
                                 }
                             case "boc":
@@ -6716,14 +6749,14 @@ namespace MKLP
                             case "brain":
                                 {
                                     Config.BossManager.ScheduleAllowBrainOfCthulhu = DateTime.MaxValue;
-                                    args.Player.SendInfoMessage("Canceled Brain Of Cthulhu Schedule");
+                                    args.Player.SendInfoMessage(GetText("Cancelled Brain Of Cthulhu Schedule"));
                                     break;
                                 }
                             case "skeletron":
                             case "sans":
                                 {
                                     Config.BossManager.ScheduleAllowSkeletron = DateTime.MaxValue;
-                                    args.Player.SendInfoMessage("Canceled Skeletron Schedule");
+                                    args.Player.SendInfoMessage(GetText("Cancelled Skeletron Schedule"));
                                     break;
                                 }
                             case "queenbee":
@@ -6731,7 +6764,7 @@ namespace MKLP
                             case "qb":
                                 {
                                     Config.BossManager.ScheduleAllowQueenBee = DateTime.MaxValue;
-                                    args.Player.SendInfoMessage("Canceled Queen Bee Schedule");
+                                    args.Player.SendInfoMessage(GetText("Cancelled Queen Bee Schedule"));
                                     break;
                                 }
                             case "deerclops":
@@ -6739,7 +6772,7 @@ namespace MKLP
                             case "deer":
                                 {
                                     Config.BossManager.ScheduleAllowDeerclops = DateTime.MaxValue;
-                                    args.Player.SendInfoMessage("Canceled Deerclops Schedule");
+                                    args.Player.SendInfoMessage(GetText("Cancelled Deerclops Schedule"));
                                     break;
                                 }
                             case "wall of flesh":
@@ -6747,7 +6780,7 @@ namespace MKLP
                             case "wof":
                                 {
                                     Config.BossManager.ScheduleAllowSkeletron = DateTime.MaxValue;
-                                    args.Player.SendInfoMessage("Canceled Wall Of Flesh Schedule");
+                                    args.Player.SendInfoMessage(GetText("Cancelled Wall Of Flesh Schedule"));
                                     break;
                                 }
                             case "queenslime":
@@ -6755,7 +6788,7 @@ namespace MKLP
                             case "qs":
                                 {
                                     Config.BossManager.ScheduleAllowQueenSlime = DateTime.MaxValue;
-                                    args.Player.SendInfoMessage("set Queen Slime Schedule");
+                                    args.Player.SendInfoMessage(GetText("Cancelled Queen Slime Schedule"));
                                     break;
                                 }
                             case "mech1":
@@ -6766,11 +6799,11 @@ namespace MKLP
                                     if (Main.zenithWorld)
                                     {
                                         Config.BossManager.ScheduleAllowMechdusa = DateTime.MaxValue;
-                                        args.Player.SendInfoMessage("Canceled Mechdusa Schedule");
+                                        args.Player.SendInfoMessage(GetText("Cancelled Mechdusa Schedule"));
                                         break;
                                     }
                                     Config.BossManager.ScheduleAllowTheDestroyer = DateTime.MaxValue;
-                                    args.Player.SendInfoMessage("Canceled the Destroyer Schedule");
+                                    args.Player.SendInfoMessage(GetText("Cancelled the Destroyer Schedule"));
                                     break;
                                 }
                             case "mech2":
@@ -6781,11 +6814,11 @@ namespace MKLP
                                     if (Main.zenithWorld)
                                     {
                                         Config.BossManager.ScheduleAllowMechdusa = DateTime.MaxValue;
-                                        args.Player.SendInfoMessage("Canceled Mechdusa Schedule");
+                                        args.Player.SendInfoMessage(GetText("Cancelled Mechdusa Schedule"));
                                         break;
                                     }
                                     Config.BossManager.ScheduleAllowTheTwins = DateTime.MaxValue;
-                                    args.Player.SendInfoMessage("Canceled The Twins Schedule");
+                                    args.Player.SendInfoMessage(GetText("Cancelled The Twins Schedule"));
                                     break;
                                 }
                             case "mech3":
@@ -6796,35 +6829,35 @@ namespace MKLP
                                     if (Main.zenithWorld)
                                     {
                                         Config.BossManager.ScheduleAllowMechdusa = DateTime.MaxValue;
-                                        args.Player.SendInfoMessage("Canceled Mechdusa Schedule");
+                                        args.Player.SendInfoMessage(GetText("Cancelled Mechdusa Schedule"));
                                         break;
                                     }
                                     Config.BossManager.ScheduleAllowSkeletronPrime = DateTime.MaxValue;
-                                    args.Player.SendInfoMessage("Canceled Skeletron Prime Schedule");
+                                    args.Player.SendInfoMessage(GetText("Cancelled Skeletron Prime Schedule"));
                                     break;
                                 }
                             case "mechdusa":
                                 {
                                     if (!Main.zenithWorld)
                                     {
-                                        args.Player.SendErrorMessage("Mechdusa is only available on zenith seed!");
+                                        args.Player.SendErrorMessage(GetText("Mechdusa is only available on zenith seed!"));
                                         return;
                                     }
 
                                     Config.BossManager.ScheduleAllowMechdusa = DateTime.MaxValue;
-                                    args.Player.SendInfoMessage("Canceled Mechdusa Schedule");
+                                    args.Player.SendInfoMessage(GetText("Cancelled Mechdusa Schedule"));
                                     break;
                                 }
                             case "plantera":
                                 {
                                     Config.BossManager.ScheduleAllowPlantera = DateTime.MaxValue;
-                                    args.Player.SendInfoMessage("Canceled Plantera Schedule");
+                                    args.Player.SendInfoMessage(GetText("Cancelled Plantera Schedule"));
                                     break;
                                 }
                             case "golem":
                                 {
                                     Config.BossManager.ScheduleAllowGolem = DateTime.MaxValue;
-                                    args.Player.SendInfoMessage("Canceled Golem Schedule");
+                                    args.Player.SendInfoMessage(GetText("Cancelled Golem Schedule"));
                                     break;
                                 }
                             case "duke":
@@ -6833,7 +6866,7 @@ namespace MKLP
                             case "duke fishron":
                                 {
                                     Config.BossManager.ScheduleAllowDukeFishron = DateTime.MaxValue;
-                                    args.Player.SendInfoMessage("Canceled Duke Fishron Schedule");
+                                    args.Player.SendInfoMessage(GetText("Cancelled Duke Fishron Schedule"));
                                     break;
                                 }
                             case "cultist":
@@ -6842,7 +6875,7 @@ namespace MKLP
                             case "lunatic cultist":
                                 {
                                     Config.BossManager.ScheduleAllowLunaticCultist = DateTime.MaxValue;
-                                    args.Player.SendInfoMessage("Canceled Lunatic Cultist Schedule");
+                                    args.Player.SendInfoMessage(GetText("Cancelled Lunatic Cultist Schedule"));
                                     break;
                                 }
                             case "empress":
@@ -6851,7 +6884,7 @@ namespace MKLP
                             case "empress of light":
                                 {
                                     Config.BossManager.ScheduleAllowEmpressOfLight = DateTime.MaxValue;
-                                    args.Player.SendInfoMessage("Canceled Empress Of Light Schedule");
+                                    args.Player.SendInfoMessage(GetText("Cancelled Empress Of Light Schedule"));
                                     break;
                                 }
                             case "moonlord":
@@ -6859,12 +6892,12 @@ namespace MKLP
                             case "ml":
                                 {
                                     Config.BossManager.ScheduleAllowMoonLord = DateTime.MaxValue;
-                                    args.Player.SendInfoMessage("Canceled Moon Lord Schedule");
+                                    args.Player.SendInfoMessage(GetText("Cancelled Moon Lord Schedule"));
                                     break;
                                 }
                             default:
                                 {
-                                    args.Player.SendErrorMessage("Please specify the boss!");
+                                    args.Player.SendErrorMessage(GetText("Please specify the boss!"));
                                     return;
                                 }
                         }
@@ -6898,7 +6931,7 @@ namespace MKLP
                         Config.BossManager.ScheduleAllowLunaticCultist = DateTime.MaxValue;
                         Config.BossManager.ScheduleAllowMoonLord = DateTime.MaxValue;
 
-                        args.Player.SendInfoMessage("Cancled All Boss Schedule");
+                        args.Player.SendInfoMessage(GetText("Cancelled All Boss Schedule"));
 
                         Config.Changeall();
                         Config.Read();
@@ -6917,14 +6950,14 @@ namespace MKLP
                             case "yes":
                                 {
                                     Config.BossManager.UseBossSchedule = true;
-                                    args.Player.SendInfoMessage("Set Using Boss Schedule to true");
+                                    args.Player.SendInfoMessage(GetText("You are now using the boss schedule"));
                                     break;
                                 }
                             case "false":
                             case "no":
                                 {
                                     Config.BossManager.UseBossSchedule = false;
-                                    args.Player.SendInfoMessage("Set Using Boss Schedule to false");
+                                    args.Player.SendInfoMessage(GetText("You are no longer using the boss schedule"));
                                     break;
                                 }
                             default:
@@ -6932,12 +6965,13 @@ namespace MKLP
                                     if ((bool)Config.BossManager.UseBossSchedule)
                                     {
                                         Config.BossManager.UseBossSchedule = false;
-                                        args.Player.SendInfoMessage("Set Using Boss Schedule to false");
+                                        args.Player.SendInfoMessage(GetText("You are no longer using the boss schedule"));
                                         break;
-                                    } else
+                                    }
+                                    else
                                     {
                                         Config.BossManager.UseBossSchedule = true;
-                                        args.Player.SendInfoMessage("Set Using Boss Schedule to true");
+                                        args.Player.SendInfoMessage(GetText("You are now using the boss schedule"));
                                         break;
                                     }
                                 }
@@ -7002,15 +7036,16 @@ namespace MKLP
                             Config.BossManager.ScheduleAllowLunaticCultist = today.AddDays((double)Config.BossManager.Default_ScheduleDay_AllowLunaticCultist);
                             Config.BossManager.ScheduleAllowMoonLord = today.AddDays((double)Config.BossManager.Default_ScheduleDay_AllowMoonLord);
 
-                            
 
-                            args.Player.SendInfoMessage($"Reload Boss Schedule" +
-                                $"\nStarting Point: {resultstr}");
+
+                            args.Player.SendInfoMessage(GetText($"Reload Boss Schedule" +
+                                $"\nStarting Point: {resultstr}"));
 
                             Config.Changeall();
                             Config.Read();
                             return;
-                        } else
+                        }
+                        else
                         {
                             DateTime today = new(DateTime.UtcNow.Year, DateTime.UtcNow.Month, DateTime.UtcNow.Day, (int)Config.BossManager.Default_ScheduleDay_Hour, 0, 0);
 
@@ -7042,14 +7077,14 @@ namespace MKLP
                             Config.Read();
                             return;
                         }
-                        
+
 
                     }
                 #endregion
                 default:
                     {
-                        args.Player.SendErrorMessage("Invalid Sub-Command!" +
-                            $"\ndo '{Commands.Specifier}manageboss help' for more info");
+                        args.Player.SendErrorMessage(GetText("Invalid Sub-Command!" +
+                            $"\ndo '{Commands.Specifier}manageboss help' for more info"));
                         return;
                     }
             }
@@ -7069,14 +7104,14 @@ namespace MKLP
                     TogglePlayerVanish(args.Player, true);
 
                     TShock.Utils.Broadcast($"{args.Player.Name} has left.", Color.Yellow);
-                    args.Player.SendSuccessMessage("You're on Vanish");
+                    args.Player.SendSuccessMessage(GetText("You're on Vanish"));
                 }
                 else
                 {
                     TogglePlayerVanish(args.Player, false);
 
                     TShock.Utils.Broadcast($"{args.Player.Name} has joined.", Color.Yellow);
-                    args.Player.SendSuccessMessage("You're no longer on Vanish");
+                    args.Player.SendSuccessMessage(GetText("You're no longer on Vanish"));
                 }
             }
             else
@@ -7084,7 +7119,7 @@ namespace MKLP
                 TogglePlayerVanish(args.Player, true);
 
                 TShock.Utils.Broadcast($"{args.Player.Name} has left.", Color.Yellow);
-                args.Player.SendSuccessMessage("You're on Vanish");
+                args.Player.SendSuccessMessage(GetText("You're on Vanish"));
             }
 
             #endregion
@@ -7099,13 +7134,13 @@ namespace MKLP
             #region code
             if (args.Parameters.Count == 0)
             {
-                args.Player.SendErrorMessage($"Proper Usage: {Commands.Specifier}managereport <info/delete>");
-                args.Player.SendMessage(
+                args.Player.SendErrorMessage(GetText($"Proper Usage: {Commands.Specifier}managereport <info/delete>"));
+                args.Player.SendMessage(GetText(
                     $"'{Commands.Specifier}report info <id>': get report info by id" +
                     $"\n'{Commands.Specifier}report info fromlist <accountname>' : get this user list of his reports" +
                     $"\n'{Commands.Specifier}report info targetlist <targetname>' : get list of report from this player" +
                     "\n" +
-                    $"\n'{Commands.Specifier}report delete <id>': delete any reports by id", Color.WhiteSmoke);
+                    $"\n'{Commands.Specifier}report delete <id>': delete any reports by id"), Color.WhiteSmoke);
                 return;
             }
 
@@ -7137,12 +7172,14 @@ namespace MKLP
                                     $"\nReported Since: [c/ff7c34:{getreport.Since}]"
                                     , Color.OrangeRed);
                                 return;
-                            } catch (NullReferenceException)
+                            }
+                            catch (NullReferenceException)
                             {
-                                args.Player.SendErrorMessage("No reports found with this id");
+                                args.Player.SendErrorMessage(GetText("No reports found with this ID"));
                                 return;
                             }
-                        } else
+                        }
+                        else
                         {
                             switch (args.Parameters[1])
                             {
@@ -7150,7 +7187,7 @@ namespace MKLP
                                     {
                                         if (args.Parameters.Count == 2)
                                         {
-                                            args.Player.SendErrorMessage($"Proper Usage: {Commands.Specifier}managereport info fromlist <accountname>");
+                                            args.Player.SendErrorMessage(GetText($"Proper Usage: {Commands.Specifier}managereport info fromlist <accountname>"));
                                             return;
                                         }
 
@@ -7158,7 +7195,7 @@ namespace MKLP
 
                                         if (getreport.Count() <= 0)
                                         {
-                                            args.Player.SendErrorMessage($"No reports from {args.Parameters[2]}");
+                                            args.Player.SendErrorMessage(GetText($"No reports from {args.Parameters[2]}"));
                                             return;
                                         }
 
@@ -7169,7 +7206,7 @@ namespace MKLP
                                             result += $"[c/ff7c34:<{r.ID}> target {r.Target}]\n";
                                         }
 
-                                        args.Player.SendMessage($"Report List from [ {args.Parameters[2]} ]" +
+                                        args.Player.SendMessage(GetText($"Report List from [ {args.Parameters[2]} ]") +
                                             $"\n{result}", Color.OrangeRed);
 
                                         return;
@@ -7178,7 +7215,7 @@ namespace MKLP
                                     {
                                         if (args.Parameters.Count == 2)
                                         {
-                                            args.Player.SendErrorMessage($"Proper Usage: {Commands.Specifier}managereport info target <accountname>");
+                                            args.Player.SendErrorMessage(GetText($"Proper Usage: {Commands.Specifier}managereport info target <accountname>"));
                                             return;
                                         }
 
@@ -7186,7 +7223,7 @@ namespace MKLP
 
                                         if (getreport.Count() <= 0)
                                         {
-                                            args.Player.SendErrorMessage($"{args.Parameters[2]} has no reports from someone");
+                                            args.Player.SendErrorMessage(GetText($"{args.Parameters[2]} has no reports from someone"));
                                             return;
                                         }
 
@@ -7197,14 +7234,14 @@ namespace MKLP
                                             result += $"[c/ff7c34:<{r.ID}> from {r.From}]\n";
                                         }
 
-                                        args.Player.SendMessage($"Players Report List from [ {args.Parameters[2]} ]" +
+                                        args.Player.SendMessage(GetText($"Players Report List from [ {args.Parameters[2]} ]") +
                                             $"\n{result}", Color.OrangeRed);
 
                                         return;
                                     }
                                 default:
                                     {
-                                        args.Player.SendErrorMessage("Invalid Report ID");
+                                        args.Player.SendErrorMessage(GetText("Invalid Report ID"));
                                         return;
                                     }
                             }
@@ -7214,7 +7251,7 @@ namespace MKLP
                     {
                         if (args.Parameters.Count == 1)
                         {
-                            args.Player.SendErrorMessage($"Proper Usage: {Commands.Specifier}managereport delete <reportID>");
+                            args.Player.SendErrorMessage(GetText($"Proper Usage: {Commands.Specifier}managereport delete <reportID>"));
                             return;
                         }
 
@@ -7224,11 +7261,12 @@ namespace MKLP
                         {
                             if (DBManager.DeleteReport(getid))
                             {
-                                args.Player.SendSuccessMessage($"Successfully deleted report no. {getid}");
+                                args.Player.SendSuccessMessage(GetText($"Successfully deleted report no. {getid}"));
                                 return;
-                            } else
+                            }
+                            else
                             {
-                                args.Player.SendSuccessMessage($"Unable to delete report no. {getid}");
+                                args.Player.SendSuccessMessage(GetText($"Unable to delete report no. {getid}"));
                                 return;
                             }
                         }
@@ -7237,8 +7275,8 @@ namespace MKLP
                     }
                 default:
                     {
-                        args.Player.SendSuccessMessage($"Invalid Sub-Command");
-                        args.Player.SendMessage($"Do '{Commands.Specifier}report help' for more info", Color.WhiteSmoke);
+                        args.Player.SendSuccessMessage(GetText($"Invalid Sub-Command"));
+                        args.Player.SendMessage(GetText($"Do '{Commands.Specifier}report help' for more info"), Color.WhiteSmoke);
                         return;
                     }
             }
@@ -7250,7 +7288,7 @@ namespace MKLP
             #region code
             if (args.Parameters.Count == 0)
             {
-                args.Player.SendErrorMessage($"Usage: {Commands.Specifier}baninfo <ticketban>");
+                args.Player.SendErrorMessage(GetText($"Usage: {Commands.Specifier}baninfo <ticketban>"));
                 return;
             }
 
@@ -7270,7 +7308,7 @@ namespace MKLP
 
                 if (!PaginationTools.TryParsePageNumber(args.Parameters, 1, args.Player, out int pageNumber))
                 {
-                    args.Player.SendMessage($"Invalid Ban page", Color.White);
+                    args.Player.SendMessage(GetText($"Invalid Ban page"), Color.White);
                     return;
                 }
 
@@ -7283,8 +7321,8 @@ namespace MKLP
                     new PaginationTools.Settings
                     {
                         HeaderFormat = "Bans ({{0}}/{{1}}):",
-                        FooterFormat = "Type " + Commands.Specifier + "ban list {{0}} for more.",
-                        NothingToDisplayString = "There are currently no active bans."
+                        FooterFormat = GetText("Type " + Commands.Specifier + "ban list {{0}} for more."),
+                        NothingToDisplayString = GetText("There are currently no active bans.")
                     });
                 return;
             }
@@ -7292,7 +7330,7 @@ namespace MKLP
             int targetid;
             if (!int.TryParse(args.Parameters[0], out targetid))
             {
-                args.Player.SendErrorMessage("Invalid ticket number");
+                args.Player.SendErrorMessage(GetText("Invalid ticket number"));
                 return;
             }
 
@@ -7300,16 +7338,16 @@ namespace MKLP
 
             if (ban == null)
             {
-                args.Player.SendErrorMessage("No bans found");
+                args.Player.SendErrorMessage(GetText("No bans found"));
                 return;
             }
 
-            args.Player.SendMessage("[c/3bf000:Ban Info]" +
+            args.Player.SendMessage(GetText("[c/3bf000:Ban Info]") +
                 $"\nTicket No. : [c/84ff5b:{ban.TicketNumber}]" +
                 $"\nIdentifier : [c/84ff5b:{ban.Identifier}]" +
                 $"\nBanned by : [c/84ff5b:{ban.BanningUser}]" +
                 $"\nReason : [c/84ff5b:{ban.Reason}]" +
-                $"\n{(ban.ExpirationDateTime < DateTime.UtcNow ? $":Ban expired : [c/84ff5b:{ban.ExpirationDateTime.ToString("yyyy/MM/dd")} ({ban.GetPrettyExpirationString()} ago)]" : "" )}"
+                $"\n{(ban.ExpirationDateTime < DateTime.UtcNow ? $":Ban expired : [c/84ff5b:{ban.ExpirationDateTime.ToString("yyyy/MM/dd")} ({ban.GetPrettyExpirationString()} ago)]" : "")}"
                 , Color.Green);
 
             /*
@@ -7329,15 +7367,15 @@ namespace MKLP
 
             if (args.Parameters.Count == 0)
             {
-                args.Player.SendErrorMessage($"Usage: {Commands.Specifier}{((bool)Config.Main.Replace_Ban_TShockCommand ? "ban" : "qban")} <player> <reason> <duration> <args...>");
-                args.Player.SendMessage($"[c/8fbfd4:Example:] [c/a5d063:{Commands.Specifier}{((bool)Config.Main.Replace_Ban_TShockCommand ? "ban" : "qban")} {args.Player.Name} \"cheating\" \"1d 1m\" -offline]" +
+                args.Player.SendErrorMessage(GetText($"Usage: {Commands.Specifier}{((bool)Config.Main.Replace_Ban_TShockCommand ? "ban" : "qban")} <player> <reason> <duration> <args...>"));
+                args.Player.SendMessage(GetText($"[c/8fbfd4:Example:] [c/a5d063:{Commands.Specifier}{((bool)Config.Main.Replace_Ban_TShockCommand ? "ban" : "qban")} {args.Player.Name} \"cheating\" \"1d 1m\" -offline]" +
                     $"\n[c/8fbfd4:duration:] 1d = 1day (d,h,m,s = day,hour,minute,second)" +
                     $"\n" +
                     $"\n[c/8fbfd4:args:] " +
                     $"\n( -alt = bans only name )" +
                     $"\n( -account = only used when banning a offline player )" +
                     $"\n( -accountid = only used when banning a offline player account id )" +
-                    ((bool)Config.BanGuard.UsingBanGuard ? $"\n( -banguard = must have a category to use banguard ex.'/ban \"{args.Player.Name}\" -banguard hacks' )\n( -banguardauto = automatically assign banguard category from your reason must be accurate )" : ""),
+                    ((bool)Config.BanGuard.UsingBanGuard ? $"\n( -banguard = must have a category to use banguard ex.'/ban \"{args.Player.Name}\" -banguard hacks' )\n( -banguardauto = automatically assign banguard category from your reason must be accurate )" : "")),
                     Color.Gray);
                 return;
             }
@@ -7361,7 +7399,7 @@ namespace MKLP
 
             List<string> flags = new List<string>() { "-alt", "-account", "-accountid", "-banguardauto", "-banguard" };
 
-            string reason = "No Reason Specified";
+            string reason = GetText("No Reason Specified");
             string duration = null;
             DateTime expiration = DateTime.MaxValue;
 
@@ -7399,7 +7437,7 @@ namespace MKLP
                 {
                     if (!BanGuardAPI.IsCategory(usingbanguardcat))
                     {
-                        args.Player.SendErrorMessage("Invalid BanGuard Category!");
+                        args.Player.SendErrorMessage(GetText("Invalid BanGuard Category!"));
                         return;
                     }
                 }
@@ -7409,7 +7447,7 @@ namespace MKLP
             {
                 if (!args.Player.HasPermission(Config.Permissions.CMD_OfflineBan))
                 {
-                    args.Player.SendErrorMessage("You do not have permission to ban offline players!");
+                    args.Player.SendErrorMessage(GetText("You do not have permission to ban offline players!"));
                     return;
                 }
 
@@ -7417,7 +7455,7 @@ namespace MKLP
 
                 if (!int.TryParse(args.Parameters[0], out accountidtarget))
                 {
-                    args.Player.SendErrorMessage("Invalid Number!");
+                    args.Player.SendErrorMessage(GetText("Invalid Number!"));
                     return;
                 }
 
@@ -7425,7 +7463,7 @@ namespace MKLP
 
                 if (targetaccount == null)
                 {
-                    args.Player.SendErrorMessage($"Account ID {accountidtarget} doesn't exist");
+                    args.Player.SendErrorMessage(GetText("Account ID {0} doesn't exist", accountidtarget));
                     return;
                 }
 
@@ -7444,37 +7482,38 @@ namespace MKLP
 
                 if (usingbanguardcat != "N/A" && BanGuardAPI._isApiKeyValid)
                 {
-                    args.Player.SendInfoMessage("Using BanGuard Ban...");
+                    args.Player.SendInfoMessage(GetText("Using BanGuard Ban..."));
                 }
 
                 if (targetplayer != null)
                 {
                     if (ManagePlayer.OnlineBan(args.Silent, targetplayer, reason, args.Player.Account.Name, expiration, uuidip, uuidip, usingbanguardcat))
                     {
-                        args.Player.SendSuccessMessage($"Successfully banned {targetplayer.Name} for {reason}");
+                        args.Player.SendSuccessMessage(GetText("Successfully banned {0} for {1}", targetplayer.Name, reason));
                     }
                     else
                     {
-                        args.Player.SendErrorMessage($"Error occur banning {targetplayer.Name}");
+                        args.Player.SendErrorMessage(GetText("Error occur banning {0}", targetplayer.Name));
                     }
                 }
                 else
                 {
                     if (ManagePlayer.OfflineBan(targetaccount, reason, args.Player.Account.Name, expiration, uuidip, uuidip, usingbanguardcat))
                     {
-                        args.Player.SendSuccessMessage($"Successfully banned Acc: {targetaccount.Name} for {reason}");
+                        args.Player.SendSuccessMessage(GetText("Successfully banned Acc: {0} for {1}", targetaccount.Name, reason));
                     }
                     else
                     {
-                        args.Player.SendErrorMessage($"Error occur banning Acc: {targetaccount.Name}");
+                        args.Player.SendErrorMessage(GetText("Error occur banning Acc: {0}", targetaccount.Name));
                     }
                 }
 
-            } else if (accountban)
+            }
+            else if (accountban)
             {
                 if (!args.Player.HasPermission(Config.Permissions.CMD_OfflineBan))
                 {
-                    args.Player.SendErrorMessage("You do not have permission to ban offline players!");
+                    args.Player.SendErrorMessage(GetText("You do not have permission to ban offline players!"));
                     return;
                 }
 
@@ -7482,7 +7521,7 @@ namespace MKLP
 
                 if (targetaccount == null)
                 {
-                    args.Player.SendErrorMessage($"Account name {args.Parameters[0]} doesn't exist");
+                    args.Player.SendErrorMessage(GetText("Account name {0} doesn't exist", args.Parameters[0]));
                     return;
                 }
 
@@ -7502,32 +7541,34 @@ namespace MKLP
 
                 if (usingbanguardcat != "N/A" && BanGuardAPI._isApiKeyValid)
                 {
-                    args.Player.SendInfoMessage("Using BanGuard Ban...");
+                    args.Player.SendInfoMessage(GetText("Using BanGuard Ban..."));
                 }
 
                 if (targetplayer != null)
                 {
                     if (ManagePlayer.OnlineBan(args.Silent, targetplayer, reason, args.Player.Account.Name, expiration, uuidip, uuidip, usingbanguardcat))
                     {
-                        args.Player.SendSuccessMessage($"Successfully banned {targetplayer.Name} for {reason}");
+                        args.Player.SendSuccessMessage(GetText("Successfully banned {0} for {1}", targetplayer.Name, reason));
                     }
                     else
                     {
-                        args.Player.SendErrorMessage($"Error occur banning {targetplayer.Name}");
+                        args.Player.SendErrorMessage(GetText("Error occur banning {0}", targetplayer.Name));
                     }
-                } else
+                }
+                else
                 {
                     if (ManagePlayer.OfflineBan(targetaccount, reason, args.Player.Account.Name, expiration, uuidip, uuidip, usingbanguardcat))
                     {
-                        args.Player.SendSuccessMessage($"Successfully banned Acc: {targetaccount.Name} for {reason}");
+                        args.Player.SendSuccessMessage(GetText("Successfully banned Acc: {0} for {1}", targetaccount.Name, reason));
                     }
                     else
                     {
-                        args.Player.SendErrorMessage($"Error occur banning Acc: {targetaccount.Name}");
+                        args.Player.SendErrorMessage(GetText("Error occur banning Acc: {0}", targetaccount.Name));
                     }
                 }
 
-            } else
+            }
+            else
             {
                 var players = TSPlayer.FindByNameOrID(args.Parameters[0]);
 
@@ -7539,7 +7580,7 @@ namespace MKLP
 
                 if (players.Count < 1)
                 {
-                    args.Player.SendErrorMessage("Could not find the target specified. Check that you have the correct spelling.");
+                    args.Player.SendErrorMessage(GetText("Could not find the target specified. Check that you have the correct spelling."));
                     return;
                 }
 
@@ -7548,15 +7589,16 @@ namespace MKLP
 
                 if (usingbanguardcat != "N/A" && BanGuardAPI._isApiKeyValid)
                 {
-                    args.Player.SendInfoMessage("Using BanGuard Ban...");
+                    args.Player.SendInfoMessage(GetText("Using BanGuard Ban..."));
                 }
 
                 if (ManagePlayer.OnlineBan(args.Silent, targetplayer, reason, args.Player.Account.Name, expiration, uuidip, uuidip, usingbanguardcat))
                 {
-                    args.Player.SendSuccessMessage($"Successfully banned {targetplayer.Name} for {reason}");
-                } else
+                    args.Player.SendSuccessMessage(GetText("Successfully banned {0} for {1}", targetplayer.Name, reason));
+                }
+                else
                 {
-                    args.Player.SendErrorMessage($"Error occur banning {targetplayer.Name}");
+                    args.Player.SendErrorMessage(GetText("Error occur banning {0}", targetplayer.Name));
                 }
             }
             #endregion
@@ -7567,9 +7609,9 @@ namespace MKLP
             #region code
             if (args.Parameters.Count == 0)
             {
-                args.Player.SendErrorMessage($"Usage: {Commands.Specifier}unban <ticket number>" +
+                args.Player.SendErrorMessage(GetText($"Usage: {Commands.Specifier}unban <ticket number>" +
                     $"\nor use '{Commands.Specifier}unban <account name> -account' to unban a account" +
-                    $"\nor use '{Commands.Specifier}unban <account id> -accountid' to unban a account");
+                    $"\nor use '{Commands.Specifier}unban <account id> -accountid' to unban a account"));
                 return;
             }
 
@@ -7582,7 +7624,7 @@ namespace MKLP
 
                 if (!int.TryParse(args.Parameters[0], out accountid))
                 {
-                    args.Player.SendErrorMessage("Invalid Number!");
+                    args.Player.SendErrorMessage(GetText("Invalid Number!"));
                     return;
                 }
 
@@ -7590,22 +7632,23 @@ namespace MKLP
 
                 if (targetaccount == null)
                 {
-                    args.Player.SendErrorMessage("Invalid Account");
+                    args.Player.SendErrorMessage(GetText("Invalid Account"));
                     return;
                 }
 
                 if (ManagePlayer.UnBanAccount(targetaccount, args.Player.Name))
                 {
-                    args.Player.SendSuccessMessage($"Removing Ban Tickets from account: {targetaccount.Name}");
+                    args.Player.SendSuccessMessage(GetText("Removing Ban Tickets from account: {0}", targetaccount.Name));
                     return;
                 }
                 else
                 {
-                    args.Player.SendErrorMessage($"AccountID: '{accountid}' could not be found...");
+                    args.Player.SendErrorMessage(GetText("AccountID: '{0}' could not be found...", accountid));
                     return;
                 }
 
-            } else if (accountunban)
+            }
+            else if (accountunban)
             {
                 string targetname = string.Join(" ", args.Parameters.ToArray(), 0, args.Parameters.Count);
                 targetname = targetname.Replace(" -account", "");
@@ -7615,22 +7658,23 @@ namespace MKLP
 
                 if (targetaccount == null)
                 {
-                    args.Player.SendErrorMessage("Invalid Account");
+                    args.Player.SendErrorMessage(GetText("Invalid Account"));
                     return;
                 }
 
                 if (ManagePlayer.UnBanAccount(targetaccount, args.Player.Name))
                 {
-                    args.Player.SendSuccessMessage($"Removing Ban Tickets from account: {targetaccount.Name}");
+                    args.Player.SendSuccessMessage(GetText("Removing Ban Tickets from account: {0}", targetaccount.Name));
                     return;
                 }
                 else
                 {
-                    args.Player.SendErrorMessage($"Account: '{targetname}' could not be found...");
+                    args.Player.SendErrorMessage(GetText("Account: '{0}' could not be found...", targetname));
                     return;
                 }
 
-            } else
+            }
+            else
             {
                 int ticketnumber = -1;
 
@@ -7638,18 +7682,18 @@ namespace MKLP
                 {
                     if (ManagePlayer.UnBanTicketNumber(ticketnumber, args.Player.Account.Name))
                     {
-                        args.Player.SendSuccessMessage("Removed Ban Ticket Number: " + ticketnumber);
+                        args.Player.SendSuccessMessage(GetText("Removed Ban Ticket Number: " + ticketnumber));
                         return;
                     }
                     else
                     {
-                        args.Player.SendErrorMessage("Invalid Ticket number!");
+                        args.Player.SendErrorMessage(GetText("Invalid Ticket number!"));
                         return;
                     }
                 }
                 else
                 {
-                    args.Player.SendErrorMessage("Invalid Ticket number!");
+                    args.Player.SendErrorMessage(GetText("Invalid Ticket number!"));
                     return;
                 }
             }
@@ -7663,14 +7707,14 @@ namespace MKLP
 
             if (args.Parameters.Count == 0)
             {
-                args.Player.SendErrorMessage($"Proper Usage: {Commands.Specifier}{((bool)Config.Main.Replace_Mute_TShockCommand ? "mute" : "qmute")} <player> <duration> <reason>" +
-                    (args.Player.HasPermission(Config.Permissions.CMD_OfflineUnMute) ? $"\nMuting Offline Player: {Commands.Specifier}{((bool)Config.Main.Replace_Mute_TShockCommand ? "mute" : "qmute")} <accountname> <duration> <reason> -offline" : ""));
+                args.Player.SendErrorMessage(GetText($"Proper Usage: {Commands.Specifier}{((bool)Config.Main.Replace_Mute_TShockCommand ? "mute" : "qmute")} <player> <duration> <reason>" +
+                    (args.Player.HasPermission(Config.Permissions.CMD_OfflineUnMute) ? $"\nMuting Offline Player: {Commands.Specifier}{((bool)Config.Main.Replace_Mute_TShockCommand ? "mute" : "qmute")} <accountname> <duration> <reason> -account" : "")));
                 return;
             }
 
-            bool offlineMute = args.Parameters.Any(p => p == "-offline");
+            bool offlineMute = args.Parameters.Any(p => p == "-account");
 
-            List<string> flags = new List<string>() { "-offline" };
+            List<string> flags = new List<string>() { "-account" };
 
             string reason = "";
             string duration = null;
@@ -7705,7 +7749,7 @@ namespace MKLP
             {
                 if (!args.Player.HasPermission(Config.Permissions.CMD_OfflineMute))
                 {
-                    args.Player.SendErrorMessage("You do not have permission to mute offline players");
+                    args.Player.SendErrorMessage(GetText("You do not have permission to mute offline players"));
                     return;
                 }
 
@@ -7713,7 +7757,7 @@ namespace MKLP
 
                 if (targetaccount == null)
                 {
-                    args.Player.SendErrorMessage($"Account name {args.Parameters[0]} doesn't exist");
+                    args.Player.SendErrorMessage(GetText("Account name {0} doesn't exist", args.Parameters[0]));
                 }
 
                 var players = TSPlayer.FindByNameOrID(args.Parameters[0]);
@@ -7733,137 +7777,29 @@ namespace MKLP
                 {
                     if (targetplayer.mute)
                     {
-                        args.Player.SendErrorMessage($"{targetplayer.Name} was already muted!");
+                        args.Player.SendErrorMessage(GetText("{0} was already muted!", targetplayer.Name));
                         return;
                     }
 
                     if (ManagePlayer.OnlineMute(args.Silent, targetplayer, reason, args.Player.Account.Name, expiration))
                     {
-                        args.Player.SendSuccessMessage($"Muted {targetplayer.Name}");
+                        args.Player.SendSuccessMessage(GetText("Muted {0}", targetplayer.Name));
                     }
                     else
                     {
-                        args.Player.SendSuccessMessage($"Error occur Muting {targetplayer.Name}");
-                    }
-
-                } else
-                {
-                    if (ManagePlayer.OfflineMute(targetaccount, reason, args.Player.Account.Name, expiration))
-                    {
-                        args.Player.SendSuccessMessage($"Muted {targetaccount.Name}");
-                    }
-                    else
-                    {
-                        args.Player.SendSuccessMessage($"Error occur Muting {targetaccount.Name}");
-                    }
-                }
-
-                
-
-            } else
-            {
-                var players = TSPlayer.FindByNameOrID(args.Parameters[0]);
-
-                if (players.Count > 1)
-                {
-                    args.Player.SendMultipleMatchError(players.Select(p => p.Name));
-                    return;
-                }
-
-                if (players.Count < 1)
-                {
-                    args.Player.SendErrorMessage("Could not find the target specified. Check that you have the correct spelling.");
-                    return;
-                }
-
-                var targetplayer = players[0];
-
-                if (targetplayer.mute)
-                {
-                    args.Player.SendErrorMessage($"{targetplayer.Name} was already muted!");
-                    return;
-                }
-
-                if (ManagePlayer.OnlineMute(args.Silent, targetplayer, reason, args.Player.Account.Name, expiration))
-                {
-                    args.Player.SendSuccessMessage($"muted {targetplayer.Name}");
-                } else
-                {
-                    args.Player.SendSuccessMessage($"Error occur Muting {targetplayer.Name}");
-                }
-            }
-            //DBManager.CheckPlayer(player, true);
-            #endregion
-        }
-
-        private void CMD_UnMute(CommandArgs args)
-        {
-            #region code
-
-            if (args.Parameters.Count == 0)
-            {
-                args.Player.SendErrorMessage($"Proper Usage: {Commands.Specifier}unmute <player>" +
-                    (args.Player.HasPermission(Config.Permissions.CMD_OfflineUnMute) ? $"\nUnmuting Offline Player: {Commands.Specifier}unmute <accountname> -offline" : ""));
-                return;
-            }
-
-            bool offlineMute = args.Parameters.Any(p => p == "-offline");
-
-            if (offlineMute)
-            {
-                if (!args.Player.HasPermission(Config.Permissions.CMD_OfflineMute))
-                {
-                    args.Player.SendErrorMessage("You do not have permission to mute offline players");
-                    return;
-                }
-
-                UserAccount targetaccount = TShock.UserAccounts.GetUserAccountByName(args.Parameters[0]);
-
-                if (targetaccount == null)
-                {
-                    args.Player.SendErrorMessage($"Account name {args.Parameters[0]} doesn't exist");
-                }
-
-                var players = TSPlayer.FindByNameOrID(args.Parameters[0]);
-
-                TSPlayer? targetplayer = null;
-
-                foreach (TSPlayer player in players)
-                {
-                    if (player == null) continue;
-                    if (player.Account.Name == targetaccount.Name)
-                    {
-                        targetplayer = player;
-                    }
-                }
-
-                if (targetplayer != null)
-                {
-                    if (!targetplayer.mute)
-                    {
-                        args.Player.SendErrorMessage($"{targetplayer.Name} hasn't been muted!");
-                        return;
-                    }
-
-                    if (ManagePlayer.OnlineUnMute(args.Silent, targetplayer, args.Player.Account.Name))
-                    {
-                        args.Player.SendSuccessMessage($"unmuted {targetplayer.Name}");
-                    }
-                    else
-                    {
-                        args.Player.SendSuccessMessage($"Error occur unmuting {targetplayer.Name}");
+                        args.Player.SendSuccessMessage(GetText("Error occur Muting {0}", targetplayer.Name));
                     }
 
                 }
                 else
                 {
-                    if (ManagePlayer.OfflineUnMute(targetaccount, args.Player.Account.Name))
+                    if (ManagePlayer.OfflineMute(targetaccount, reason, args.Player.Account.Name, expiration))
                     {
-                        args.Player.SendSuccessMessage($"unmuted {targetaccount.Name}");
+                        args.Player.SendSuccessMessage(GetText("Muted {0}", targetaccount.Name));
                     }
                     else
                     {
-                        args.Player.SendSuccessMessage($"Error occur unmuting {targetaccount.Name}");
+                        args.Player.SendSuccessMessage(GetText("Error occur Muting {0}", targetaccount.Name));
                     }
                 }
 
@@ -7882,7 +7818,118 @@ namespace MKLP
 
                 if (players.Count < 1)
                 {
-                    args.Player.SendErrorMessage("Could not find the target specified. Check that you have the correct spelling.");
+                    args.Player.SendErrorMessage(GetText("Could not find the target specified. Check that you have the correct spelling."));
+                    return;
+                }
+
+                var targetplayer = players[0];
+
+                if (targetplayer.mute)
+                {
+                    args.Player.SendErrorMessage(GetText("{0} was already muted!", targetplayer.Name));
+                    return;
+                }
+
+                if (ManagePlayer.OnlineMute(args.Silent, targetplayer, reason, args.Player.Account.Name, expiration))
+                {
+                    args.Player.SendSuccessMessage(GetText("muted {0}", targetplayer.Name));
+                }
+                else
+                {
+                    args.Player.SendSuccessMessage(GetText("Error occur Muting {0}", targetplayer.Name));
+                }
+            }
+            //DBManager.CheckPlayer(player, true);
+            #endregion
+        }
+
+        private void CMD_UnMute(CommandArgs args)
+        {
+            #region code
+
+            if (args.Parameters.Count == 0)
+            {
+                args.Player.SendErrorMessage(GetText($"Proper Usage: {Commands.Specifier}unmute <player>" +
+                    (args.Player.HasPermission(Config.Permissions.CMD_OfflineUnMute) ? $"\nUnmuting Offline Player: {Commands.Specifier}unmute <accountname> -account" : "")));
+                return;
+            }
+
+            bool offlineMute = args.Parameters.Any(p => p == "-account");
+
+            if (offlineMute)
+            {
+                if (!args.Player.HasPermission(Config.Permissions.CMD_OfflineMute))
+                {
+                    args.Player.SendErrorMessage(GetText("You do not have permission to mute offline players"));
+                    return;
+                }
+
+                UserAccount targetaccount = TShock.UserAccounts.GetUserAccountByName(args.Parameters[0]);
+
+                if (targetaccount == null)
+                {
+                    args.Player.SendErrorMessage(GetText("Account name {0} doesn't exist", args.Parameters[0]));
+                }
+                
+                var players = TSPlayer.FindByNameOrID(args.Parameters[0]);
+
+                TSPlayer? targetplayer = null;
+
+                foreach (TSPlayer player in players)
+                {
+                    if (player == null) continue;
+                    if (player.Account.Name == targetaccount.Name)
+                    {
+                        targetplayer = player;
+                    }
+                }
+
+                if (targetplayer != null)
+                {
+                    if (!targetplayer.mute)
+                    {
+                        args.Player.SendErrorMessage(GetText("{0} hasn't been muted!", targetplayer.Name));
+                        return;
+                    }
+
+                    if (ManagePlayer.OnlineUnMute(args.Silent, targetplayer, args.Player.Account.Name))
+                    {
+                        args.Player.SendSuccessMessage(GetText("unmuted {0}", targetplayer.Name));
+                    }
+                    else
+                    {
+                        args.Player.SendSuccessMessage(GetText("Error occur unmuting {0}", targetplayer.Name));
+                    }
+
+                }
+                else
+                {
+                    if (ManagePlayer.OfflineUnMute(targetaccount, args.Player.Account.Name))
+                    {
+                        args.Player.SendSuccessMessage(GetText("unmuted {0}", targetaccount.Name));
+                    }
+                    else
+                    {
+                        args.Player.SendSuccessMessage(GetText("Error occur unmuting {0}", targetaccount.Name));
+                    }
+                }
+
+
+
+            }
+            else
+            {
+                var players = TSPlayer.FindByNameOrID(args.Parameters[0]);
+
+                if (players.Count > 1)
+                {
+                    args.Player.SendMultipleMatchError(players.Select(p => p.Name));
+                    return;
+                }
+
+                if (players.Count < 1)
+                {
+                    args.Player.SendErrorMessage(GetText("Could not find the target specified. Check that you have the correct spelling."));
                     return;
                 }
 
@@ -7890,17 +7937,17 @@ namespace MKLP
 
                 if (!targetplayer.mute)
                 {
-                    args.Player.SendErrorMessage($"{targetplayer.Name} hasn't been muted!");
+                    args.Player.SendErrorMessage(GetText("{0} hasn't been muted!", targetplayer.Name));
                     return;
                 }
 
                 if (ManagePlayer.OnlineUnMute(args.Silent, targetplayer, args.Player.Account.Name))
                 {
-                    args.Player.SendSuccessMessage($"Unmuted {targetplayer.Name}");
+                    args.Player.SendSuccessMessage(GetText("Unmuted {0}", targetplayer.Name));
                 }
                 else
                 {
-                    args.Player.SendSuccessMessage($"Error occur unmuting {targetplayer.Name}");
+                    args.Player.SendSuccessMessage(GetText("Error occur unmuting {0}", targetplayer.Name));
                 }
             }
             //DBManager.CheckPlayer(player, true);
@@ -7912,7 +7959,7 @@ namespace MKLP
             #region code
             if (args.Parameters.Count == 0)
             {
-                args.Player.SendErrorMessage($"Proper Usage: {Commands.Specifier}disable <player> <reason>");
+                args.Player.SendErrorMessage(GetText($"Proper Usage: {Commands.Specifier}disable <player> <reason>"));
                 return;
             }
 
@@ -7926,7 +7973,7 @@ namespace MKLP
 
             if (players.Count < 1)
             {
-                args.Player.SendErrorMessage("Could not find the target specified. Check that you have the correct spelling.");
+                args.Player.SendErrorMessage(GetText("Could not find the target specified. Check that you have the correct spelling."));
                 return;
             }
 
@@ -7936,12 +7983,13 @@ namespace MKLP
             {
 
                 ManagePlayer.DisablePlayer(targetplayer, executername: args.Player.Name);
-                args.Player.SendSuccessMessage($"Player {targetplayer.Name} disabled");
+                args.Player.SendSuccessMessage(GetText("Player {0} disabled", targetplayer.Name));
 
-            } else
+            }
+            else
             {
                 ManagePlayer.DisablePlayer(targetplayer, args.Parameters[1], executername: args.Player.Name);
-                args.Player.SendSuccessMessage($"Player {targetplayer.Name} disabled");
+                args.Player.SendSuccessMessage(GetText("Player {0} disabled for {1}", targetplayer.Name, args.Parameters[1]));
 
             }
 
@@ -7954,7 +8002,7 @@ namespace MKLP
             #region code
             if (args.Parameters.Count == 0)
             {
-                args.Player.SendErrorMessage($"Proper Usage: {Commands.Specifier}enable <player>");
+                args.Player.SendErrorMessage(GetText($"Proper Usage: {Commands.Specifier}enable <player>"));
                 return;
             }
 
@@ -7968,7 +8016,7 @@ namespace MKLP
 
             if (players.Count < 1)
             {
-                args.Player.SendErrorMessage("Could not find the target specified. Check that you have the correct spelling.");
+                args.Player.SendErrorMessage(GetText("Could not find the target specified. Check that you have the correct spelling."));
                 return;
             }
 
@@ -7976,10 +8024,11 @@ namespace MKLP
 
             if (ManagePlayer.UnDisablePlayer(targetplayer, args.Player.Name))
             {
-                args.Player.SendSuccessMessage($"Player {targetplayer.Name} enabled");
-            } else
+                args.Player.SendSuccessMessage(GetText("Player {0} enabled", targetplayer.Name));
+            }
+            else
             {
-                args.Player.SendErrorMessage($"Player {targetplayer.Name} isn't disabled");
+                args.Player.SendErrorMessage(GetText("Player {0} isn't disabled", targetplayer.Name));
             }
 
 
@@ -8007,10 +8056,10 @@ namespace MKLP
 
                     args.Player.RemoveData("MKLP_TargetSpy");
 
-                    args.Player.SendInfoMessage($"You're no longer spying on someone");
+                    args.Player.SendInfoMessage(GetText("Your no longer spying on someone"));
                     return;
                 }
-                args.Player.SendErrorMessage($"Usage: {Commands.Specifier}spy <player>");
+                args.Player.SendErrorMessage(GetText($"Proper Usage: {Commands.Specifier}spy <player>"));
                 return;
             }
 
@@ -8024,7 +8073,7 @@ namespace MKLP
 
             if (players.Count < 1)
             {
-                args.Player.SendErrorMessage("Could not find the target specified. Check that you have the correct spelling.");
+                args.Player.SendErrorMessage(GetText("Could not find the target specified. Check that you have the correct spelling."));
                 return;
             }
 
@@ -8038,7 +8087,7 @@ namespace MKLP
 
             args.Player.SetData("MKLP_TargetSpy", player);
 
-            args.Player.SendInfoMessage($"Spying {player.Name}");
+            args.Player.SendInfoMessage(GetText("Spying {0}", player.Name));
             return;
 
             #endregion
@@ -8049,7 +8098,7 @@ namespace MKLP
             #region code
             if (args.Parameters.Count == 0)
             {
-                args.Player.SendErrorMessage($"Proper Usage: {Commands.Specifier}uuidmatch <accountname>");
+                args.Player.SendErrorMessage(GetText($"Proper Usage: {Commands.Specifier}uuidmatch <accountname>"));
                 return;
             }
 
@@ -8057,7 +8106,7 @@ namespace MKLP
 
             if (getuser == null)
             {
-                args.Player.SendErrorMessage("Invalid Player");
+                args.Player.SendErrorMessage(GetText("Invalid Player"));
                 return;
             }
 
@@ -8065,8 +8114,9 @@ namespace MKLP
 
             if (getresult.Count == 0)
             {
-                args.Player.SendWarningMessage("No Accounts Match");
-            } else
+                args.Player.SendWarningMessage(GetText("No Accounts Match"));
+            }
+            else
             {
                 string result = "";
 
@@ -8075,7 +8125,7 @@ namespace MKLP
                     result += get.ID + " : " + get.Name + "\n";
                 }
 
-                args.Player.SendMessage("Following Users match their UUID:" +
+                args.Player.SendMessage(GetText("Following Users match their UUID:") +
                     "\n" + result, Color.Gray);
             }
             #endregion
@@ -8091,15 +8141,15 @@ namespace MKLP
 
             if ((Config.DataBaseDLink.StorageType != "sqlite" && Config.DataBaseDLink.SqliteDBPath != Path.Combine(TShock.SavePath, "MKLP.sqlite")) || !(bool)Config.DataBaseDLink.UsingDB)
             {
-                args.Player.SendErrorMessage("You cannot use this command" +
-                    "\nas if 'UsingDB' and 'UsingMKLPDatabase' in Config file is set to false...");
+                args.Player.SendErrorMessage(GetText("You cannot use this command" +
+                    "\nas if 'UsingDB' and 'UsingMKLPDatabase' in Config file is set to false..."));
                 return;
             }
 
             if (args.Parameters.Count == 0)
             {
-                args.Player.SendErrorMessage($"Usage: {Commands.Specifier}mklpdiscord <type> <args...>" +
-                    $"\nDo '{Commands.Specifier}mklpdiscord help' for more details");
+                args.Player.SendErrorMessage(GetText($"Usage: {Commands.Specifier}mklpdiscord <type> <args...>" +
+                    $"\nDo '{Commands.Specifier}mklpdiscord help' for more details"));
                 return;
             }
 
@@ -8108,14 +8158,14 @@ namespace MKLP
                 #region [ helptext ]
                 case "help":
                     {
-                        args.Player.SendMessage(
+                        args.Player.SendMessage(GetText(
                             $"Proper Usage: {Commands.Specifier}mklpdiscord <sub-command> <args...>" +
                             $"\n\n[ Sub Commands ]" +
                             $"\n[c/4089ff:'list <page>' :] list of accountlinked users" +
                             $"\n" +
                             $"\n[c/4089ff:'set <player> <userid>' :] sets or adds a accountlink user" +
                             $"\n" +
-                            $"\n[c/4089ff:'remove <player>' :] removes a accountlink user"
+                            $"\n[c/4089ff:'remove <player>' :] removes a accountlink user")
                             , Color.WhiteSmoke);
                         return;
                     }
@@ -8132,13 +8182,13 @@ namespace MKLP
 
                             if (maxpage == 0)
                             {
-                                args.Player.SendInfoMessage("No Link Accounts Assigned...");
+                                args.Player.SendInfoMessage(GetText("No Link Accounts Assigned..."));
                                 return;
                             }
 
                             if (args.Parameters.Count == 2)
                             {
-                                args.Player.SendInfoMessage($"Linked Accounts 1/{maxpage}" +
+                                args.Player.SendInfoMessage(GetText("Linked Accounts 1/{0}", maxpage) +
                                     $"\n{valuepage()}");
                                 return;
                             }
@@ -8147,13 +8197,13 @@ namespace MKLP
                                 try
                                 {
                                     int page = int.Parse(args.Parameters[2]);
-                                    args.Player.SendInfoMessage($"Linked Accounts {page}/{maxpage}" +
+                                    args.Player.SendInfoMessage(GetText("Linked Accounts {0}/{1}", page, maxpage) +
                                         $"\n{valuepage(page)}");
                                     return;
                                 }
                                 catch (Exception)
                                 {
-                                    args.Player.SendInfoMessage($"Linked Accounts 1/{maxpage}" +
+                                    args.Player.SendInfoMessage(GetText("Linked Accounts 1/{0}", maxpage) +
                                         $"\n{valuepage()}");
                                     return;
                                 }
@@ -8176,22 +8226,23 @@ namespace MKLP
                                         $"\nUserID: {Tvalue.Value}\n";
                                 }
 
-                                if (result == "") result = "Empty...";
+                                if (result == "") result = GetText("Empty...");
 
                                 return result;
                             }
 
-                        } catch { }
-                        
+                        }
+                        catch { }
+
                         return;
                     }
-                    #endregion
+                #endregion
                 case "set":
                     #region ( Type: Set )
                     {
                         if (args.Parameters.Count < 3)
                         {
-                            args.Player.SendErrorMessage($"Usage: {Commands.Specifier}mklpdiscord set <player> <userid>");
+                            args.Player.SendErrorMessage(GetText($"Usage: {Commands.Specifier}mklpdiscord set <player> <userid>"));
                             return;
                         }
 
@@ -8208,7 +8259,7 @@ namespace MKLP
                             UserAccount getuseraccount = TShock.UserAccounts.GetUserAccountByName(args.Parameters[1]);
                             if (getuseraccount == null)
                             {
-                                args.Player.SendErrorMessage("Invalid Player User");
+                                args.Player.SendErrorMessage(GetText("Invalid Player User"));
                                 return;
                             }
                             targetname = getuseraccount.Name;
@@ -8219,7 +8270,7 @@ namespace MKLP
                         }
                         if (targetname == "")
                         {
-                            args.Player.SendErrorMessage("Invalid Player User");
+                            args.Player.SendErrorMessage(GetText("Invalid Player User"));
                             return;
                         }
 
@@ -8227,28 +8278,30 @@ namespace MKLP
 
                         if (!ulong.TryParse(args.Parameters[2], out useridtarget))
                         {
-                            args.Player.SendErrorMessage("Invalid UserID");
+                            args.Player.SendErrorMessage(GetText("Invalid UserID"));
                             return;
                         }
 
                         if (DBManager.ChangeAccountDLinkingUserID(targetname, useridtarget.ToString()))
                         {
-                            args.Player.SendSuccessMessage($"Change {targetname} UserID to {useridtarget}");
+                            args.Player.SendSuccessMessage(GetText("Change {0} UserID to {1}", targetname, useridtarget));
                             return;
-                        } else
+                        }
+                        else
                         {
                             if (DBManager.AddAccountDLinkingUserID(targetname, useridtarget.ToString()))
                             {
-                                args.Player.SendSuccessMessage($"Added new linked account {targetname} UserID: {useridtarget}");
+                                args.Player.SendSuccessMessage(GetText("Added new linked account {0} UserID: {1}", targetname, useridtarget));
                                 return;
-                            } else
+                            }
+                            else
                             {
-                                args.Player.SendSuccessMessage($"Unable to add new link account");
+                                args.Player.SendSuccessMessage(GetText("Unable to add new link account"));
                                 return;
                             }
                         }
                     }
-                    #endregion
+                #endregion
                 case "remove":
                     #region ( Type: Removed )
                     {
@@ -8289,7 +8342,8 @@ namespace MKLP
                         if (DBManager.DeleteAccountDLinkingUserID(targetname))
                         {
                             args.Player.SendSuccessMessage($"Removed {targetname} accountlink");
-                        } else
+                        }
+                        else
                         {
                             args.Player.SendErrorMessage($"Unable to remove {targetname} accountlink" +
                                 $"\nplease check '{Commands.Specifier}mklpdiscord list' if that name exist");
@@ -8297,11 +8351,11 @@ namespace MKLP
 
                         return;
                     }
-                    #endregion
+                #endregion
                 default:
                     {
-                        args.Player.SendErrorMessage("Invalid Sub-Command" +
-                            $"\nDo '{Commands.Specifier}mklpdiscord help' for more info");
+                        args.Player.SendErrorMessage(GetText("Invalid Sub-Command" +
+                            $"\nDo '{Commands.Specifier}mklpdiscord help' for more info"));
                         return;
                     }
             }
@@ -8318,15 +8372,16 @@ namespace MKLP
         private void MCMD_AccountInfo(CommandArgs args)
         {
             #region code
-            
+
             if (args.Parameters.Count == 0)
             {
                 if ((bool)Config.Main.Replace_AccountInfo_TShockCommand)
                 {
-                    args.Player.SendErrorMessage($"Proper Usage: {Commands.Specifier}accountinfo <account name>");
-                } else
+                    args.Player.SendErrorMessage(GetText($"Proper Usage: {Commands.Specifier}accountinfo <account name>"));
+                }
+                else
                 {
-                    args.Player.SendErrorMessage($"Proper Usage: {Commands.Specifier}klpaccountinfo <account name>");
+                    args.Player.SendErrorMessage(GetText($"Proper Usage: {Commands.Specifier}klpaccountinfo <account name>"));
                 }
                 return;
             }
@@ -8335,7 +8390,7 @@ namespace MKLP
 
             if (targetaccount == null)
             {
-                args.Player.SendErrorMessage("Invalid Account!");
+                args.Player.SendErrorMessage(GetText("Invalid Account!"));
                 return;
             }
 
@@ -8369,7 +8424,8 @@ namespace MKLP
                 try
                 {
                     userid = (bool)Config.DataBaseDLink.Target_UserAccount_ID ? LinkAccountManager.GetUserIDByAccountID(account.ID) : LinkAccountManager.GetUserIDByAccountName(account.Name);
-                } catch { }
+                }
+                catch { }
 
 
                 List<string> iplist = JsonConvert.DeserializeObject<List<string>>(account.KnownIps?.ToString() ?? string.Empty);
@@ -8446,22 +8502,22 @@ namespace MKLP
             }
             if (invalidUsage)
             {
-                args.Player.SendMessage($"List Online Players Syntax", Color.White);
-                args.Player.SendMessage($"{"playing".Color(TShockAPI.Utils.BoldHighlight)} {"[-i]".Color(TShockAPI.Utils.RedHighlight)} {"[page]".Color(TShockAPI.Utils.GreenHighlight)}", Color.White);
-                args.Player.SendMessage($"Command aliases: {"playing".Color(TShockAPI.Utils.GreenHighlight)}, {"online".Color(TShockAPI.Utils.GreenHighlight)}, {"who".Color(TShockAPI.Utils.GreenHighlight)}", Color.White);
-                args.Player.SendMessage($"Example usage: {"who".Color(TShockAPI.Utils.BoldHighlight)} {"-i".Color(TShockAPI.Utils.RedHighlight)}", Color.White);
+                args.Player.SendMessage(GetText("List Online Players Syntax"), Color.White);
+                args.Player.SendMessage(GetText($"{"playing".Color(TShockAPI.Utils.BoldHighlight)} {"[-i]".Color(TShockAPI.Utils.RedHighlight)} {"[page]".Color(TShockAPI.Utils.GreenHighlight)}"), Color.White);
+                args.Player.SendMessage(GetText($"Command aliases: {"playing".Color(TShockAPI.Utils.GreenHighlight)}, {"online".Color(TShockAPI.Utils.GreenHighlight)}, {"who".Color(TShockAPI.Utils.GreenHighlight)}"), Color.White);
+                args.Player.SendMessage(GetText($"Example usage: {"who".Color(TShockAPI.Utils.BoldHighlight)} {"-i".Color(TShockAPI.Utils.RedHighlight)}"), Color.White);
                 return;
             }
-            
+
             if (displayIdsRequested && !args.Player.HasPermission(Permissions.seeids))
             {
-                args.Player.SendErrorMessage("You do not have permission to see player IDs.");
+                args.Player.SendErrorMessage(GetText("You do not have permission to see player IDs."));
                 return;
             }
 
             if (TShock.Utils.GetActivePlayerCount() == 0)
             {
-                args.Player.SendMessage("There are currently no players online.", Color.White);
+                args.Player.SendMessage(GetText("There are currently no players online."), Color.White);
                 return;
             }
             args.Player.SendMessage($"Online Players ({TShock.Utils.GetActivePlayerCount().Color(TShockAPI.Utils.GreenHighlight)}/{TShock.Config.Settings.MaxSlots})", Color.White);
@@ -8492,7 +8548,7 @@ namespace MKLP
                 new PaginationTools.Settings
                 {
                     IncludeHeader = false,
-                    FooterFormat = $"Type {Commands.Specifier}who {(displayIdsRequested ? "-i" : string.Empty)} for more."
+                    FooterFormat = GetText($"Type {Commands.Specifier}who {(displayIdsRequested ? "-i" : string.Empty)} for more.")
                 }
             );
 
@@ -8503,6 +8559,17 @@ namespace MKLP
 
         #region [ Function ]
 
+        #region [[{ GetText }]]
+        public static string GetText(string text)
+        {
+            return text;
+        }
+        public static string GetText(string text, params object?[] obj)
+        {
+            return string.Format(text, obj);
+        }
+        #endregion
+
         public static void SendStaffMessage(string message, Microsoft.Xna.Framework.Color messagecolor)
         {
             foreach (TSPlayer player in TShock.Players)
@@ -8512,7 +8579,7 @@ namespace MKLP
                 player.SendMessage(message, messagecolor);
             }
         }
-        
+
         public static void TogglePlayerVanish(TSPlayer executer, bool vanish)
         {
             #region code
@@ -8533,7 +8600,8 @@ namespace MKLP
                     if (player == executer) continue;
                     player.SendData(PacketTypes.PlayerActive, null, executer.Index, false.GetHashCode());
                 }
-            } else
+            }
+            else
             {
                 if ((bool)Config.Main.Use_VanishCMD_TPlayer_Active_Var)
                 {
@@ -8575,13 +8643,16 @@ namespace MKLP
             #endregion
         }
 
-        public static bool PunishPlayer(MKLP_CodeType CodeType, byte CodeNumber, TSPlayer player, string Reason, string WarningMessage, bool RevertInventory = false)
+        public static bool PunishPlayer(MKLP_CodeType CodeType, byte CodeNumber, TSPlayer player, string getReason, string getWarningMessage, bool RevertInventory = false)
         {
             #region code
 
+            string Reason = GetText(getReason);
+            string WarningMessage = GetText(getWarningMessage);
+
             if (CodeType == MKLP_CodeType.Main)
             {
-                switch ((PunishmentType)Config.Main.Main_Code_PunishmentType)
+                switch ((PunishmentType)Config.Main.DisableNode.Main_Code_PunishmentType)
                 {
                     case PunishmentType.Ban:
                         {
@@ -8629,7 +8700,7 @@ namespace MKLP
             if (CodeType == MKLP_CodeType.Survival)
             {
                 if (OnCheckIllegal) return true;
-                switch ((PunishmentType)Config.Main.Survival_Code_PunishmentType)
+                switch ((PunishmentType)Config.Main.DisableNode.Survival_Code_PunishmentType)
                 {
                     case PunishmentType.Ban:
                         {
@@ -8675,7 +8746,7 @@ namespace MKLP
             }
             if (CodeType == MKLP_CodeType.Default)
             {
-                switch ((PunishmentType)Config.Main.Default_Code_PunishmentType)
+                switch ((PunishmentType)Config.Main.DisableNode.Default_Code_PunishmentType)
                 {
                     case PunishmentType.Ban:
                         {
@@ -8720,7 +8791,7 @@ namespace MKLP
             }
             if (CodeType == MKLP_CodeType.Dupe)
             {
-                switch ((PunishmentType)Config.Main.SuspiciousDupe_PunishmentType)
+                switch ((PunishmentType)Config.Main.DisableNode.SuspiciousDupe_PunishmentType)
                 {
                     case PunishmentType.Ban:
                         {
@@ -8894,7 +8965,8 @@ namespace MKLP
             while (reader.Read())
             {
                 if (reader.Get<string>("Username") == playername) continue;
-                result.Add(new UserAccount{
+                result.Add(new UserAccount
+                {
                     ID = reader.Get<int>("ID"),
                     Group = reader.Get<string>("Usergroup"),
                     UUID = reader.Get<string>("UUID"),
@@ -8911,7 +8983,7 @@ namespace MKLP
 
         #endregion
     }
-    
+
     public enum MKLP_CodeType
     {
         Main,
@@ -9043,6 +9115,46 @@ namespace MKLP
             Console.ResetColor();
         }
 
+    }
+    #endregion
+
+    #region LogKLP
+    class LogKLP
+    {
+        public static string LogPath_Tile = Path.Combine(TShock.SavePath, "logs", "MKLP", "Log-Tile");
+        public static string LogPath_Sign = Path.Combine(TShock.SavePath, "logs", "MKLP", "Log-Sign");
+        public static DateTime Currentlogfile = DateTime.Now;
+
+        public static void InitializeLogging()
+        {
+            Currentlogfile = DateTime.Now;
+
+            if (!Directory.Exists(LogPath_Tile) && (bool)MKLP.Config.Main.Logging.LogTile) Directory.CreateDirectory(LogPath_Tile);
+            if (!Directory.Exists(LogPath_Sign) && (bool)MKLP.Config.Main.Logging.LogSign) Directory.CreateDirectory(LogPath_Sign);
+
+            if ((bool)MKLP.Config.Main.Logging.LogTile) LogPath_Tile = Path.Combine(LogPath_Tile, $"{Currentlogfile.ToString("dd/MM/yyyy")}.log".Replace("/", "-"));
+            if ((bool)MKLP.Config.Main.Logging.LogSign) LogPath_Sign = Path.Combine(LogPath_Sign, $"{Currentlogfile.ToString("dd/MM/yyyy")}.log".Replace("/", "-"));
+
+        }
+
+        public static void Log_Tile(string text)
+        {
+            if (!(bool)MKLP.Config.Main.Logging.LogTile) return;
+
+            using (StreamWriter writer = new StreamWriter(LogPath_Tile, true))
+            {
+                writer.WriteLine($"{text}");
+            }
+        }
+        public static void Log_Sign(string text)
+        {
+            if (!(bool)MKLP.Config.Main.Logging.LogSign) return;
+
+            using (StreamWriter writer = new StreamWriter(LogPath_Sign, true))
+            {
+                writer.WriteLine($"{text}");
+            }
+        }
     }
     #endregion
 

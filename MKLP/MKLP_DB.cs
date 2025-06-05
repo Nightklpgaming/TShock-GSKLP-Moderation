@@ -56,6 +56,7 @@ namespace MKLP
 
             sqlCreator.EnsureTableStructure(new SqlTable("Reports",
                 new SqlColumn("ID", MySqlDbType.Int32) { AutoIncrement = true, Primary = true },
+                new SqlColumn("ReportType", MySqlDbType.VarChar, 20),
                 new SqlColumn("Reporter", MySqlDbType.VarChar, 20),
                 new SqlColumn("Target", MySqlDbType.VarChar, 20),
                 new SqlColumn("Message", MySqlDbType.Text),
@@ -135,6 +136,7 @@ namespace MKLP
 
                 result.Add(new(
                         reader.Get<int>("ID"),
+                        reader.Get<string>("ReportType"),
                         reader.Get<string>("Reporter"),
                         reader.Get<string>("Target"),
                         reader.Get<string>("Message"),
@@ -157,21 +159,7 @@ namespace MKLP
                 {
                     yield return new(
                         reader.Get<int>("ID"),
-                        reader.Get<string>("Reporter"),
-                        reader.Get<string>("Target"),
-                        reader.Get<string>("Message"),
-                        reader.Get<DateTime>("Since"),
-                        reader.Get<string>("Location"),
-                        reader.Get<string>("Players")
-                        );
-                }
-            } else if (from != "")
-            {
-                using var reader = _db.QueryReader("SELECT * FROM Reports WHERE From = @0", from);
-                while (reader.Read())
-                {
-                    yield return new(
-                        reader.Get<int>("ID"),
+                        reader.Get<string>("ReportType"),
                         reader.Get<string>("Reporter"),
                         reader.Get<string>("Target"),
                         reader.Get<string>("Message"),
@@ -181,7 +169,24 @@ namespace MKLP
                         );
                 }
             }
-            
+            else if (from != "")
+            {
+                using var reader = _db.QueryReader("SELECT * FROM Reports WHERE From = @0", from);
+                while (reader.Read())
+                {
+                    yield return new(
+                        reader.Get<int>("ID"),
+                        reader.Get<string>("ReportType"),
+                        reader.Get<string>("Reporter"),
+                        reader.Get<string>("Target"),
+                        reader.Get<string>("Message"),
+                        reader.Get<DateTime>("Since"),
+                        reader.Get<string>("Location"),
+                        reader.Get<string>("Players")
+                        );
+                }
+            }
+
         }
 
         public MKLP_Report GetReportByID(int ID)
@@ -191,6 +196,7 @@ namespace MKLP
             {
                 return new(
                     reader.Get<int>("ID"),
+                    reader.Get<string>("ReportType"),
                     reader.Get<string>("Reporter"),
                     reader.Get<string>("Target"),
                     reader.Get<string>("Message"),
@@ -203,16 +209,17 @@ namespace MKLP
             throw new NullReferenceException();
         }
 
-        public int AddReport(string reporter, string target, string message, DateTime Since, string location, string playerlist)
+        public int AddReport(MKLP_Report.RType reportType, string reporter, string target, string message, DateTime Since, string location, string playerlist)
         {
             string query = "INSERT INTO Reports (" +
+                "ReportType, " +
                 "Reporter, " +
                 "Target, " +
                 "Message, " +
                 "Since, " +
                 "Location, " +
                 "Players) " +
-                "VALUES (@0, @1, @2, @3, @4, @5);";
+                "VALUES (@0, @1, @2, @3, @4, @5, @6);";
             if (_db.GetSqlType() == SqlType.Mysql)
             {
                 query += "SELECT LAST_INSERT_ID();";
@@ -223,6 +230,7 @@ namespace MKLP
             }
 
             int id = _db.QueryScalar<int>(query,
+                reportType.ToString(),
                 reporter,
                 target,
                 message,
@@ -253,7 +261,7 @@ namespace MKLP
             using var reader = _db.QueryReader("SELECT * FROM Mute WHERE Identifier = @0", Identifier);
             while (reader.Read())
             {
-                yield return new (
+                yield return new(
                     reader.Get<int>("ID"),
                     reader.Get<string>("Identifier"),
                     reader.Get<string>("Reason"),
@@ -276,12 +284,17 @@ namespace MKLP
             }
         }
 
-        public DateTime GetMuteExpiration(string Identifier)
+        public Mute GetMuteExpiration(string Identifier)
         {
             using var reader = _db.QueryReader("SELECT * FROM Mute WHERE Identifier = @0", Identifier);
             while (reader.Read())
             {
-                return reader.Get<DateTime>("Expiration");
+                return new Mute(
+                    reader.Get<int>("ID"),
+                    reader.Get<string>("Identifier"),
+                    reader.Get<string>("Reason"),
+                    reader.Get<DateTime>("Expiration")
+                    );
             }
             throw new NullReferenceException();
         }
@@ -306,31 +319,36 @@ namespace MKLP
             return _db.Query("DELETE FROM Mute WHERE Identifier = @0", Identifier) != 0;
         }
 
-        
+
         public bool CheckPlayerMute(TSPlayer player, bool inform_unmuted = false)
         {
-            bool IsExist = false;
             bool muted = false;
+            bool itExist = false;
             try
             {
-                DateTime Name = GetMuteExpiration($"Name:{player.Name}");
+                Mute get = GetMuteExpiration($"{Identifier.Name}{player.Name}");
+                itExist = true;
+                if ((DateTime.UtcNow - get.Expiration).TotalSeconds < 0)
+                {
+                    muted = true;
+                } else
+                {
+                    DeleteMute(Identifier.Name + player.Name);
+                }
+            }
+            catch (NullReferenceException) { }
 
-                IsExist = true;
-                if (DateTime.UtcNow < Name)
+            try
+            {
+                Mute get = GetMuteExpiration($"{Identifier.Account}{player.Account.Name}");
+                itExist = true;
+                if ((DateTime.UtcNow - get.Expiration).TotalSeconds < 0)
                 {
                     muted = true;
                 }
-
-            } catch (NullReferenceException) { }
-
-            try
-            {
-                DateTime AccountName = GetMuteExpiration($"Account:{player.Account.Name}");
-
-                IsExist = true;
-                if (DateTime.UtcNow < AccountName)
+                else
                 {
-                    muted = true;
+                    DeleteMute(Identifier.Account + player.Account.Name);
                 }
 
             }
@@ -338,12 +356,15 @@ namespace MKLP
 
             try
             {
-                DateTime IP = GetMuteExpiration($"IP:{player.IP}");
-
-                IsExist = true;
-                if (DateTime.UtcNow < IP)
+                Mute get = GetMuteExpiration($"{Identifier.IP}{player.IP}");
+                itExist = true;
+                if ((DateTime.UtcNow - get.Expiration).TotalSeconds < 0)
                 {
                     muted = true;
+                }
+                else
+                {
+                    DeleteMute(Identifier.IP + player.IP);
                 }
 
             }
@@ -351,39 +372,28 @@ namespace MKLP
 
             try
             {
-                DateTime UUID = GetMuteExpiration($"UUID:{player.UUID}");
-
-                IsExist = true;
-                if (DateTime.UtcNow < UUID)
+                Mute get = GetMuteExpiration($"{Identifier.UUID}{player.UUID}");
+                itExist = true;
+                if ((DateTime.UtcNow - get.Expiration).TotalSeconds < 0)
                 {
                     muted = true;
+                }
+                else
+                {
+                    DeleteMute(Identifier.UUID + player.UUID);
                 }
 
             }
             catch (NullReferenceException) { }
-
-            /*
-            if (IsExist)
-            {
-                if (!player.mute && inform_unmuted)
-                {
-                    player.SendSuccessMessage("You're no longer muted");
-                } else if (inform_muted)
-                {
-                    player.SendErrorMessage("You're still muted!");
-                }
-                return player.mute;
-            }
-            */
 
             if (muted)
             {
                 player.mute = true;
             }
 
-            if (IsExist && !player.mute && inform_unmuted)
+            if (!player.mute && itExist && inform_unmuted)
             {
-                player.SendSuccessMessage("You're no longer muted");
+                player.SendSuccessMessage(MKLP.GetText("You're no longer muted"));
             }
 
             return player.mute;
@@ -418,6 +428,7 @@ namespace MKLP
     public class MKLP_Report
     {
         public int ID;
+        public RType ReportType;
         public string From;
         public string Target;
         public string Message;
@@ -427,6 +438,7 @@ namespace MKLP
 
         public MKLP_Report(
             int ID,
+            string ReportType,
             string From,
             string Target,
             string Message,
@@ -436,12 +448,46 @@ namespace MKLP
             )
         {
             this.ID = ID;
-            this.From = From;
+            if (ReportType == null)
+            {
+                this.ReportType = RType.NA;
+            } else
+            {
+                switch (ReportType)
+                {
+                    case "NormalReport":
+                        this.ReportType = RType.NormalReport;
+                        break;
+                    case "PlayerReport":
+                        this.ReportType = RType.PlayerReport;
+                        break;
+                    case "BugReport":
+                        this.ReportType = RType.BugReport;
+                        break;
+                    case "StaffReport":
+                        this.ReportType = RType.StaffReport;
+                        break;
+                    default:
+                        this.ReportType = RType.NA;
+                        break;
+                }
+            }
+
+                this.From = From;
             this.Target = Target;
             this.Message = Message;
             this.Since = Since;
             this.Location = Location;
             this.Players = Players;
+        }
+
+        public enum RType
+        {
+            NA,
+            NormalReport,
+            PlayerReport,
+            BugReport,
+            StaffReport
         }
     }
 }

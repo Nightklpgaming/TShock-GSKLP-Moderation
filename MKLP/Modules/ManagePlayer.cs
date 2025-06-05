@@ -451,7 +451,8 @@ namespace MKLP.Modules
                     tsplayer.SendWarningMessage("!!!IHSP");
                 }
                 #endregion
-            } else
+            }
+            else
             {
                 #region test
                 for (int i = 0; i < tsplayer.TPlayer.inventory.Count(); i++)
@@ -469,7 +470,7 @@ namespace MKLP.Modules
                 }
 
 
-                if ((bool)MKLP.Config.Main.Using_Main_Code1 && !tsplayer.HasPermission(MKLP.Config.Permissions.IgnoreMainCode_1))
+                if ((bool)MKLP.Config.Main.DisableNode.Using_Main_Code1 && !tsplayer.HasPermission(MKLP.Config.Permissions.IgnoreMainCode_1))
                 {
                     for (int i = 0; i < tsplayer.TPlayer.armor.Count(); i++)
                     {
@@ -489,7 +490,7 @@ namespace MKLP.Modules
                     }
                 }
 
-                if ((bool)MKLP.Config.Main.Using_Survival_Code1 && !tsplayer.HasPermission(MKLP.Config.Permissions.IgnoreSurvivalCode_1))
+                if ((bool)MKLP.Config.Main.DisableNode.Using_Survival_Code1 && !tsplayer.HasPermission(MKLP.Config.Permissions.IgnoreSurvivalCode_1))
                 {
                     for (int i = 0; i < tsplayer.TPlayer.armor.Count(); i++)
                     {
@@ -510,8 +511,8 @@ namespace MKLP.Modules
                 }
 
                 #region Chest
-                bool dontrevertchest = (PunishmentType)MKLP.Config.Main.SuspiciousDupe_PunishmentType != PunishmentType.RevertAndLog &&
-                            (PunishmentType)MKLP.Config.Main.SuspiciousDupe_PunishmentType != PunishmentType.Revert;
+                bool dontrevertchest = (PunishmentType)MKLP.Config.Main.DisableNode.SuspiciousDupe_PunishmentType != PunishmentType.RevertAndLog &&
+                            (PunishmentType)MKLP.Config.Main.DisableNode.SuspiciousDupe_PunishmentType != PunishmentType.Revert;
                 if (tsplayer.ActiveChest != -1)
                 {
                     try
@@ -689,7 +690,7 @@ namespace MKLP.Modules
                 {
 
                     if (illegalitems.ContainsKey(now.netID) &&
-                        (bool)MKLP.Config.Main.Using_Survival_Code1 &&
+                        (bool)MKLP.Config.Main.DisableNode.Using_Survival_Code1 &&
                         !tsplayer.HasPermission(MKLP.Config.Permissions.IgnoreSurvivalCode_1))
                     {
                         MKLP.PunishPlayer(MKLP_CodeType.Survival, 1, tsplayer, $"{illegalitems[now.netID]} Item Progression", $"Player **{tsplayer.Name}** has a item that is illegal on this progression `Item: {now.Name}` **{illegalitems[now.netID]}**", true);
@@ -698,7 +699,7 @@ namespace MKLP.Modules
 
                     if ((now.value * now.stack) / 5000000 >= maxvalue &&
                         now.netID != 74
-                        && (bool)MKLP.Config.Main.Using_Main_Code1 &&
+                        && (bool)MKLP.Config.Main.DisableNode.Using_Main_Code1 &&
                         !tsplayer.HasPermission(MKLP.Config.Permissions.IgnoreMainCode_1))
                     {
                         MKLP.PunishPlayer(MKLP_CodeType.Main, 1, tsplayer, $"Abnormal Item [i/s{now.stack}:{now.netID}]", $"Player **{tsplayer.Name}** has High Value Item Stack `({now.stack}) {now.Name}`", true);
@@ -711,7 +712,7 @@ namespace MKLP.Modules
                 {
 
                     if (illegalitems.ContainsKey(now.netID) &&
-                        (bool)MKLP.Config.Main.Using_Survival_Code1)
+                        (bool)MKLP.Config.Main.DisableNode.Using_Survival_Code1)
                     {
                         return true;
                     }
@@ -723,7 +724,7 @@ namespace MKLP.Modules
 
                     if ((now.value * now.stack) / 5000000 >= maxvalue &&
                         now.netID != 74
-                        && (bool)MKLP.Config.Main.Using_Main_Code1)
+                        && (bool)MKLP.Config.Main.DisableNode.Using_Main_Code1)
                     {
                         return true;
                     }
@@ -735,7 +736,7 @@ namespace MKLP.Modules
                 {
                     if (type == "Inventory" && slot == 58) return;
 
-                    if (!(bool)MKLP.Config.Main.Use_SuspiciousDupe) return;
+                    if (!(bool)MKLP.Config.Main.DisableNode.Use_SuspiciousDupe) return;
 
                     if (now.stack == 255)
                     {
@@ -813,7 +814,7 @@ namespace MKLP.Modules
                 {
                     if (type == "Inventory" && slot == 58) return;
 
-                    if (!(bool)MKLP.Config.Main.Use_SuspiciousDupe) return;
+                    if (!(bool)MKLP.Config.Main.DisableNode.Use_SuspiciousDupe) return;
 
                     if (now.stack == 255)
                     {
@@ -913,7 +914,7 @@ namespace MKLP.Modules
                         }
                     }
                 }
-                
+
                 bool confirmedREV()
                 {
                     if (tsplayer.ContainsData("MKLP_Confirmed_InvRev"))
@@ -981,14 +982,15 @@ namespace MKLP.Modules
                     MKLP.Discordklp.KLPBotSendMessage_Disabled(ServerReason, player.Account.Name, Reason);
                 }
 
-                player.SendMessage("You have been Disable reason : " + Reason, Microsoft.Xna.Framework.Color.Red);
+                player.SendMessage(MKLP.GetText("You have been Disable reason : ") + Reason, Microsoft.Xna.Framework.Color.Red);
                 if (ServerReason == "")
                 {
-                    MKLP.Discordklp.KLPBotSendMessageMainLog($"Player **{player.Name}** was Disabled by **{executername}**");
-                    MKLP.SendStaffMessage($"{executername} disabled {player.Name} for: {Reason}", Microsoft.Xna.Framework.Color.DarkRed);
-                } else
+                    MKLP.Discordklp.KLPBotSendMessageMainLog(MKLP.GetText("Player **{0}** was Disabled by **{1}**", player.Name, executername));
+                    MKLP.SendStaffMessage(MKLP.GetText("{0} disabled {1} for: {2}", executername, player.Name, Reason), Microsoft.Xna.Framework.Color.DarkRed);
+                }
+                else
                 {
-                    MKLP.SendStaffMessage($"{player.Name} was disabled for: {Reason}", Microsoft.Xna.Framework.Color.DarkRed);
+                    MKLP.SendStaffMessage(MKLP.GetText("{1} was disabled for: {1}", player.Name, Reason), Microsoft.Xna.Framework.Color.DarkRed);
                 }
 
 
@@ -1015,11 +1017,11 @@ namespace MKLP.Modules
 
                 player.SetData("MKLP_IsDisabled", false);
 
-                player.SendMessage("You're now enabled", Microsoft.Xna.Framework.Color.Lime);
+                player.SendMessage(MKLP.GetText("You're now enabled"), Microsoft.Xna.Framework.Color.Lime);
 
-                MKLP.SendStaffMessage($"{player.Name} was enable by {executername}", Microsoft.Xna.Framework.Color.DarkRed);
+                MKLP.SendStaffMessage(MKLP.GetText("{0} was enable by {1}", player.Name, executername), Microsoft.Xna.Framework.Color.DarkRed);
 
-                MKLP.Discordklp.KLPBotSendMessageMainLog($"Player **{player.Name}** was Enabled by **{executername}**");
+                MKLP.Discordklp.KLPBotSendMessageMainLog(MKLP.GetText("Player **{0}** was Enabled by **{1}**", player.Name, executername));
 
                 return true;
             }
@@ -1069,24 +1071,24 @@ namespace MKLP.Modules
             if (MKLP.DisabledKey.ContainsKey(Identifier.UUID + Player.UUID)) { MKLP.DisabledKey.Remove(Identifier.UUID + Player.UUID); }
 
             bool banguardused = false;
-            if (banguardtype != "N/A" && ((bool)MKLP.Config.BanGuard.UsingBanGuard && !(bool)MKLP.Config.BanGuard.UsingPlugin) && BanGuardAPI._isApiKeyValid)
+            if (banguardtype != "N/A" && (bool)MKLP.Config.BanGuard.UsingBanGuard && BanGuardAPI._isApiKeyValid)
             {
                 _ = BanGuardAPI.BanPlayer(Player.UUID, banguardtype, Player.IP);
                 banguardused = true;
             }
 
-            MKLP.Discordklp.KLPBotSendMessageMainLog($"**{Executer}** 🔨Banned **{Player.Name}** for `{Reason}`" +
+            MKLP.Discordklp.KLPBotSendMessageMainLog(MKLP.GetText("**{0}** 🔨Banned **{1}** for `{2}`" +
                 (banguardused ? $"\n-# 🛡️BanGuard has been used on this one! ( category: {banguardtype} )" : "") +
                 $"\n### Ban Tickets Numbers:\n" +
                 Tickets +
-                $"-# Duration: {(Duration == DateTime.MaxValue ? "Permanent" : GetDuration(Duration))}");
+                $"-# Duration: {(Duration == DateTime.MaxValue ? "Permanent" : GetDuration(Duration))}", Executer, Player.Name, Reason));
 
-            if (!Silent) TShock.Utils.Broadcast($"Player [c/3378f0:{Player.Name}] was banned!", Microsoft.Xna.Framework.Color.Cyan);
-            
-            MKLP.SendStaffMessage($"[MKLP] [c/008ecf:{Player.Name}] was banned by [c/008ecf:{Executer}]", Microsoft.Xna.Framework.Color.DarkCyan);
+            if (!Silent) TShock.Utils.Broadcast(MKLP.GetText("Player [c/3378f0:{0}] was banned!", Player.Name), Microsoft.Xna.Framework.Color.Cyan);
 
-            Player.Disconnect("You were Banned By " + Executer +
-                "\nReason: " + Reason);
+            MKLP.SendStaffMessage(MKLP.GetText("[MKLP] [c/008ecf:{0}] was banned by [c/008ecf:{1}]", Player.Name, Executer), Microsoft.Xna.Framework.Color.DarkCyan);
+
+            Player.Disconnect(MKLP.GetText("You were Banned By ") + Executer +
+                MKLP.GetText("\nReason: ") + Reason);
 
             return true;
 
@@ -1117,7 +1119,7 @@ namespace MKLP.Modules
         public static bool OfflineBan(UserAccount Account, string Reason, string Executer, DateTime Duration, bool IP = false, bool UUID = false, string banguardtype = "N/A")
         {
             var getban = TShock.Bans.RetrieveBansByIdentifier(Identifier.Account + Account.Name);
-            
+
 
             foreach (Ban ban in getban)
             {
@@ -1144,19 +1146,19 @@ namespace MKLP.Modules
             if (MKLP.DisabledKey.ContainsKey(Identifier.UUID + Account.UUID)) { MKLP.DisabledKey.Remove(Identifier.UUID + Account.UUID); }
 
             bool banguardused = false;
-            if (banguardtype != "N/A" && ((bool)MKLP.Config.BanGuard.UsingBanGuard && !(bool)MKLP.Config.BanGuard.UsingPlugin) && BanGuardAPI._isApiKeyValid)
+            if (banguardtype != "N/A" && (bool)MKLP.Config.BanGuard.UsingBanGuard && BanGuardAPI._isApiKeyValid)
             {
                 _ = BanGuardAPI.BanPlayer(Account.UUID, banguardtype, GetIPs[GetIPs.Count() - 1]);
                 banguardused = true;
             }
 
-            MKLP.SendStaffMessage($"[MKLP] Account [c/008ecf:{Account.Name}] was banned by [c/008ecf:{Executer}]", Microsoft.Xna.Framework.Color.DarkCyan);
+            MKLP.SendStaffMessage(MKLP.GetText("[MKLP] Account [c/008ecf:{0}] was banned by [c/008ecf:{1}]", Account.Name, Executer), Microsoft.Xna.Framework.Color.DarkCyan);
 
-            MKLP.Discordklp.KLPBotSendMessageMainLog($"**{Executer}** 🔨Banned **{Account.Name}** for `{Reason}`" +
+            MKLP.Discordklp.KLPBotSendMessageMainLog(MKLP.GetText("**{0}** 🔨Banned **{1}** for `{2}`" +
                 (banguardused ? $"\n-# 🛡️BanGuard has been used on this one! ( category: {banguardtype} )" : "") +
                 $"\n### Ban Tickets Numbers:\n" +
                 Tickets +
-                $"-# Duration: {(Duration == DateTime.MaxValue ? "Permanent" : GetDuration(Duration))}");
+                $"-# Duration: {(Duration == DateTime.MaxValue ? "Permanent" : GetDuration(Duration))}", Executer, Account.Name, Reason));
 
             return true;
 
@@ -1194,7 +1196,7 @@ namespace MKLP.Modules
 
 
             int? getban_Name = getticket(Identifier.Name + Account.Name);
-            
+
             if (getban_Name != null)
             {
                 if (TShock.Bans.RemoveBan((int)getban_Name, true))
@@ -1239,11 +1241,11 @@ namespace MKLP.Modules
                 }
             }
 
-            MKLP.SendStaffMessage($"[MKLP] Account: [c/008ecf:{Account.Name}] was unbanned by [c/008ecf:{Executer}]", Microsoft.Xna.Framework.Color.DarkCyan);
+            MKLP.SendStaffMessage(MKLP.GetText("[MKLP] Account: [c/008ecf:{1}] was unbanned by [c/008ecf:{0}]", Account.Name, Executer), Microsoft.Xna.Framework.Color.DarkCyan);
 
-            MKLP.Discordklp.KLPBotSendMessageMainLog($"**{Executer}** ✅UnBan **{Account.Name}**" +
+            MKLP.Discordklp.KLPBotSendMessageMainLog(MKLP.GetText($"**{Executer}** ✅UnBan **{Account.Name}**" +
                 $"\n### Ban Tickets Removed:\n" +
-                Tickets);
+                Tickets));
             return unbanned;
 
             int? getticket(string identifier)
@@ -1262,11 +1264,12 @@ namespace MKLP.Modules
 
             if (TShock.Bans.RemoveBan(TicketNumber, true))
             {
-                MKLP.SendStaffMessage($"[MKLP] BanTicket: [c/008ecf:{TicketNumber}] was removed by [c/008ecf:{Executer}]", Microsoft.Xna.Framework.Color.DarkCyan);
+                MKLP.SendStaffMessage(MKLP.GetText("[MKLP] BanTicket: [c/008ecf:{0}] was removed by [c/008ecf:{1}]", TicketNumber, Executer), Microsoft.Xna.Framework.Color.DarkCyan);
 
-                MKLP.Discordklp.KLPBotSendMessageMainLog($"**{Executer}** ✅Remove Ticket Ban No. **{TicketNumber}**");
+                MKLP.Discordklp.KLPBotSendMessageMainLog(MKLP.GetText("**{0}** ✅Remove Ticket Ban No. **{1}**", Executer, TicketNumber));
                 return true;
-            } else
+            }
+            else
             {
                 return false;
             }
@@ -1290,19 +1293,20 @@ namespace MKLP.Modules
             if (MuteSuccess)
             {
                 Player.mute = true;
-                MKLP.Discordklp.KLPBotSendMessageMainLog($"**{Executer}** 🔇Muted **{Player.Name}** for `{Reason}`" +
-                    $"\n-# Duration: {(Duration == DateTime.MaxValue ? "Permanent" : GetDuration(Duration))}");
+                MKLP.Discordklp.KLPBotSendMessageMainLog(MKLP.GetText("**{0}** 🔇Muted **{1}**" + (Reason == "" ? "" : $" for ") + "{2}" +
+                    $"\n-# Duration: {(Duration == DateTime.MaxValue ? "Permanent" : GetDuration(Duration))}", Executer, Player.Name, (Reason == "" ? "" : $" for `{Reason}`")));
 
                 if (!Silent)
                 {
-                    TShock.Utils.Broadcast($"[c/228f25:{Executer}] Muted [c/228f25:{Player.Name}] {(Reason == "" ? "" : $"for {Reason}")}", Microsoft.Xna.Framework.Color.Lime);
-                } else
+                    TShock.Utils.Broadcast(MKLP.GetText("[c/228f25:{0}] Muted [c/228f25:{1}]{2}", Executer, Player.Name, (Reason == "" ? "" : $" for {Reason}")), Microsoft.Xna.Framework.Color.Lime);
+                }
+                else
                 {
-                    MKLP.SendStaffMessage($"[MKLP] [c/09c100:{Player.Name}] was muted by [c/09c100:{Executer}] {(Reason == "" ? "" : $"for {Reason}")}", Microsoft.Xna.Framework.Color.DarkOliveGreen);
+                    MKLP.SendStaffMessage(MKLP.GetText("[MKLP] [c/09c100:{0}] was muted by [c/09c100:{1}]{2}", Player.Name, Executer, (Reason == "" ? "" : $" for {Reason}")), Microsoft.Xna.Framework.Color.DarkOliveGreen);
                 }
 
-                Player.SendMessage($"you have been muted for {Reason}" +
-                    $"\nDuration: {GetDuration(Duration)}", Microsoft.Xna.Framework.Color.DarkOliveGreen);
+                Player.SendMessage(MKLP.GetText("you have been muted for {0}" +
+                    $"\nDuration: {(Duration == DateTime.MaxValue ? "Permanent" : GetDuration(Duration))}", Reason), Microsoft.Xna.Framework.Color.DarkOliveGreen);
             }
 
             return MuteSuccess;
@@ -1347,13 +1351,14 @@ namespace MKLP.Modules
             {
                 Player.mute = false;
 
-                MKLP.Discordklp.KLPBotSendMessageMainLog($"**{Executer}** 🔊Unmuted **{Player.Name}**");
+                MKLP.Discordklp.KLPBotSendMessageMainLog(MKLP.GetText("**{0}** 🔊Unmuted **{1}**", Executer, Player.Name));
                 if (!Silent)
                 {
-                    TShock.Utils.Broadcast($"[c/228f25:{Executer}] Unmuted [c/228f25:{Player.Name}]", Microsoft.Xna.Framework.Color.Lime);
-                } else
+                    TShock.Utils.Broadcast(MKLP.GetText("[c/228f25:{0}] Unmuted [c/228f25:{1}]", Executer, Player.Name), Microsoft.Xna.Framework.Color.Lime);
+                }
+                else
                 {
-                    MKLP.SendStaffMessage($"[MKLP] [c/09c100:{Player.Name}] was unmuted by [c/09c100:{Executer}]", Microsoft.Xna.Framework.Color.DarkOliveGreen);
+                    MKLP.SendStaffMessage(MKLP.GetText("[MKLP] [c/09c100:{0}] was unmuted by [c/09c100:{1}]", Player.Name, Executer), Microsoft.Xna.Framework.Color.DarkOliveGreen);
                 }
             }
 
@@ -1372,10 +1377,10 @@ namespace MKLP.Modules
 
             if (MuteSuccess)
             {
-                MKLP.Discordklp.KLPBotSendMessageMainLog($"**{Executer}** 🔇Muted **{Account.Name}** for `{Reason}`" +
-                    $"\n-# Duration: {(Duration == DateTime.MaxValue ? "Permanent" : GetDuration(Duration))}");
+                MKLP.Discordklp.KLPBotSendMessageMainLog(MKLP.GetText("**{0}** 🔇Muted **{1}**" + (Reason == "" ? "" : $" for ") + "{2}" +
+                    $"\n-# Duration: {(Duration == DateTime.MaxValue ? "Permanent" : GetDuration(Duration))}", Executer, Account.Name, (Reason == "" ? "" : $" for `{Reason}`")));
 
-                MKLP.SendStaffMessage($"[MKLP] Account: [c/09c100:{Account.Name}] was muted by [c/09c100:{Executer}] {(Reason == "" ? "" : $"for {Reason}")}", Microsoft.Xna.Framework.Color.DarkOliveGreen);
+                MKLP.SendStaffMessage(MKLP.GetText("[MKLP] Account: [c/09c100:{0}] was muted by [c/09c100:{1}]{2}", Account.Name, Executer, (Reason == "" ? "" : $" for {Reason}")), Microsoft.Xna.Framework.Color.DarkOliveGreen);
             }
 
             return MuteSuccess;
@@ -1408,6 +1413,7 @@ namespace MKLP.Modules
         {
             bool UnMuteSuccess = false;
 
+            if (MKLP.DBManager.DeleteMute(Identifier.Name + Account.Name)) UnMuteSuccess = true;
             if (MKLP.DBManager.DeleteMute(Identifier.Account + Account.Name)) UnMuteSuccess = true;
             var GetIPs = JsonConvert.DeserializeObject<List<string>>(Account.KnownIps);
             if (MKLP.DBManager.DeleteMute(Identifier.IP + GetIPs[GetIPs.Count() - 1])) UnMuteSuccess = true;
@@ -1415,9 +1421,9 @@ namespace MKLP.Modules
 
             if (UnMuteSuccess)
             {
-                MKLP.Discordklp.KLPBotSendMessageMainLog($"**{Executer}** 🔊Unmuted **{Account.Name}**");
+                MKLP.Discordklp.KLPBotSendMessageMainLog(MKLP.GetText("**{0}** 🔊Unmuted **{1}**", Executer, Account.Name));
 
-                MKLP.SendStaffMessage($"[MKLP] Account: [c/09c100:{Account.Name}] was Unmuted by [c/09c100:{Executer}]", Microsoft.Xna.Framework.Color.DarkOliveGreen);
+                MKLP.SendStaffMessage(MKLP.GetText("[MKLP] Account: [c/09c100:{0}] was Unmuted by [c/09c100:{1}]", Account.Name, Executer), Microsoft.Xna.Framework.Color.DarkOliveGreen);
             }
 
             return UnMuteSuccess;

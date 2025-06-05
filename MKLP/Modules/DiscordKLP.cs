@@ -137,6 +137,9 @@ namespace MKLP.Modules
             List<SlashCommandBuilder> Guildcommands = new()
             {
                 new SlashCommandBuilder()
+                    .WithName(SlashCommandName + "mklp-help")
+                    .WithDescription("get list of commands"),
+                new SlashCommandBuilder()
                     .WithName(SlashCommandName + "moderation")
                     .WithDescription("Manage Server in-game"),
                 new SlashCommandBuilder()
@@ -169,6 +172,10 @@ namespace MKLP.Modules
                     .WithName(SlashCommandName)
                     .WithDescription("MKLP Command")
                     .AddOption(new SlashCommandOptionBuilder()
+                            .WithName("mklp-help")
+                            .WithDescription("get list of commands")
+                            .WithType(ApplicationCommandOptionType.SubCommand))
+                    .AddOption(new SlashCommandOptionBuilder()
                             .WithName("moderation")
                             .WithDescription("Manage Server in-game")
                             .WithType(ApplicationCommandOptionType.SubCommand))
@@ -194,7 +201,7 @@ namespace MKLP.Modules
                                 ))
                 };
             }
-            
+
             #endregion
 
 
@@ -250,7 +257,7 @@ namespace MKLP.Modules
                                     });
                                     return;
                                 }
-                                #endregion
+                            #endregion
                             case "Warning":
                                 #region ( Type: warning message )
                                 {
@@ -274,7 +281,7 @@ namespace MKLP.Modules
                                         .WithButton("Dismiss", "XXX", ButtonStyle.Secondary, disabled: true)
                                         .WithButton("Check Player", "X1", emote: new Emoji("\U0001F4B3"), disabled: true)
                                         .WithButton("Quick Ban [ permanent ]", "X2", ButtonStyle.Danger, emote: new Emoji("\U0001F528"), row: 1, disabled: true);
-                                    
+
                                     await message.Message.ModifyAsync(msg => {
                                         msg.Components = buttons.Build();
                                     });
@@ -282,7 +289,7 @@ namespace MKLP.Modules
                                     await message.RespondAsync($"Report Ticket no. {message.Data.CustomId.Split(S_)[3]} Dismissed", ephemeral: true);
                                     return;
                                 }
-                                #endregion
+                            #endregion
                             case "Report2":
                                 #region ( Type: Report2 message )
                                 {
@@ -303,7 +310,7 @@ namespace MKLP.Modules
                         }
                         return;
                     }
-                    #endregion
+                #endregion
                 case "SendMsg":
                     #region ( Type | SendMessage )
                     {
@@ -329,7 +336,7 @@ namespace MKLP.Modules
                                         await message.RespondAsync($"Player {message.Data.CustomId.Split(S_)[4]} isn't online", ephemeral: true);
                                         return;
                                     }
-                                    
+
                                     switch (message.Data.CustomId.Split(S_)[3])
                                     {
                                         case "Main":
@@ -361,7 +368,7 @@ namespace MKLP.Modules
                                                     .WithColor(EmbedColor);
 
                                                 await message.RespondAsync(embed: embed.Build(), ephemeral: true, components: buttons.Build());
-                                                
+
 
                                                 break;
                                             }
@@ -371,7 +378,7 @@ namespace MKLP.Modules
 
                                     return;
                                 }
-                                #endregion
+                            #endregion
                             case "PlayerViewInventory":
                                 #region ( Type: PlayerViewInventory )
                                 {
@@ -498,7 +505,7 @@ namespace MKLP.Modules
                                                 int total = 0;
                                                 foreach (string invlog in InventoryManager.InventoryLogs)
                                                 {
-                                                    if (invlog.Split(S_) [0] == targetplayer.Account.Name)
+                                                    if (invlog.Split(S_)[0] == targetplayer.Account.Name)
                                                     {
                                                         total++;
                                                     }
@@ -522,7 +529,7 @@ namespace MKLP.Modules
 
                                     var embed = new EmbedBuilder()
                                         .WithTitle($"Player [ {targetplayer.Index} ] {targetplayer.Name}")
-                                        .WithDescription(EmbedDescription+"```")
+                                        .WithDescription(EmbedDescription + "```")
                                         .WithColor(EmbedColor);
 
                                     await message.RespondAsync(embed: embed.Build(), ephemeral: true, components: buttons.Build());
@@ -606,7 +613,7 @@ namespace MKLP.Modules
 
                                     return;
                                 }
-                                #endregion
+                            #endregion
                             case "PlayerViewInventory":
                                 #region ( Type: PlayerViewInventory )
                                 {
@@ -759,7 +766,7 @@ namespace MKLP.Modules
 
                                     var embed = new EmbedBuilder()
                                         .WithTitle($"Player [ {targetplayer.Index} ] {targetplayer.Name}")
-                                        .WithDescription(EmbedDescription+"```")
+                                        .WithDescription(EmbedDescription + "```")
                                         .WithColor(EmbedColor);
 
                                     await message.DeferAsync(true);
@@ -784,7 +791,7 @@ namespace MKLP.Modules
                                             string stplayer = $"- {ply.Name} ";
                                             try
                                             {
-                                                if (ply.Account.Name == null) continue; 
+                                                if (ply.Account.Name == null) continue;
                                                 ulong getuserid = (bool)MKLP.Config.DataBaseDLink.Target_UserAccount_ID ? MKLP.LinkAccountManager.GetUserIDByAccountID(ply.Account.ID) : MKLP.LinkAccountManager.GetUserIDByAccountName(ply.Account.Name);
                                                 stplayer += "[ <@!" + getuserid + "> ]";
 
@@ -800,7 +807,7 @@ namespace MKLP.Modules
                                     #region { stringdefeatedbosses }
                                     string GetListDefeatedBoss()
                                     {
-                                        CONFIG_BOSSES getenabledboss = MKLP.Config.BossManager;
+                                        Config.CONFIG_BOSSES getenabledboss = MKLP.Config.BossManager;
                                         Dictionary<string, bool> defeatedbosses = new();
                                         if ((bool)getenabledboss.AllowKingSlime)
                                         {
@@ -1496,14 +1503,14 @@ namespace MKLP.Modules
 
                                                 if ((bool)MKLP.Config.BanGuard.UsingBanGuard)
                                                 {
-                                                    modal.AddTextInput("BanGuardType", "Ban_BGCategory".Replace('_', S_), TextInputStyle.Short, "Type -auto if you want to automatic categories this ( leave it blank if you don't want to share this on BanGuard )", maxLength: 30, required: false);
+                                                    modal.AddTextInput("BanGuardType", "Ban_BGCategory".Replace('_', S_), TextInputStyle.Short, "Type -auto if you want to automatic categories ( leave it blank if you don't want to use BanGuard )", maxLength: 30, required: false);
                                                 }
 
                                                 await message.RespondWithModalAsync(modal.Build());
 
                                                 return;
                                             }
-                                            #endregion
+                                        #endregion
                                         case "QBan":
                                             #region ( Type: QBan )
                                             {
@@ -1521,7 +1528,7 @@ namespace MKLP.Modules
 
                                                 if ((bool)MKLP.Config.BanGuard.UsingBanGuard)
                                                 {
-                                                    modal.AddTextInput("BanGuardType", "Ban_BGCategory".Replace('_', S_), TextInputStyle.Short, "Type -auto if you want to automatic categories this ( leave it blank if you don't want to share this on BanGuard )", maxLength: 30, required: false);
+                                                    modal.AddTextInput("BanGuardType", "Ban_BGCategory".Replace('_', S_), TextInputStyle.Short, "Type -auto if you want to automatic categories ( leave it blank if you don't want to use BanGuard )", maxLength: 30, required: false);
                                                 }
 
                                                 await message.RespondWithModalAsync(modal.Build());
@@ -1603,7 +1610,7 @@ namespace MKLP.Modules
                                                 await message.RespondWithModalAsync(modal.Build());
                                                 return;
                                             }
-                                            #endregion
+                                        #endregion
                                         case "Undisable":
                                             #region ( Type: Undisable )
                                             {
@@ -1632,7 +1639,8 @@ namespace MKLP.Modules
                                                 if (ManagePlayer.UnDisablePlayer(targetplayer, executer.Name))
                                                 {
                                                     await message.RespondAsync($"Successfully Enable **{message.Data.CustomId.Split(S_)[4]}**", ephemeral: true);
-                                                } else
+                                                }
+                                                else
                                                 {
                                                     await message.RespondAsync($"Player **{message.Data.CustomId.Split(S_)[4]}** isn't disabled", ephemeral: true);
                                                 }
@@ -1730,7 +1738,7 @@ namespace MKLP.Modules
 
                         return;
                     }
-                    #endregion
+                #endregion
                 case "Discord":
                     #region ( Type | Discord )
                     {
@@ -1753,19 +1761,21 @@ namespace MKLP.Modules
                                         }
 
                                         var role = _client.GetGuild((ulong)MKLP.Config.Discord.MainGuildID).GetRole(roleid);
-                                        if (_client.GetGuild((ulong)MKLP.Config.Discord.MainGuildID).GetUser(message.User.Id).Roles.Any( r => r == role))
+                                        if (_client.GetGuild((ulong)MKLP.Config.Discord.MainGuildID).GetUser(message.User.Id).Roles.Any(r => r == role))
                                         {
                                             await _client.GetGuild((ulong)MKLP.Config.Discord.MainGuildID).GetUser(message.User.Id).RemoveRoleAsync(roleid);
 
                                             await message.RespondAsync($"{role.Mention} is removed on you!", ephemeral: true);
-                                        } else
+                                        }
+                                        else
                                         {
                                             await _client.GetGuild((ulong)MKLP.Config.Discord.MainGuildID).GetUser(message.User.Id).AddRoleAsync(roleid);
 
                                             await message.RespondAsync($"{role.Mention} is added on you!", ephemeral: true);
                                         }
 
-                                    } catch
+                                    }
+                                    catch
                                     {
                                         await message.RespondAsync("Error: Unable to add/remove this role from you!" +
                                                 "\n-# Contact any administrator to resolve this issue", ephemeral: true);
@@ -1805,7 +1815,7 @@ namespace MKLP.Modules
                 case "InGame":
                     #region ( Type | InGame )
                     {
-                        
+
                         switch (modal.Data.CustomId.Split(S_)[2])
                         {
                             case "PlayerAction":
@@ -1878,7 +1888,8 @@ namespace MKLP.Modules
                                                         await modal.RespondAsync($"Player **{targetplayer.Name}** was already banned", ephemeral: true);
                                                     }
 
-                                                } else
+                                                }
+                                                else
                                                 {
                                                     UserAccount account = TShock.UserAccounts.GetUserAccountByName(modal.Data.CustomId.Split(S_)[4]);
 
@@ -1941,7 +1952,8 @@ namespace MKLP.Modules
                                                 if (ManagePlayer.DisablePlayer(targetplayer, reason, executer.Name))
                                                 {
                                                     await modal.RespondAsync($"Successfully disabled **{targetplayer.Name}**", ephemeral: true);
-                                                } else
+                                                }
+                                                else
                                                 {
                                                     await modal.RespondAsync($"Player **{targetplayer.Name}** was already disabled", ephemeral: true);
                                                 }
@@ -2124,7 +2136,7 @@ namespace MKLP.Modules
 
                                     return;
                                 }
-                                #endregion
+                            #endregion
                             case "PlayerViewInventory":
                                 #region ( Type: PlayerViewInventory )
                                 {
@@ -2285,6 +2297,26 @@ namespace MKLP.Modules
                 {
                     switch (command.Data.Options.First().Name)
                     {
+                        case "mklp-help":
+                            #region ( Command | help )
+                            {
+                                string commands = 
+                                    $"</{SlashCommandName} moderation:{command.CommandId}> : shows mklp panel in discord" +
+                                    $"\n\n" +
+                                    $"</{SlashCommandName} moderation-user:{command.CommandId}> : Select a Account you want to view" +
+                                    $"\n\n" +
+                                    $"</{SlashCommandName} ingame-command:{command.CommandId}> : execute a command in server";
+
+                                var embed = new EmbedBuilder()
+                                    .WithTitle("List of Commands")
+                                    .WithDescription(commands)
+                                    .WithColor(EmbedColor);
+
+                                command.RespondAsync(embed: embed.Build(), ephemeral: true);
+
+                                return;
+                            }
+                        #endregion
                         case "moderation":
                             #region ( Command | moderation )
                             {
@@ -2320,7 +2352,7 @@ namespace MKLP.Modules
                                     #region { stringdefeatedbosses }
                                     string GetListDefeatedBoss()
                                     {
-                                        CONFIG_BOSSES getenabledboss = MKLP.Config.BossManager;
+                                        Config.CONFIG_BOSSES getenabledboss = MKLP.Config.BossManager;
                                         Dictionary<string, bool> defeatedbosses = new();
                                         if ((bool)getenabledboss.AllowKingSlime)
                                         {
@@ -2969,6 +3001,26 @@ namespace MKLP.Modules
 
             switch (command.Data.Name)
             {
+                case "mklp-help":
+                    #region ( Command | help )
+                    {
+                        string commands =
+                            $"</moderation:{command.CommandId}> : shows mklp panel in discord" +
+                            $"\n\n" +
+                            $"</moderation-user:{command.CommandId}> : Select a Account you want to view" +
+                            $"\n\n" +
+                            $"</ingame-command:{command.CommandId}> : execute a command in server";
+
+                        var embed = new EmbedBuilder()
+                            .WithTitle("List of Commands")
+                            .WithDescription(commands)
+                            .WithColor(EmbedColor);
+
+                        command.RespondAsync(embed: embed.Build(), ephemeral: true);
+
+                        return;
+                    }
+                #endregion
                 case "moderation":
                     #region ( Command | moderation )
                     {
@@ -3004,7 +3056,7 @@ namespace MKLP.Modules
                             #region { stringdefeatedbosses }
                             string GetListDefeatedBoss()
                             {
-                                CONFIG_BOSSES getenabledboss = MKLP.Config.BossManager;
+                                Config.CONFIG_BOSSES getenabledboss = MKLP.Config.BossManager;
                                 Dictionary<string, bool> defeatedbosses = new();
                                 if ((bool)getenabledboss.AllowKingSlime)
                                 {
@@ -3507,14 +3559,15 @@ namespace MKLP.Modules
                                     .WithButton("Refresh", "MKLP_EditMsg_ServerModView".Replace('_', S_), ButtonStyle.Secondary, row: 0);
                                 await command.RespondAsync(embed: embed, components: component.Build(), ephemeral: true);
                             }
-                        } catch (Exception e)
+                        }
+                        catch (Exception e)
                         {
                             await command.RespondAsync("An error occur executing this command", ephemeral: true);
                             MKLP_Console.SendLog_Exception(e);
                         }
                         return;
                     }
-                    #endregion
+                #endregion
                 case "moderation-user":
                     #region ( Command | moderation-user )
                     {
@@ -3575,7 +3628,8 @@ namespace MKLP.Modules
                                 ).WithColor(EmbedColor);
 
                             await command.RespondAsync(embed: embed.Build(), components: buttons.Build(), ephemeral: true);
-                        } catch (Exception e)
+                        }
+                        catch (Exception e)
                         {
                             await command.RespondAsync("An error occur executing this command", ephemeral: true);
                             MKLP_Console.SendLog_Exception(e);
@@ -3674,25 +3728,25 @@ namespace MKLP.Modules
 
                     foreach (var user in message.MentionedUsers)
                     {
-                        messagecontent = messagecontent.Replace($"<@{user.Id}>", $"[c/{MKLP.Config.Main.StaffChat_HexColor_Discord_Mention_User}:@{user.Username.Replace("[", "").Replace("]", "")}]");
-                        messagecontent = messagecontent.Replace($"<@!{user.Id}>", $"[c/{MKLP.Config.Main.StaffChat_HexColor_Discord_Mention_User}:@{user.Username.Replace("[", "").Replace("]", "")}]");
+                        messagecontent = messagecontent.Replace($"<@{user.Id}>", $"[c/{MKLP.Config.Main.StaffChat.StaffChat_HexColor_Discord_Mention_User}:@{user.Username.Replace("[", "").Replace("]", "")}]");
+                        messagecontent = messagecontent.Replace($"<@!{user.Id}>", $"[c/{MKLP.Config.Main.StaffChat.StaffChat_HexColor_Discord_Mention_User}:@{user.Username.Replace("[", "").Replace("]", "")}]");
                     }
 
                     foreach (var roles in message.MentionedRoles)
                     {
-                        messagecontent = messagecontent.Replace($"<@&{roles.Id}>", $"[c/{MKLP.Config.Main.StaffChat_HexColor_Discord_Mention_Role}:@" + roles.Name.Replace("[", "").Replace("]", "") + "]");
+                        messagecontent = messagecontent.Replace($"<@&{roles.Id}>", $"[c/{MKLP.Config.Main.StaffChat.StaffChat_HexColor_Discord_Mention_Role}:@" + roles.Name.Replace("[", "").Replace("]", "") + "]");
                     }
 
                     foreach (var channel in message.MentionedChannels)
                     {
-                        messagecontent = messagecontent.Replace($"<@{channel.Id}>", $"[c/{MKLP.Config.Main.StaffChat_HexColor_Discord_Mention_Channel}:#{channel.Name.Replace("[", "").Replace("]", "")}]");
+                        messagecontent = messagecontent.Replace($"<@{channel.Id}>", $"[c/{MKLP.Config.Main.StaffChat.StaffChat_HexColor_Discord_Mention_Channel}:#{channel.Name.Replace("[", "").Replace("]", "")}]");
                     }
 
-                    if (message.Attachments.Count > 0) messagecontent += MKLP.Config.Main.StaffChat_Message_Discord_HasAttachment;
+                    if (message.Attachments.Count > 0) messagecontent += MKLP.Config.Main.StaffChat.StaffChat_Message_Discord_HasAttachment;
 
-                    CONFIG_COLOR_RBG Config_messagecolor = (CONFIG_COLOR_RBG)MKLP.Config.Main.StaffChat_MessageRecieved_InGame_RBG;
+                    Config.CONFIG_COLOR_RBG Config_messagecolor = (Config.CONFIG_COLOR_RBG)MKLP.Config.Main.StaffChat.StaffChat_MessageRecieved_InGame_RBG;
 
-                    MKLP.SendStaffMessage(GetMessageDiscordResult(message.Author, MKLP.Config.Main.StaffChat_MessageRecieved_Discord, messagecontent), new(Config_messagecolor.R, Config_messagecolor.G, Config_messagecolor.B));
+                    MKLP.SendStaffMessage(GetMessageDiscordResult(message.Author, MKLP.Config.Main.StaffChat.StaffChat_MessageRecieved_Discord, messagecontent), new(Config_messagecolor.R, Config_messagecolor.G, Config_messagecolor.B));
 
                     MKLP_Console.SendLog_Message_StaffChat_Discord(message.Author.Username, messagecontent);
                 }
@@ -3711,7 +3765,7 @@ namespace MKLP.Modules
 
                     Context = Context.Replace("%discordingame%", getlinkaccountname);
                     Context = Context.Replace("%discordoringame%", getlinkaccountname);
-                    Context = Context.Replace("%discordacclinkedicon%", MKLP.Config.Main.StaffChat_Message_discordacclinkedicon);
+                    Context = Context.Replace("%discordacclinkedicon%", MKLP.Config.Main.StaffChat.StaffChat_Message_discordacclinkedicon);
 
                 }
                 catch (NullReferenceException)
@@ -3781,7 +3835,8 @@ namespace MKLP.Modules
 
                     message = message.Replace("%notification%", role.Mention);
                     await ((SocketTextChannel)targetchannel).SendMessageAsync(message, components: buttons.Build());
-                } catch
+                }
+                catch
                 {
                     message = message.Replace("%notification%", "`@notifity`");
                     await ((SocketTextChannel)targetchannel).SendMessageAsync(message);
@@ -3811,11 +3866,12 @@ namespace MKLP.Modules
                     var role = _client.GetGuild((ulong)MKLP.Config.Discord.MainGuildID).GetRole((ulong)MKLP.Config.BossManager.Discord_BossEnableRole);
 
                     var buttons = new ComponentBuilder()
-                        .WithButton("Get Notify", $"MKLP_Discord_GiveRole_{role.Id}".Replace('_', S_), ButtonStyle.Secondary);
+                        .WithButton(MKLP.GetText("Get Notify"), $"MKLP_Discord_GiveRole_{role.Id}".Replace('_', S_), ButtonStyle.Secondary);
 
                     message = message.Replace("%notification%", role.Mention);
                     await ((SocketTextChannel)targetchannel).SendMessageAsync(message, components: buttons.Build());
-                } catch
+                }
+                catch
                 {
                     message = message.Replace("%notification%", "`@notifity`");
                     await ((SocketTextChannel)targetchannel).SendMessageAsync(message);
@@ -3951,52 +4007,6 @@ namespace MKLP.Modules
 
                 await ((SocketTextChannel)targetchannel).SendMessageAsync(TitleLog + message, components: buttons.Build());
                 return;
-            } catch (Exception e)
-            {
-                MKLP_Console.SendLog_Message_DiscordBot(e, "=[Log Exception]=", ConsoleColor.Red, ConsoleColor.DarkRed);
-            }
-        }
-
-        public async void KLPBotSendMessage_Report(int ID, string reporter, string target, string message, DateTime Since, string location, string playerlist)
-        {
-            if (MKLP.Config.Discord.MainChannelLog == null) return;
-            if ((ulong)MKLP.Config.Discord.MainChannelLog == 0) return;
-            try
-            {
-                var targetchannel = _client.GetChannel((ulong)MKLP.Config.Discord.MainChannelLog);
-
-                if (target != DiscordKLP.S_ + "none" + DiscordKLP.S_)
-                {
-                    var buttons = new ComponentBuilder()
-                    .WithButton("Dismiss [ Report ]", "MKLP_DismissMsg_Report1_".Replace('_', S_) + ID, ButtonStyle.Secondary)
-                    .WithButton("Check Player", "MKLP_SendMsg_PlayerModView_Main_".Replace('_', S_) + target, emote: new Emoji("\U0001F4B3"))
-                    .WithButton("Ban", $"MKLP_InGame_PlayerAction_Ban_".Replace('_', S_) + target, ButtonStyle.Danger, emote: new Emoji("\U0001F528"), row: 1);
-
-                    playerlist = playerlist.Replace($"{DiscordKLP.S_}", ", ");
-                    playerlist = playerlist.TrimEnd(',');
-
-                    await ((SocketTextChannel)targetchannel).SendMessageAsync(TitleLog + $"New report from **{reporter}** {TimestampTag.FormatFromDateTime(Since, TimestampTagStyles.Relative)}" +
-                        $"\n> **ID:** `{ID}`" +
-                        $"\n> **Location:** `{location}`" +
-                        $"\n> **Players Online:** `{playerlist}`" +
-                        $"\n" +
-                        $"\n> **Target:** `{target}`" +
-                        $"\n> **Message:** `{message}`",
-                        components: buttons.Build());
-                }
-                else
-                {
-                    var buttons = new ComponentBuilder()
-                        .WithButton("Dismiss [ Report ]", "MKLP_DismissMsg_Report2_".Replace('_', S_) + ID, ButtonStyle.Secondary);
-
-                    await ((SocketTextChannel)targetchannel).SendMessageAsync(TitleLog + $"New report from **{reporter}** {TimestampTag.FormatFromDateTime(Since, TimestampTagStyles.Relative)}" +
-                        $"\n> **ID:** `{ID}`" +
-                        $"\n> **Location:** `{location}`" +
-                        $"\n> **Players Online:** `{playerlist}`" +
-                        $"\n\n> **Message:** `{message}`",
-                        components: buttons.Build());
-                }
-                return;
             }
             catch (Exception e)
             {
@@ -4014,9 +4024,9 @@ namespace MKLP.Modules
                 var targetchannel = _client.GetChannel((ulong)MKLP.Config.Discord.MainChannelLog);
 
                 var buttons = new ComponentBuilder()
-                    .WithButton("Dismiss", "MKLP_DismissMsg_Warning".Replace('_', S_), ButtonStyle.Secondary)
-                    .WithButton("Check Player", "MKLP_SendMsg_PlayerModView_Main_".Replace('_', S_) + playername, emote: new Emoji("\U0001F4B3"))
-                    .WithButton("Quick Ban [ permanent ]", $"MKLP_InGame_PlayerAction_QBan_".Replace('_', S_) + playername + S_ + reason, ButtonStyle.Danger, emote: new Emoji("\U0001F528"), row: 1);
+                    .WithButton(MKLP.GetText("Dismiss"), "MKLP_DismissMsg_Warning".Replace('_', S_), ButtonStyle.Secondary)
+                    .WithButton(MKLP.GetText("Check Player"), "MKLP_SendMsg_PlayerModView_Main_".Replace('_', S_) + playername, emote: new Emoji("\U0001F4B3"))
+                    .WithButton(MKLP.GetText("Quick Ban [ permanent ]"), $"MKLP_InGame_PlayerAction_QBan_".Replace('_', S_) + playername + S_ + reason, ButtonStyle.Danger, emote: new Emoji("\U0001F528"), row: 1);
 
                 await ((SocketTextChannel)targetchannel).SendMessageAsync(TitleLog + "**Warning!** " + message, components: buttons.Build());
                 return;
@@ -4026,6 +4036,158 @@ namespace MKLP.Modules
                 MKLP_Console.SendLog_Message_DiscordBot(e, "=[Log Exception]=", ConsoleColor.Red, ConsoleColor.DarkRed);
             }
         }
+
+
+        #region [ Report ]
+
+        public async void KLPBotSendMessage_Report_Main(int ID, string type, string reporter, string message, DateTime Since, string location, string playerlist)
+        {
+            if (MKLP.Config.Discord.ReportChannel == null) return;
+            if ((ulong)MKLP.Config.Discord.ReportChannel == 0) return;
+            try
+            {
+                var targetchannel = _client.GetChannel((ulong)MKLP.Config.Discord.ReportChannel);
+
+                var buttons = new ComponentBuilder()
+                    .WithButton(MKLP.GetText("Dismiss [ Report ]"), "MKLP_DismissMsg_Report2_".Replace('_', S_) + ID, ButtonStyle.Secondary);
+
+                if (ID == -1) buttons = new ComponentBuilder();
+
+                await ((SocketTextChannel)targetchannel).SendMessageAsync(TitleLog + $"New {type}report from **{reporter}** {TimestampTag.FormatFromDateTime(Since, TimestampTagStyles.Relative)}" +
+                    (ID == -1 ? "\n> **__[Temporary!]__**" : $"\n> **ID:** `{ID}`") +
+                    $"\n> **Location:** `{location}`" +
+                    $"\n> **Players Online:** `{playerlist}`" +
+                    $"\n\n> **Message:** `{message}`",
+                    components: buttons.Build());
+                return;
+            }
+            catch (Exception e)
+            {
+                MKLP_Console.SendLog_Message_DiscordBot(e, "=[Log Exception]=", ConsoleColor.Red, ConsoleColor.DarkRed);
+            }
+        }
+
+        public async void KLPBotSendMessage_Report_Player(int ID, string reporter, string target, string message, DateTime Since, string location, string playerlist)
+        {
+            if (MKLP.Config.Discord.ReportChannel == null) return;
+            if ((ulong)MKLP.Config.Discord.ReportChannel == 0) return;
+            try
+            {
+                var targetchannel = _client.GetChannel((ulong)MKLP.Config.Discord.MainChannelLog);
+
+                if (target != DiscordKLP.S_ + "none" + DiscordKLP.S_)
+                {
+                    var buttons = new ComponentBuilder()
+                    .WithButton(MKLP.GetText("Dismiss [ Report ]"), "MKLP_DismissMsg_Report1_".Replace('_', S_) + ID, ButtonStyle.Secondary)
+                    .WithButton(MKLP.GetText("Check Player"), "MKLP_SendMsg_PlayerModView_Main_".Replace('_', S_) + target, emote: new Emoji("\U0001F4B3"))
+                    .WithButton(MKLP.GetText("Ban"), $"MKLP_InGame_PlayerAction_Ban_".Replace('_', S_) + target, ButtonStyle.Danger, emote: new Emoji("\U0001F528"), row: 1);
+
+                    if (ID == -1) buttons = new ComponentBuilder()
+                            .WithButton("Check Player", "MKLP_SendMsg_PlayerModView_Main_".Replace('_', S_) + target, emote: new Emoji("\U0001F4B3"))
+                            .WithButton("Ban", $"MKLP_InGame_PlayerAction_Ban_".Replace('_', S_) + target, ButtonStyle.Danger, emote: new Emoji("\U0001F528"), row: 1);
+
+                    playerlist = playerlist.Replace($"{DiscordKLP.S_}", ", ");
+                    playerlist = playerlist.TrimEnd(',');
+
+                    await ((SocketTextChannel)targetchannel).SendMessageAsync(TitleLog + $"New 👤Player report from **{reporter}** {TimestampTag.FormatFromDateTime(Since, TimestampTagStyles.Relative)}" +
+                        (ID == -1 ? "\n> **__[Temporary!]__**" : $"\n> **ID:** `{ID}`") +
+                        $"\n> **Location:** `{location}`" +
+                        $"\n> **Players Online:** `{playerlist}`" +
+                        $"\n" +
+                        $"\n> **Target:** `{target}`" +
+                        $"\n> **Message:** `{message}`",
+                        components: buttons.Build());
+                }
+                else
+                {
+                    var buttons = new ComponentBuilder()
+                        .WithButton("Dismiss [ Report ]", "MKLP_DismissMsg_Report2_".Replace('_', S_) + ID, ButtonStyle.Secondary);
+
+                    if (ID == -1) buttons = new ComponentBuilder();
+
+                    await ((SocketTextChannel)targetchannel).SendMessageAsync(TitleLog + $"New 👤Player report from **{reporter}** {TimestampTag.FormatFromDateTime(Since, TimestampTagStyles.Relative)}" +
+                        (ID == -1 ? "\n> **__[Temporary!]__**" : $"\n> **ID:** `{ID}`") +
+                        $"\n> **Location:** `{location}`" +
+                        $"\n> **Players Online:** `{playerlist}`" +
+                        $"\n\n> **Message:** `{message}`",
+                        components: buttons.Build());
+                }
+                return;
+            }
+            catch (Exception e)
+            {
+                MKLP_Console.SendLog_Message_DiscordBot(e, "=[Log Exception]=", ConsoleColor.Red, ConsoleColor.DarkRed);
+            }
+        }
+
+        public async void KLPBotSendMessage_Report_Staff(int ID, string reporter, string target, string message, DateTime Since, string location, string playerlist)
+        {
+            if (MKLP.Config.Discord.StaffReportChannel == null) return;
+            if ((ulong)MKLP.Config.Discord.StaffReportChannel == 0) return;
+            try
+            {
+                var targetchannel = _client.GetChannel((ulong)MKLP.Config.Discord.StaffReportChannel);
+
+                var buttons = new ComponentBuilder()
+                    .WithButton("Dismiss [ Report ]", "MKLP_DismissMsg_Report2_".Replace('_', S_) + ID, ButtonStyle.Secondary);
+
+                if (ID == -1) buttons = new ComponentBuilder();
+
+                if (target != DiscordKLP.S_ + "none" + DiscordKLP.S_)
+                {
+
+                    playerlist = playerlist.Replace($"{DiscordKLP.S_}", ", ");
+                    playerlist = playerlist.TrimEnd(',');
+
+                    await ((SocketTextChannel)targetchannel).SendMessageAsync(TitleLog + $"New 👮Staff report from **{reporter}** {TimestampTag.FormatFromDateTime(Since, TimestampTagStyles.Relative)}" +
+                        (ID == -1 ? "\n> **__[Temporary!]__**" : $"\n> **ID:** `{ID}`") +
+                        $"\n> **Location:** `{location}`" +
+                        $"\n> **Players Online:** `{playerlist}`" +
+                        $"\n" +
+                        $"\n> **Target:** `{target}`" +
+                        $"\n> **Message:** `{message}`",
+                        components: buttons.Build());
+
+                    if ((bool)MKLP.Config.Discord.Discord_Send_DM_OnStaffReport)
+                    {
+                        await _client.GetGuild((ulong)MKLP.Config.Discord.MainGuildID).Owner.SendMessageAsync(TitleLog + $"New 👮Staff report from **{reporter}** {TimestampTag.FormatFromDateTime(Since, TimestampTagStyles.Relative)}" +
+                        (ID == -1 ? "\n> **__[Temporary!]__**" : $"\n> **ID:** `{ID}`") +
+                        $"\n> **Location:** `{location}`" +
+                        $"\n> **Players Online:** `{playerlist}`" +
+                        $"\n" +
+                        $"\n> **Target:** `{target}`" +
+                        $"\n> **Message:** `{message}`");
+                    }
+                }
+                else
+                {
+                    await ((SocketTextChannel)targetchannel).SendMessageAsync(TitleLog + $"New 👮Staff report from **{reporter}** {TimestampTag.FormatFromDateTime(Since, TimestampTagStyles.Relative)}" +
+                        (ID == -1 ? "\n> **__[Temporary!]__**" : $"\n> **ID:** `{ID}`") +
+                        $"\n> **Location:** `{location}`" +
+                        $"\n> **Players Online:** `{playerlist}`" +
+                        $"\n\n> **Message:** `{message}`",
+                        components: buttons.Build());
+
+                    if ((bool)MKLP.Config.Discord.Discord_Send_DM_OnStaffReport)
+                    {
+                        await _client.GetGuild((ulong)MKLP.Config.Discord.MainGuildID).Owner.SendMessageAsync(TitleLog + $"New 👮Staff report from **{reporter}** {TimestampTag.FormatFromDateTime(Since, TimestampTagStyles.Relative)}" +
+                        (ID == -1 ? "\n> **__[Temporary!]__**" : $"\n> **ID:** `{ID}`") +
+                        $"\n> **Location:** `{location}`" +
+                        $"\n> **Players Online:** `{playerlist}`" +
+                        $"\n\n> **Message:** `{message}`");
+                    }
+                }
+                return;
+            }
+            catch (Exception e)
+            {
+                MKLP_Console.SendLog_Message_DiscordBot(e, "=[Log Exception]=", ConsoleColor.Red, ConsoleColor.DarkRed);
+            }
+        }
+
+
+
+        #endregion
 
         #endregion
 
@@ -4068,11 +4230,12 @@ namespace MKLP.Modules
                 }
 
                 return executer;
-            } catch
+            }
+            catch
             {
                 return CheckDiscordServer();
             }
-            
+
 
 
             UserAccount? CheckDiscordServer()
@@ -4108,7 +4271,8 @@ namespace MKLP.Modules
             try
             {
                 return _client.GetUser(UserID);
-            } catch
+            }
+            catch
             {
                 return null;
             }

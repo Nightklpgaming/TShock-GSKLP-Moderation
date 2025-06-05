@@ -2,6 +2,8 @@
 using IL.Terraria.Graphics;
 using Microsoft.Data.Sqlite;
 using Microsoft.Xna.Framework;
+using Org.BouncyCastle.Utilities;
+
 //System
 using System.ComponentModel;
 using System.Data;
@@ -25,11 +27,11 @@ namespace MKLP.Modules
 
             //bool bothevilworld = (Main.drunkWorld || Main.remixWorld || Main.zenithWorld);
 
-            bool allowvanity = (bool)MKLP.Config.Progression.AllowVanityCloth;
-            bool allowmusicbox = (bool)MKLP.Config.Progression.AllowMusicBox;
+            bool allowvanity = (bool)MKLP.Config.Main.Progression.AllowVanityCloth;
+            bool allowmusicbox = (bool)MKLP.Config.Main.Progression.AllowMusicBox;
 
-            bool allowdungeonrush = (bool)MKLP.Config.Progression.AllowDungeonRush;
-            bool allowtemplerush = (bool)MKLP.Config.Progression.AllowTempleRush;
+            bool allowdungeonrush = (bool)MKLP.Config.Main.Progression.AllowDungeonRush;
+            bool allowtemplerush = (bool)MKLP.Config.Main.Progression.AllowTempleRush;
 
             #region | unobtainable |
 
@@ -81,7 +83,8 @@ namespace MKLP.Modules
                 if (WorldGen.crimson)
                 {
                     getillegalitems.Add(782, "Unobtainable");
-                } else
+                }
+                else
                 {
                     getillegalitems.Add(784, "Unobtainable");
                 }
@@ -92,7 +95,7 @@ namespace MKLP.Modules
             #region ( Banners )
 
             bool allowbanners = false;
-            
+
             if (!allowbanners)
             {
                 if (!NPC.downedBoss2)
@@ -180,7 +183,7 @@ namespace MKLP.Modules
 
                 if (!NPC.downedAncientCultist)
                 {
-                    int[] addin = { 3438, 3436, 3437, 3440, 3439, 3433, 3435, 3434, 3432, 3422, 3421, 
+                    int[] addin = { 3438, 3436, 3437, 3440, 3439, 3433, 3435, 3434, 3432, 3422, 3421,
                         3424, 3425, 3420, 3423, 3426, 3428, 3430, 3429, 3431, 3427 };
                     foreach (int add in addin)
                     {
@@ -314,7 +317,8 @@ namespace MKLP.Modules
                         getillegalitems.Remove(remove);
                     }
                 }
-            } else
+            }
+            else
             {
                 if (!getillegalitems.ContainsKey(86))
                 {
@@ -344,7 +348,7 @@ namespace MKLP.Modules
                     3323, 3619, 3620, 3625, 3629, 3707, 3725, 4264, 4484, 4485, 4703, 4801,
                     4818, 4927, 4993 };
 
-                int[] dungeonrushids = { 112, 113, 151, 152, 153, 155, 156, 157, 163, 164,
+                int[] dungeonrushids = { 112, 113, 155, 156, 157, 163, 164,
                     218, 220, 273, 274, 328, 329, 1613, 3019, 3317, 5010, 5126 };
 
                 int[] vanityids = { 254, 260, 269, 270, 271, 322, 325, 326, 978, 979, 980,
@@ -364,7 +368,7 @@ namespace MKLP.Modules
                         }
                     }
                 }
-                
+
 
                 foreach (int add in dungeonrushids)
                 {
@@ -375,7 +379,7 @@ namespace MKLP.Modules
                             getillegalitems.Add(add, "Skeletron");
                         }
                     }
-                    
+
                 }
 
                 foreach (int add in addin)
@@ -388,7 +392,7 @@ namespace MKLP.Modules
 
                 if (!Main.drunkWorld && !Main.remixWorld)
                 {
-                    int[] skeleids = { 154, 327, 768, 808, 811, 820, 827, 890, 891, 904, 932, 959,
+                    int[] skeleids = { 151, 152, 153, 154, 327, 768, 808, 811, 820, 827, 890, 891, 904, 932, 959,
                         1307, 3095, 3122, 3124, 4076, 4131, 5074, 5325, 5328, 5358, 5359, 5360,
                         5361, 5438 };
                     foreach (int add in skeleids)
@@ -415,7 +419,7 @@ namespace MKLP.Modules
                 }
 
                 int[] addin = { 842, 843, 844, 909, 910, 1123, 1129, 1130, 1132, 1167, 1170, 1249,
-                    1339, 1340, 1341, 1342, 1353, 1354, 1355, 1356, 1357, 1359, 1364, 1430, 1578, 
+                    1339, 1340, 1341, 1342, 1353, 1354, 1355, 1356, 1357, 1359, 1364, 1430, 1578,
                     1791, 2108, 2361, 2362, 2363, 2364, 2431, 2502, 2888, 3216, 3251, 3322, 3333,
                     4417, 4802, 4922, 4928 };
                 foreach (int add in addin)
@@ -470,7 +474,7 @@ namespace MKLP.Modules
                         getillegalitems.Add(i, "HardMode | Wall of Flesh");
                     }
                 }
-                
+
                 for (int i = 487; i <= 497; i++)
                 {
                     if (!getillegalitems.ContainsKey(i))
@@ -542,7 +546,7 @@ namespace MKLP.Modules
                     }
                 }
 
-                if (!allowmusicbox) 
+                if (!allowmusicbox)
                 {
                     for (int i = 562; i <= 574; i++)
                     {
@@ -568,7 +572,7 @@ namespace MKLP.Modules
                     int[] musicboxids = { 576, 2742, 3236, 3237, 3371, 3796, 4077, 4078,
                         4079, 4080, 4081, 4082, 4356, 4357, 4358, 4606, 4979, 4990,
                         4991, 4992, 5006, 5112, 5362 };
-                    
+
                     foreach (int add in musicboxids)
                     {
                         if (!getillegalitems.ContainsKey(add))
@@ -576,7 +580,7 @@ namespace MKLP.Modules
                             getillegalitems.Add(add, "HardMode | Wall of Flesh");
                         }
                     }
-                    
+
                 }
 
                 int[] addin = { 400, 401, 402, 403, 404, 406, 408, 409, 412, 415, 416, 417, 420,
@@ -736,7 +740,7 @@ namespace MKLP.Modules
                             getillegalitems.Add(add, "Mechanical Bosses");
                         }
                     }
-                } 
+                }
                 foreach (int add in addin)
                 {
                     if (!getillegalitems.ContainsKey(add))
@@ -746,7 +750,7 @@ namespace MKLP.Modules
                 }
 
                 int[] templeids = { 497, 900, 1165, 1311, 1520, 5236, 5239, 5260, 5261, 5262 };
-                
+
                 if (!allowtemplerush)
                 {
                     foreach (int add in templeids)
@@ -1043,7 +1047,7 @@ namespace MKLP.Modules
             }
 
             #endregion
-            
+
             #region [ Empress of Light ]
 
             if (!NPC.downedEmpressOfLight)
@@ -1095,12 +1099,12 @@ namespace MKLP.Modules
                     }
                 }
 
-                int[] addin = { 2856, 2857, 2858, 2859, 3331, 3357, 3372, 3456,
+                int[] addin = { 3331, 3357, 3372, 3456,
                     3457, 3458, 3459, 3473, 3474, 3475, 3476, 3536, 3537, 3538,
                     3539, 3540, 3542, 3543, 3544, 3549, 3572, 3573, 3574, 3575,
                     3576, 3601, 4809, 4937 };
 
-                int[] vanityids = { 3526, 3527, 3528, 3529 };
+                int[] vanityids = { 2856, 2857, 2858, 2859, 3526, 3527, 3528, 3529 };
 
                 foreach (int add in addin)
                 {
@@ -1323,7 +1327,7 @@ namespace MKLP.Modules
                     {
                         getillegalitems.Remove(2623);
                     }
-                    
+
                 }
                 if (getillegalitems.ContainsKey(683))
                 {
@@ -1379,7 +1383,7 @@ namespace MKLP.Modules
 
             #endregion
 
-            foreach (int whitelist in MKLP.Config.Main.WhiteList_Survival_Code1)
+            foreach (int whitelist in MKLP.Config.Main.DisableNode.WhiteList_Survival_Code1)
             {
                 if (getillegalitems.ContainsKey(whitelist))
                 {
@@ -1393,13 +1397,13 @@ namespace MKLP.Modules
         public static Dictionary<short, string> GetIllegalProjectile()
         {
             #region [ get Illegal Projectile ]
-            
+
             Dictionary<short, string> getillegalprojectile = new();
 
             //bool bothevilworld = (Main.drunkWorld || Main.remixWorld || Main.zenithWorld);
 
-            bool allowdungeonrush = (bool)MKLP.Config.Progression.AllowDungeonRush;
-            bool allowtemplerush = (bool)MKLP.Config.Progression.AllowTempleRush;
+            bool allowdungeonrush = (bool)MKLP.Config.Main.Progression.AllowDungeonRush;
+            bool allowtemplerush = (bool)MKLP.Config.Main.Progression.AllowTempleRush;
 
             #region | unobtainable |
 
@@ -1546,7 +1550,7 @@ namespace MKLP.Modules
             #region [ Skeletron ]
             if (!NPC.downedBoss3)
             {
-                short[] addin = { 256, 270, 532, 545, 837, 885, 902,};
+                short[] addin = { 256, 270, 532, 545, 837, 885, 902, };
 
                 short[] dungeonrushids = { 15, 16, 22, 26, 34, 35, 46, 485, 565, 972, 973, 977 };
 
@@ -2101,7 +2105,7 @@ namespace MKLP.Modules
 
             #endregion
 
-            foreach (short whitelist in MKLP.Config.Main.WhiteList_Survival_Code2)
+            foreach (short whitelist in MKLP.Config.Main.DisableNode.WhiteList_Survival_Code2)
             {
                 if (getillegalprojectile.ContainsKey(whitelist))
                 {
@@ -2121,9 +2125,322 @@ namespace MKLP.Modules
             {
                 this.ID = ID;
                 this.SubID = SubID;
-                if (AllSubID == true) this.SubID = 0; 
+                if (AllSubID == true) this.SubID = 0;
                 this.AllSubID = AllSubID;
             }
+
+            public static bool[] ObjectIDs = new bool[692];
+        }
+        private static void INIT_ObjectIDs()
+        {
+            #region INIT_ObjectIDs
+            for (int i = 0; i < MKLP_Tile.ObjectIDs.Length; i++)
+            {
+                MKLP_Tile.ObjectIDs[i] = false;
+            }
+
+            MKLP_Tile.ObjectIDs[10] = true;
+            MKLP_Tile.ObjectIDs[11] = true;
+            MKLP_Tile.ObjectIDs[12] = true;
+            MKLP_Tile.ObjectIDs[14] = true;
+            MKLP_Tile.ObjectIDs[15] = true;
+            MKLP_Tile.ObjectIDs[16] = true;
+            MKLP_Tile.ObjectIDs[17] = true;
+            MKLP_Tile.ObjectIDs[18] = true;
+            MKLP_Tile.ObjectIDs[20] = true;
+            MKLP_Tile.ObjectIDs[21] = true;
+            MKLP_Tile.ObjectIDs[26] = true;
+            MKLP_Tile.ObjectIDs[27] = true;
+            MKLP_Tile.ObjectIDs[28] = true;
+            MKLP_Tile.ObjectIDs[29] = true;
+
+            MKLP_Tile.ObjectIDs[31] = true;
+            MKLP_Tile.ObjectIDs[34] = true;
+            MKLP_Tile.ObjectIDs[35] = true;
+            MKLP_Tile.ObjectIDs[42] = true;
+            MKLP_Tile.ObjectIDs[55] = true;
+            MKLP_Tile.ObjectIDs[77] = true;
+            MKLP_Tile.ObjectIDs[79] = true;
+            MKLP_Tile.ObjectIDs[85] = true;
+            MKLP_Tile.ObjectIDs[86] = true;
+            MKLP_Tile.ObjectIDs[87] = true;
+            MKLP_Tile.ObjectIDs[88] = true;
+            MKLP_Tile.ObjectIDs[89] = true;
+            MKLP_Tile.ObjectIDs[90] = true;
+
+            MKLP_Tile.ObjectIDs[91] = true;
+            MKLP_Tile.ObjectIDs[92] = true;
+            MKLP_Tile.ObjectIDs[93] = true;
+            MKLP_Tile.ObjectIDs[94] = true;
+            MKLP_Tile.ObjectIDs[95] = true;
+            MKLP_Tile.ObjectIDs[96] = true;
+            MKLP_Tile.ObjectIDs[97] = true;
+            MKLP_Tile.ObjectIDs[99] = true;
+            MKLP_Tile.ObjectIDs[100] = true;
+
+            MKLP_Tile.ObjectIDs[101] = true;
+            MKLP_Tile.ObjectIDs[102] = true;
+            MKLP_Tile.ObjectIDs[103] = true;
+            MKLP_Tile.ObjectIDs[104] = true;
+            MKLP_Tile.ObjectIDs[105] = true;
+            MKLP_Tile.ObjectIDs[106] = true;
+            MKLP_Tile.ObjectIDs[125] = true;
+            MKLP_Tile.ObjectIDs[126] = true;
+            MKLP_Tile.ObjectIDs[128] = true;
+            MKLP_Tile.ObjectIDs[133] = true;
+            MKLP_Tile.ObjectIDs[134] = true;
+            MKLP_Tile.ObjectIDs[138] = true;
+            MKLP_Tile.ObjectIDs[139] = true;
+            MKLP_Tile.ObjectIDs[142] = true;
+            MKLP_Tile.ObjectIDs[143] = true;
+            MKLP_Tile.ObjectIDs[165] = true;
+            MKLP_Tile.ObjectIDs[171] = true;
+            MKLP_Tile.ObjectIDs[172] = true;
+            MKLP_Tile.ObjectIDs[173] = true;
+            MKLP_Tile.ObjectIDs[185] = true;
+            MKLP_Tile.ObjectIDs[186] = true;
+            MKLP_Tile.ObjectIDs[187] = true;
+
+            MKLP_Tile.ObjectIDs[209] = true;
+            MKLP_Tile.ObjectIDs[212] = true;
+            MKLP_Tile.ObjectIDs[215] = true;
+            MKLP_Tile.ObjectIDs[216] = true;
+            MKLP_Tile.ObjectIDs[217] = true;
+            MKLP_Tile.ObjectIDs[218] = true;
+            MKLP_Tile.ObjectIDs[219] = true;
+            MKLP_Tile.ObjectIDs[220] = true;
+            MKLP_Tile.ObjectIDs[228] = true;
+            MKLP_Tile.ObjectIDs[231] = true;
+            MKLP_Tile.ObjectIDs[233] = true;
+            MKLP_Tile.ObjectIDs[235] = true;
+            MKLP_Tile.ObjectIDs[236] = true;
+            MKLP_Tile.ObjectIDs[237] = true;
+            MKLP_Tile.ObjectIDs[238] = true;
+            MKLP_Tile.ObjectIDs[240] = true;
+            MKLP_Tile.ObjectIDs[241] = true;
+            MKLP_Tile.ObjectIDs[242] = true;
+            MKLP_Tile.ObjectIDs[243] = true;
+            MKLP_Tile.ObjectIDs[244] = true;
+            MKLP_Tile.ObjectIDs[245] = true;
+            MKLP_Tile.ObjectIDs[246] = true;
+            MKLP_Tile.ObjectIDs[247] = true;
+            MKLP_Tile.ObjectIDs[254] = true;
+            MKLP_Tile.ObjectIDs[269] = true;
+            MKLP_Tile.ObjectIDs[270] = true;
+            MKLP_Tile.ObjectIDs[271] = true;
+            MKLP_Tile.ObjectIDs[275] = true;
+            MKLP_Tile.ObjectIDs[276] = true;
+            MKLP_Tile.ObjectIDs[277] = true;
+            MKLP_Tile.ObjectIDs[278] = true;
+            MKLP_Tile.ObjectIDs[279] = true;
+            MKLP_Tile.ObjectIDs[280] = true;
+            MKLP_Tile.ObjectIDs[281] = true;
+            MKLP_Tile.ObjectIDs[282] = true;
+            MKLP_Tile.ObjectIDs[283] = true;
+            MKLP_Tile.ObjectIDs[285] = true;
+            MKLP_Tile.ObjectIDs[286] = true;
+            MKLP_Tile.ObjectIDs[287] = true;
+            MKLP_Tile.ObjectIDs[288] = true;
+            MKLP_Tile.ObjectIDs[289] = true;
+            MKLP_Tile.ObjectIDs[290] = true;
+            MKLP_Tile.ObjectIDs[291] = true;
+            MKLP_Tile.ObjectIDs[292] = true;
+            MKLP_Tile.ObjectIDs[293] = true;
+            MKLP_Tile.ObjectIDs[294] = true;
+            MKLP_Tile.ObjectIDs[295] = true;
+            MKLP_Tile.ObjectIDs[296] = true;
+            MKLP_Tile.ObjectIDs[297] = true;
+            MKLP_Tile.ObjectIDs[298] = true;
+            MKLP_Tile.ObjectIDs[299] = true;
+
+            MKLP_Tile.ObjectIDs[300] = true;
+            MKLP_Tile.ObjectIDs[301] = true;
+            MKLP_Tile.ObjectIDs[302] = true;
+            MKLP_Tile.ObjectIDs[303] = true;
+            MKLP_Tile.ObjectIDs[304] = true;
+            MKLP_Tile.ObjectIDs[305] = true;
+            MKLP_Tile.ObjectIDs[306] = true;
+            MKLP_Tile.ObjectIDs[307] = true;
+            MKLP_Tile.ObjectIDs[308] = true;
+            MKLP_Tile.ObjectIDs[309] = true;
+            MKLP_Tile.ObjectIDs[310] = true;
+            MKLP_Tile.ObjectIDs[316] = true;
+            MKLP_Tile.ObjectIDs[317] = true;
+            MKLP_Tile.ObjectIDs[318] = true;
+            MKLP_Tile.ObjectIDs[319] = true;
+            MKLP_Tile.ObjectIDs[320] = true;
+            MKLP_Tile.ObjectIDs[334] = true;
+            MKLP_Tile.ObjectIDs[335] = true;
+            MKLP_Tile.ObjectIDs[337] = true;
+            MKLP_Tile.ObjectIDs[338] = true;
+            MKLP_Tile.ObjectIDs[339] = true;
+            MKLP_Tile.ObjectIDs[349] = true;
+            MKLP_Tile.ObjectIDs[354] = true;
+            MKLP_Tile.ObjectIDs[355] = true;
+            MKLP_Tile.ObjectIDs[356] = true;
+            MKLP_Tile.ObjectIDs[358] = true;
+            MKLP_Tile.ObjectIDs[359] = true;
+            MKLP_Tile.ObjectIDs[360] = true;
+            MKLP_Tile.ObjectIDs[361] = true;
+            MKLP_Tile.ObjectIDs[362] = true;
+            MKLP_Tile.ObjectIDs[363] = true;
+            MKLP_Tile.ObjectIDs[364] = true;
+            MKLP_Tile.ObjectIDs[376] = true;
+            MKLP_Tile.ObjectIDs[377] = true;
+            MKLP_Tile.ObjectIDs[378] = true;
+            MKLP_Tile.ObjectIDs[386] = true;
+            MKLP_Tile.ObjectIDs[387] = true;
+            MKLP_Tile.ObjectIDs[388] = true;
+            MKLP_Tile.ObjectIDs[389] = true;
+            MKLP_Tile.ObjectIDs[390] = true;
+            MKLP_Tile.ObjectIDs[391] = true;
+            MKLP_Tile.ObjectIDs[392] = true;
+            MKLP_Tile.ObjectIDs[393] = true;
+            MKLP_Tile.ObjectIDs[394] = true;
+            MKLP_Tile.ObjectIDs[395] = true;
+            MKLP_Tile.ObjectIDs[405] = true;
+            MKLP_Tile.ObjectIDs[406] = true;
+            MKLP_Tile.ObjectIDs[410] = true;
+            MKLP_Tile.ObjectIDs[411] = true;
+            MKLP_Tile.ObjectIDs[412] = true;
+            MKLP_Tile.ObjectIDs[413] = true;
+            MKLP_Tile.ObjectIDs[414] = true;
+            MKLP_Tile.ObjectIDs[425] = true;
+            MKLP_Tile.ObjectIDs[440] = true;
+            MKLP_Tile.ObjectIDs[441] = true;
+            MKLP_Tile.ObjectIDs[443] = true;
+            MKLP_Tile.ObjectIDs[444] = true;
+            MKLP_Tile.ObjectIDs[452] = true;
+            MKLP_Tile.ObjectIDs[453] = true;
+            MKLP_Tile.ObjectIDs[454] = true;
+            MKLP_Tile.ObjectIDs[455] = true;
+            MKLP_Tile.ObjectIDs[456] = true;
+            MKLP_Tile.ObjectIDs[457] = true;
+            MKLP_Tile.ObjectIDs[462] = true;
+            MKLP_Tile.ObjectIDs[463] = true;
+            MKLP_Tile.ObjectIDs[464] = true;
+            MKLP_Tile.ObjectIDs[465] = true;
+            MKLP_Tile.ObjectIDs[466] = true;
+            MKLP_Tile.ObjectIDs[467] = true;
+            MKLP_Tile.ObjectIDs[468] = true;
+            MKLP_Tile.ObjectIDs[469] = true;
+
+            MKLP_Tile.ObjectIDs[470] = true;
+            MKLP_Tile.ObjectIDs[471] = true;
+            MKLP_Tile.ObjectIDs[475] = true;
+            MKLP_Tile.ObjectIDs[480] = true;
+            MKLP_Tile.ObjectIDs[484] = true;
+            MKLP_Tile.ObjectIDs[485] = true;
+            MKLP_Tile.ObjectIDs[486] = true;
+            MKLP_Tile.ObjectIDs[487] = true;
+            MKLP_Tile.ObjectIDs[488] = true;
+            MKLP_Tile.ObjectIDs[489] = true;
+            MKLP_Tile.ObjectIDs[490] = true;
+            MKLP_Tile.ObjectIDs[491] = true;
+            MKLP_Tile.ObjectIDs[493] = true;
+            MKLP_Tile.ObjectIDs[497] = true;
+            MKLP_Tile.ObjectIDs[499] = true;
+            MKLP_Tile.ObjectIDs[505] = true;
+            MKLP_Tile.ObjectIDs[506] = true;
+            MKLP_Tile.ObjectIDs[507] = true;
+            MKLP_Tile.ObjectIDs[508] = true;
+            MKLP_Tile.ObjectIDs[509] = true;
+            MKLP_Tile.ObjectIDs[510] = true;
+            MKLP_Tile.ObjectIDs[511] = true;
+            MKLP_Tile.ObjectIDs[520] = true;
+            MKLP_Tile.ObjectIDs[521] = true;
+            MKLP_Tile.ObjectIDs[522] = true;
+            MKLP_Tile.ObjectIDs[523] = true;
+            MKLP_Tile.ObjectIDs[524] = true;
+            MKLP_Tile.ObjectIDs[525] = true;
+            MKLP_Tile.ObjectIDs[526] = true;
+            MKLP_Tile.ObjectIDs[527] = true;
+            MKLP_Tile.ObjectIDs[530] = true;
+            MKLP_Tile.ObjectIDs[531] = true;
+            MKLP_Tile.ObjectIDs[532] = true;
+            MKLP_Tile.ObjectIDs[533] = true;
+            MKLP_Tile.ObjectIDs[538] = true;
+            MKLP_Tile.ObjectIDs[542] = true;
+            MKLP_Tile.ObjectIDs[543] = true;
+            MKLP_Tile.ObjectIDs[544] = true;
+            MKLP_Tile.ObjectIDs[545] = true;
+            MKLP_Tile.ObjectIDs[547] = true;
+            MKLP_Tile.ObjectIDs[548] = true;
+            MKLP_Tile.ObjectIDs[550] = true;
+            MKLP_Tile.ObjectIDs[551] = true;
+            MKLP_Tile.ObjectIDs[552] = true;
+            MKLP_Tile.ObjectIDs[553] = true;
+            MKLP_Tile.ObjectIDs[554] = true;
+            MKLP_Tile.ObjectIDs[555] = true;
+            MKLP_Tile.ObjectIDs[556] = true;
+            MKLP_Tile.ObjectIDs[558] = true;
+            MKLP_Tile.ObjectIDs[559] = true;
+            MKLP_Tile.ObjectIDs[560] = true;
+            MKLP_Tile.ObjectIDs[564] = true;
+            MKLP_Tile.ObjectIDs[565] = true;
+            MKLP_Tile.ObjectIDs[567] = true;
+            MKLP_Tile.ObjectIDs[568] = true;
+            MKLP_Tile.ObjectIDs[569] = true;
+            MKLP_Tile.ObjectIDs[570] = true;
+            MKLP_Tile.ObjectIDs[572] = true;
+            MKLP_Tile.ObjectIDs[573] = true;
+            MKLP_Tile.ObjectIDs[580] = true;
+            MKLP_Tile.ObjectIDs[581] = true;
+            MKLP_Tile.ObjectIDs[582] = true;
+            MKLP_Tile.ObjectIDs[590] = true;
+            MKLP_Tile.ObjectIDs[591] = true;
+            MKLP_Tile.ObjectIDs[592] = true;
+            MKLP_Tile.ObjectIDs[594] = true;
+            MKLP_Tile.ObjectIDs[595] = true;
+            MKLP_Tile.ObjectIDs[597] = true;
+            MKLP_Tile.ObjectIDs[598] = true;
+            MKLP_Tile.ObjectIDs[599] = true;
+            MKLP_Tile.ObjectIDs[600] = true;
+            MKLP_Tile.ObjectIDs[601] = true;
+            MKLP_Tile.ObjectIDs[602] = true;
+            MKLP_Tile.ObjectIDs[603] = true;
+            MKLP_Tile.ObjectIDs[604] = true;
+            MKLP_Tile.ObjectIDs[605] = true;
+            MKLP_Tile.ObjectIDs[606] = true;
+            MKLP_Tile.ObjectIDs[607] = true;
+            MKLP_Tile.ObjectIDs[608] = true;
+            MKLP_Tile.ObjectIDs[609] = true;
+            MKLP_Tile.ObjectIDs[610] = true;
+            MKLP_Tile.ObjectIDs[611] = true;
+            MKLP_Tile.ObjectIDs[612] = true;
+            MKLP_Tile.ObjectIDs[613] = true;
+            MKLP_Tile.ObjectIDs[614] = true;
+            MKLP_Tile.ObjectIDs[615] = true;
+            MKLP_Tile.ObjectIDs[617] = true;
+            MKLP_Tile.ObjectIDs[619] = true;
+            MKLP_Tile.ObjectIDs[620] = true;
+            MKLP_Tile.ObjectIDs[621] = true;
+            MKLP_Tile.ObjectIDs[622] = true;
+            MKLP_Tile.ObjectIDs[623] = true;
+            MKLP_Tile.ObjectIDs[629] = true;
+            MKLP_Tile.ObjectIDs[632] = true;
+            MKLP_Tile.ObjectIDs[639] = true;
+            MKLP_Tile.ObjectIDs[640] = true;
+            MKLP_Tile.ObjectIDs[642] = true;
+            MKLP_Tile.ObjectIDs[643] = true;
+            MKLP_Tile.ObjectIDs[644] = true;
+            MKLP_Tile.ObjectIDs[645] = true;
+            MKLP_Tile.ObjectIDs[647] = true;
+            MKLP_Tile.ObjectIDs[648] = true;
+            MKLP_Tile.ObjectIDs[649] = true;
+            MKLP_Tile.ObjectIDs[651] = true;
+            MKLP_Tile.ObjectIDs[652] = true;
+            MKLP_Tile.ObjectIDs[653] = true;
+            MKLP_Tile.ObjectIDs[654] = true;
+            MKLP_Tile.ObjectIDs[656] = true;
+            MKLP_Tile.ObjectIDs[657] = true;
+            MKLP_Tile.ObjectIDs[658] = true;
+            MKLP_Tile.ObjectIDs[660] = true;
+            MKLP_Tile.ObjectIDs[663] = true;
+            MKLP_Tile.ObjectIDs[664] = true;
+            MKLP_Tile.ObjectIDs[665] = true;
+
+            #endregion
         }
         public static Dictionary<MKLP_Tile, string> GetIllegalTile()
         {
@@ -2133,10 +2450,10 @@ namespace MKLP.Modules
 
             //bool bothevilworld = (Main.drunkWorld || Main.remixWorld || Main.zenithWorld);
 
-            bool allowdungeonrush = (bool)MKLP.Config.Progression.AllowDungeonRush;
-            bool allowtemplerush = (bool)MKLP.Config.Progression.AllowTempleRush;
+            bool allowdungeonrush = (bool)MKLP.Config.Main.Progression.AllowDungeonRush;
+            bool allowtemplerush = (bool)MKLP.Config.Main.Progression.AllowTempleRush;
 
-            bool allowmusicbox = (bool)MKLP.Config.Progression.AllowMusicBox;
+            bool allowmusicbox = (bool)MKLP.Config.Main.Progression.AllowMusicBox;
 
             //530
 
@@ -2174,7 +2491,7 @@ namespace MKLP.Modules
 
             #region ( Banners )
 
-            bool allowbanners = (bool)MKLP.Config.Progression.AllowBanners;
+            bool allowbanners = (bool)MKLP.Config.Main.Progression.AllowBanners;
 
             if (!allowbanners)
             {
@@ -2201,7 +2518,7 @@ namespace MKLP.Modules
 
                 if (!Main.hardMode)
                 {
-                    MKLP_Tile[] addin = { new(91, 22), new(91, 23), new(91, 26), new(91, 27), new(91, 30), new(91, 32), 
+                    MKLP_Tile[] addin = { new(91, 22), new(91, 23), new(91, 26), new(91, 27), new(91, 30), new(91, 32),
                        new(91, 33), new(91, 36), new(91, 37), new(91, 38), new(91, 43), new(91, 44), new(91, 47),
                         new(91, 49), new(91, 52), new(91, 57), new(91, 58), new(91, 67), new(91, 69), new(91, 70),
                         new(91, 73), new(91, 78), new(91, 80), new(91, 83), new(91, 84), new(91, 95), new(91, 96),
@@ -2210,7 +2527,7 @@ namespace MKLP.Modules
                         new(91, 148), new(91, 149), new(91, 150), new(91, 174), new(91, 178), new(91, 181), new(91, 185),
                         new(91, 188), new(91, 207), new(91, 229), new(91, 232), new(91, 233), new(91, 234), new(91, 235),
                         new(91, 236), new(91, 258), new(91, 259), new(91, 260), new(91, 261), new(91, 265), new(91, 266),
-                        new(91, 267), new(91, 269), new(91, 272), new(91, 273), new(91, 274), new(91, 275), new(91, 276), 
+                        new(91, 267), new(91, 269), new(91, 272), new(91, 273), new(91, 274), new(91, 275), new(91, 276),
                         new(91, 281), new(91, 282), new(91, 283), new(91, 284), new(91, 291), new(91, 292), new(91, 293),
                         new(91, 294), new(91, 297), new(91, 298), new(91, 305), new(91, 306), new(91, 307), new(91, 308),
                         new(91, 309) };
@@ -2459,7 +2776,7 @@ namespace MKLP.Modules
 
                 MKLP_Tile[] dungeonrushids = { new(21, 3), new(21, 4) };
 
-                
+
 
                 foreach (MKLP_Tile add in dungeonrushids)
                 {
@@ -2549,7 +2866,7 @@ namespace MKLP.Modules
                     new(100, 31), new(100, 32), new(101, 20), new(101, 32), new(101, 33), new(104, 2), new(104, 28), new(104, 33),
                     new(107, 0), new(108, 0), new(111, 0), new(116, 0), new(117, 0), new(118, 0), new(121, 0), new(122, 0),
                     new(125, 0), new(127, 0), new(129, 0, true), new(133, 0, true), new(134, 0, true), new(137, 5), new(150, 0),
-                    new(164, 0), new(172, 3), new(172, 16), new(172, 32), new(172, 33), new(177, 0), new(195, 0), new(215, 1),
+                    new(164, 0), new(172, 3), new(172, 16), new(172, 32), new(172, 33), new(195, 0), new(215, 1),
                     new(215, 4), new(215, 5), new(218, 0), new(221, 0), new(222, 0), new(223, 0), new(227, 8), new(227, 9),
                     new(227, 10), new(227, 11), new(239, 11), new(239, 12), new(239, 13), new(239, 14), new(239, 15), new(239, 16),
                     new(240, 5), new(240, 58), new(240, 89), new(242, 52), new(242, 55), new(246, 15), new(246, 23), new(246, 24),
@@ -2750,7 +3067,7 @@ namespace MKLP.Modules
                         }
                     }
                 }
-                
+
                 if (!Main.tenthAnniversaryWorld)
                 {
                     MKLP_Tile[] princessids = { new(240, 74), new(240, 80), new(240, 86), new(242, 45), new(242, 64),
@@ -2834,7 +3151,7 @@ namespace MKLP.Modules
                     new(33, 36), new(34, 40), new(34, 41), new(34, 42), new(34, 43), new(42, 40), new(42, 41), new(42, 42),
                     new(42, 43), new(79, 34), new(79, 35), new(79, 36), new(79, 37), new(87, 34), new(87, 35), new(87, 36),
                     new(87, 37), new(88, 34), new(88, 35), new(88, 36), new(88, 37), new(89, 37), new(89, 38), new(89, 39),
-                    new(89, 40), new(90, 34), new(90, 35), new(90, 36), new(90, 37), new(93, 34), new(93, 35), new(93, 36), 
+                    new(89, 40), new(90, 34), new(90, 35), new(90, 36), new(90, 37), new(93, 34), new(93, 35), new(93, 36),
                     new(93, 37), new(100, 34), new(100, 35), new(100, 36), new(100, 37), new(101, 35), new(101, 36),
                     new(101, 37), new(101, 38), new(104, 35), new(104, 36), new(104, 37), new(104, 38), new(172, 35),
                     new(172, 36), new(172, 37), new(172, 38), new(240, 56), new(410, 0, true), new(412, 0), new(415, 0),
@@ -2940,6 +3257,8 @@ namespace MKLP.Modules
 
             #endregion
 
+            INIT_ObjectIDs();
+
             return getillegaltile;
         }
 
@@ -2949,7 +3268,7 @@ namespace MKLP.Modules
             Dictionary<ushort, string> getillegalwalls = new();
 
             //bool bothevilworld = (Main.drunkWorld || Main.remixWorld || Main.zenithWorld);
-            
+
             #region | unobtainable |
 
             ushort[] unobtainableids = { 2, 3, 13, 14, 15, 28, 61, 63, 64, 65, 69, 70, 71, 79, 80, 81, 83,
@@ -3051,7 +3370,7 @@ namespace MKLP.Modules
                     3247, 3362, 3363, 3627, 3730, 3731, 3733, 3734, 3735, 4128, 4129,
                     4130, 4132, 4133, 4134, 4685, 4686, 4704, 4705, 4706, 4707, 4708,
                     4709 };
-                
+
 
                 if (!Main.drunkWorld && !Main.remixWorld)
                 {
@@ -3208,7 +3527,7 @@ namespace MKLP.Modules
 
             #endregion
 
-            foreach (ushort whitelist in MKLP.Config.Main.WhiteList_Survival_Code4)
+            foreach (ushort whitelist in MKLP.Config.Main.DisableNode.WhiteList_Survival_Code4)
             {
                 if (getillegalwalls.ContainsKey(whitelist))
                 {
@@ -3238,5 +3557,5 @@ namespace MKLP.Modules
         }
     }
 
-    
+
 }

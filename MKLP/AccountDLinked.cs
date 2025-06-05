@@ -93,7 +93,8 @@ namespace MKLP
                     return reader.Get<string>(Get_AccountName_DB);
                 }
                 throw new NullReferenceException();
-            } else
+            }
+            else
             {
                 using var reader = _db.QueryReader($"SELECT * FROM {TableName} WHERE {Get_UserID_DB} = @0", UserID);
 
@@ -119,7 +120,8 @@ namespace MKLP
                     return reader.Get<int>(Get_AccountID_DB);
                 }
                 throw new NullReferenceException();
-            } else
+            }
+            else
             {
                 using var reader = _db.QueryReader($"SELECT * FROM {TableName} WHERE {Get_UserID_DB} = @0", UserID);
 
@@ -140,7 +142,7 @@ namespace MKLP
             if (UsingCustom)
             {
                 using var reader = _db.QueryReader("SELECT * " + Custom_Get_UserID_From_AccountName, AccountName);
-                
+
                 while (reader.Read())
                 {
                     if (reader.Get<string>(Get_UserID_DB) == "0" || reader.Get<string>(Get_UserID_DB) == "")
@@ -181,7 +183,7 @@ namespace MKLP
             if (UsingCustom)
             {
                 using var reader = _db.QueryReader("SELECT * " + Custom_Get_UserID_From_AccountID, AccountID);
-                
+
                 while (reader.Read())
                 {
                     if (reader.Get<string>(Get_UserID_DB) == "0" || reader.Get<string>(Get_UserID_DB) == "")

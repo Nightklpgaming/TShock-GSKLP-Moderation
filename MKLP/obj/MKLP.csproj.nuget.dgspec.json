@@ -10,11 +10,15 @@
         "projectUniqueName": "D:\\Nightklp_KLP\\my_Terraria_Plugins\\GSKLP\\MKLP\\MKLP\\MKLP.csproj",
         "projectName": "MKLP",
         "projectPath": "D:\\Nightklp_KLP\\my_Terraria_Plugins\\GSKLP\\MKLP\\MKLP\\MKLP.csproj",
-        "packagesPath": "C:\\Users\\Rock\\.nuget\\packages\\",
+        "packagesPath": "C:\\Users\\pilap\\.nuget\\packages\\",
         "outputPath": "D:\\Nightklp_KLP\\my_Terraria_Plugins\\GSKLP\\MKLP\\MKLP\\obj\\",
         "projectStyle": "PackageReference",
+        "fallbackFolders": [
+          "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
+        ],
         "configFilePaths": [
-          "C:\\Users\\Rock\\AppData\\Roaming\\NuGet\\NuGet.Config",
+          "C:\\Users\\pilap\\AppData\\Roaming\\NuGet\\NuGet.Config",
+          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
           "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
         ],
         "originalTargetFrameworks": [
@@ -39,7 +43,8 @@
           "enableAudit": "true",
           "auditLevel": "low",
           "auditMode": "direct"
-        }
+        },
+        "SdkAnalysisLevel": "9.0.200"
       },
       "frameworks": {
         "net6.0": {
@@ -78,7 +83,7 @@
               "privateAssets": "all"
             }
           },
-          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\8.0.403\\RuntimeIdentifierGraph.json"
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.203\\RuntimeIdentifierGraph.json"
         }
       }
     }

@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Newtonsoft.Json.Linq;
 using Newtonsoft.Json;
 using TShockAPI;
+using BanGuard;
 
 namespace MKLP.Functions
 {
@@ -77,6 +78,10 @@ namespace MKLP.Functions
 
         public static async Task<bool?> CheckPlayerBan(string uuid, string playerName, string playerIP)
         {
+            if (MKLP.HasBanGuardPlugin && (bool)MKLP.Config.BanGuard.UsingBanGuard && (bool)MKLP.Config.BanGuard.UsingPlugin)
+            {
+                return await Plugin_CheckPlayerBan(uuid, playerName, playerIP);
+            }
             var requestData = new Dictionary<string, string>
             {
                 { "player_uuid", uuid },
@@ -98,6 +103,10 @@ namespace MKLP.Functions
 
         public static async Task<int?> GenerateNewConnection(string uuid, string playerName)
         {
+            if (MKLP.HasBanGuardPlugin && (bool)MKLP.Config.BanGuard.UsingBanGuard && (bool)MKLP.Config.BanGuard.UsingPlugin)
+            {
+                return await Plugin_GenerateNewConnection(uuid, playerName);
+            }
             try
             {
                 var requestData = new Dictionary<string, string>
@@ -120,6 +129,10 @@ namespace MKLP.Functions
 
         public static async Task<bool> BanPlayer(string uuid, string category, string ip)
         {
+            if (MKLP.HasBanGuardPlugin && (bool)MKLP.Config.BanGuard.UsingBanGuard && (bool)MKLP.Config.BanGuard.UsingPlugin)
+            {
+                return await Plugin_BanPlayer(uuid, category, ip);
+            }
             var requestData = new Dictionary<string, string>
             {
                 { "player", uuid },
@@ -139,6 +152,21 @@ namespace MKLP.Functions
             }
         }
 
+        public static async Task<bool?> Plugin_CheckPlayerBan(string uuid, string playerName, string playerIP)
+        {
+            return await BanGuard.APIService.CheckPlayerBan(uuid, playerName, playerIP);
+        }
+
+        public static async Task<int?> Plugin_GenerateNewConnection(string uuid, string playerName)
+        {
+            return await BanGuard.APIService.GenerateNewConnection(uuid, playerName);
+        }
+
+        public static async Task<bool> Plugin_BanPlayer(string uuid, string category, string ip)
+        {
+            return await BanGuard.APIService.BanPlayer(uuid, category, ip);
+        }
+
         /*
         public static async Task<DCAccount?> TryGetDiscordAccount(string uuid)
         {
@@ -150,7 +178,7 @@ namespace MKLP.Functions
             try
             {
                 JObject? response = await SendApiRequest(_discordCheckMessage, requestData);
-                return DCAccount.FromJson(response!["connection_data"]!.ToObject<JObject>()!);
+                return DCAccount.FromJson(response!);
             }
             catch
             {
@@ -177,7 +205,7 @@ namespace MKLP.Functions
                 case "splitduper":
                 case "split duper":
                     {
-                        return "Duping";
+                        return "duping";
                     }
                 case "hack":
                 case "hacks":
