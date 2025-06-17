@@ -294,6 +294,11 @@ namespace MKLP
                 if ((bool)Config.Main.ManagePackets.Disable_Packet85_QuickStackChest)
                 {
                     args.Handled = true;
+                    player.SendData(PacketTypes.PlayerUpdate, "", player.Index);
+                    for (int i = 0; i < NetItem.InventorySlots; i++)
+                    {
+                        player.SendData(PacketTypes.PlayerSlot, "", player.Index, i);
+                    }
                 }
             }
 
