@@ -21,7 +21,6 @@ namespace MKLP
         public CONFIG_BOSSES BossManager { get; set; } = new();
         public CONFIG_DATABASE DataBaseMain { get; set; } = new();
         public CONFIG_DATABASE_LINKING DataBaseDLink { get; set; } = new();
-        public CONFIG_BanGuard BanGuard { get; set; } = new();
         public CONFIG_UNRELEASE_FEATURE Unrelease { get; set; } = new();
 
         static string path = Path.Combine(TShock.SavePath, "MKLP_Config.json");
@@ -31,6 +30,10 @@ namespace MKLP
 
         public static Config Read()
         {
+            if (!File.Exists(TShock.SavePath))
+            {
+                Directory.CreateDirectory(TShock.SavePath);
+            }
             if (!File.Exists(path))
             {
                 if (File.Exists(OldConfig.path))
@@ -77,9 +80,6 @@ namespace MKLP
             if (args.DataBaseDLink == null) args.DataBaseDLink = new();
             args.DataBaseDLink.FixNull();
 
-            if (args.BanGuard == null) args.BanGuard = new();
-            args.BanGuard.FixNull();
-
             if (args.Unrelease == null) args.Unrelease = new();
             args.Unrelease.FixNull();
 
@@ -114,7 +114,6 @@ namespace MKLP
                 BossManager = new(),
                 DataBaseMain = new(),
                 DataBaseDLink = new(),
-                BanGuard = new(),
                 Unrelease = new(),
             };
         }
@@ -124,10 +123,6 @@ namespace MKLP
 
         public class CONFIG_HELPTEXT
         {
-            public string HelpText_Seperator1 = "■▶▶▶▶ Seperator ◀◀◀◀■";
-            public string HelpText_Seperator2 = "- Warning this is used for discord buttons! if a player tried to use this character they woudn't able to join!";
-            public string HelpText_Space1 = " ";
-            public string HelpText_Space2 = " ";
             public string HelpText_PunishType0a = "■▶▶▶▶ Punishment Type 0-6 ◀◀◀◀■";
             public string HelpText_PunishType1a = "▮▬▬▬▬ [ 0 ] Ban ▬▬▬▬▬▮";
             public string HelpText_PunishType1b = "- bans a player immidiately";
@@ -182,6 +177,11 @@ namespace MKLP
         #region ={[ MAIN ]}=
         public class CONFIG_MAIN
         {
+
+            public string HelpText_Seperator1 = "■▶▶▶▶ Seperator ◀◀◀◀■";
+            public string HelpText_Seperator2 = "- Warning this is used for discord buttons! if a player tried to use this character they woudn't able to join!";
+            public string HelpText_Space1 = " ";
+            public string HelpText_Space2 = " ";
             public char Seperator = '¤';
             //public string Language = "en";
             public byte? Minimum_CharacterName = 1;
@@ -193,11 +193,11 @@ namespace MKLP
             public bool? Allow_PlayerName_InappropriateWords = false;
             public string S_1 = "▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬";
             public string HelpText_0a = "■▶▶▶▶ Reason_User_JoinMatchUUID ◀◀◀◀■";
-            public string HelpText_Space1 = " ";
+            public string HelpText_Space3 = " ";
             public string HelpText_0b = "- %matchtype% : Shows if IP or UUID is matched";
             public string HelpText_0c = "- %accountname% : Shows what accountname was match";
-            public string HelpText_Space2 = " ";
-            public string HelpText_Space3 = " ";
+            public string HelpText_Space4 = " ";
+            public string HelpText_Space5 = " ";
             public bool? Target_UserMatchUUIDAndIP = false;
             public bool? Allow_User_JoinMatchUUID = true;
             public string Reason_User_JoinMatchUUID = "( %matchtype% ) making 2 or more accounts is forbidden!\nplease use your account: %accountname%";
@@ -213,9 +213,8 @@ namespace MKLP
             public bool? ReceivedWarning_WirePlaceUnderground = false;
             public string S_4 = "▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬";
             public bool? Allow_Players_StackSameAccessory = false;
-            public bool? Allow_Players_MultipleFishingBobber = false;
             public string S_5 = "▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬";
-            //public bool? Discord_SenD_DM_OnStaffReport = false;
+            public bool? Allow_Players_MultipleFishingBobber = false;
             public string S_6 = "▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬";
             public int? Ignore_Value_ClearLag = 12000;
             public string S_7 = "▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬";
@@ -223,6 +222,8 @@ namespace MKLP
             public bool? Use_OnUpdate_Func = true;
             public bool? DetectAllPlayerInv = false;
             public string S_8 = "▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬";
+            public bool? UsingBanGuardPlugin = false;
+            public string S_9 = "▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬";
             public CONFIG_CHATMODERATION ChatMod = new();
             public CONFIG_DISABLENODE DisableNode = new();
             public CONFIG_PROGRESSION Progression = new();
@@ -246,6 +247,16 @@ namespace MKLP
                 S_6 = getdefault.S_6;
                 S_7 = getdefault.S_7;
                 S_8 = getdefault.S_8;
+                S_9 = getdefault.S_9;
+
+                HelpText_Space1 = getdefault.HelpText_Space1;
+                HelpText_Space2 = getdefault.HelpText_Space2;
+                HelpText_Space3 = getdefault.HelpText_Space3;
+                HelpText_Space4 = getdefault.HelpText_Space4;
+                HelpText_Space5 = getdefault.HelpText_Space5;
+
+                HelpText_Seperator1 = getdefault.HelpText_Seperator1;
+                HelpText_Seperator2 = getdefault.HelpText_Seperator2;
 
                 if (Seperator == null) Seperator = getdefault.Seperator;
                 //if (Language == null) Language = getdefault.Language;
@@ -258,11 +269,8 @@ namespace MKLP
 
 
                 HelpText_0a = getdefault.HelpText_0a;
-                HelpText_Space1 = getdefault.HelpText_Space1;
                 HelpText_0b = getdefault.HelpText_0b;
                 HelpText_0b = getdefault.HelpText_0b;
-                HelpText_Space2 = getdefault.HelpText_Space2;
-                HelpText_Space3 = getdefault.HelpText_Space3;
                 if (Target_UserMatchUUIDAndIP == null) Target_UserMatchUUIDAndIP = getdefault.Target_UserMatchUUIDAndIP;
                 if (Allow_User_JoinMatchUUID == null) Allow_User_JoinMatchUUID = getdefault.Allow_User_JoinMatchUUID;
                 if (Reason_User_JoinMatchUUID == null) Reason_User_JoinMatchUUID = getdefault.Reason_User_JoinMatchUUID;
@@ -280,9 +288,8 @@ namespace MKLP
                 if (ReceivedWarning_WirePlaceUnderground == null) ReceivedWarning_WirePlaceUnderground = getdefault.ReceivedWarning_WirePlaceUnderground;
 
                 if (Allow_Players_StackSameAccessory == null) Allow_Players_StackSameAccessory = getdefault.Allow_Players_StackSameAccessory;
-                if (Allow_Players_MultipleFishingBobber == null) Allow_Players_MultipleFishingBobber = getdefault.Allow_Players_MultipleFishingBobber;
 
-                
+                if (Allow_Players_MultipleFishingBobber == null) Allow_Players_MultipleFishingBobber = getdefault.Allow_Players_MultipleFishingBobber;
 
                 if (Ignore_Value_ClearLag == null) Ignore_Value_ClearLag = getdefault.Ignore_Value_ClearLag;
 
@@ -294,7 +301,7 @@ namespace MKLP
 
                 if (DetectAllPlayerInv == null) DetectAllPlayerInv = getdefault.DetectAllPlayerInv;
 
-
+                if (UsingBanGuardPlugin == null) UsingBanGuardPlugin = getdefault.UsingBanGuardPlugin;
 
                 if (ChatMod == null) ChatMod = new();
                 ChatMod.FixNull();
@@ -852,9 +859,12 @@ namespace MKLP
             public string[] CommandLog_Normal = { "help", "motd", "who", "playing" };
             public string[] CommandLog_IgnoreARGS = { "user" };
             public string S_1 = "▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬";
+            public bool? ModLogTXT_Enable = false;
+            public bool? ReportLogTXT_Enable = false;
+            public string S_2 = "▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬";
             public bool? LogTile = true;
             public bool? LogSign = true;
-            public string S_2 = "▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬";
+            public string S_3 = "▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬";
             public bool? Save_Inventory_Log = false;
             public int? Save_InvLog_Max = 70;
             public int? Remove_InvLog_IfMax = 40;
@@ -867,10 +877,14 @@ namespace MKLP
 
                 S_1 = getdefault.S_1;
                 S_2 = getdefault.S_2;
+                S_3 = getdefault.S_3;
 
                 if (CommandLog_Ignore == null) CommandLog_Ignore = getdefault.CommandLog_Ignore;
                 if (CommandLog_Normal == null) CommandLog_Normal = getdefault.CommandLog_Normal;
                 if (CommandLog_IgnoreARGS == null) CommandLog_IgnoreARGS = getdefault.CommandLog_IgnoreARGS;
+
+                if (ModLogTXT_Enable == null) ModLogTXT_Enable = getdefault.ModLogTXT_Enable;
+                if (ReportLogTXT_Enable == null) ReportLogTXT_Enable = getdefault.ReportLogTXT_Enable;
 
                 if (LogTile == null) LogTile = getdefault.LogTile;
                 if (LogSign == null) LogSign = getdefault.LogSign;
@@ -887,7 +901,6 @@ namespace MKLP
         public class CONFIG_DISCORD
         {
             public string BotToken = "NONE";
-            public string SlashCommandName = "";
             public ulong? MainGuildID = 0;
             public ulong? StaffChannel = 0;
             public ulong? MainChannelLog = 0;
@@ -899,6 +912,17 @@ namespace MKLP
             public ulong? CommandLogChannel = 0;
             public string S_3 = "▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬";
             public bool? AllowUser_UseIngame_ModPermission = false;
+            public string S_4 = "▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬";
+            public string HelpText_0a = "■▶▶▶▶ SlashCommandName ◀◀◀◀■";
+            public string HT_Space1 = " ";
+            public string HelpText_0b = "- this is only used when you have 2 servers connected in 1 bot ( leave it blank if this isn't the case for you )";
+            public string HelpText_0c = "- this allow all MKLP discord Command be sub-command such as";
+            public string HT_Example1 = "- SlashCommandName: \"S1\";";
+            public string HT_Example2 = "- all your MKLP commands will be '/S1 mklp-help', '/S1 moderation', '/S1 moderation-user'";
+            public string HT_Example3 = "warning: *SlashCommandName* must not contain any symbols!";
+            public string HT_Space2 = " ";
+            public string HT_Space3 = " ";
+            public string SlashCommandName = "";
             public CONFIG_DISCORD() { }
 
             #region FixNull
@@ -952,13 +976,14 @@ namespace MKLP
             public string CMD_OfflineBan = "MKLP.moderator.offline.ban";
             public string CMD_UnBan = "MKLP.moderator.unban";
             public string CMD_Disable = "MKLP.moderator.disable";
+            public string CMD_OfflineEnable = "MKLP.moderator.offline.enable";
             public string CMD_Mute = "MKLP.moderator.mute";
             public string CMD_OfflineMute = "MKLP.moderator.offline.mute";
             public string CMD_UnMute = "MKLP.moderator.unmute";
             public string CMD_OfflineUnMute = "MKLP.moderator.offline.unmute";
 
             //inspect
-            public string CMD_InventoryView = "MKLP.staff.Inventory.view";
+            public string CMD_InventoryView = "MKLP.moderator.Inventory.view";
             public string CMD_Spy = "MKLP.spy";
             public string CMD_UUIDMatch = "MKLP.uuidmatch";
 
@@ -979,20 +1004,22 @@ namespace MKLP
 
             public string Ignore_IllegalWireProgression = "MKLP.bypass.progression.wire";
 
-            public string IgnoreMainCode_1 = "MKLP.bypass.Main.code1";
-            public string IgnoreMainCode_2 = "MKLP.bypass.Main.code2";
+            public string IgnoreDupeCode_0 = "MKLP.disablenode.bypass.Dupe.code0";
 
-            public string IgnoreDefaultCode_1 = "MKLP.bypass.Default.code1";
-            public string IgnoreDefaultCode_2 = "MKLP.bypass.Default.code2";
-            public string IgnoreDefaultCode_3 = "MKLP.bypass.Default.code3";
-            public string IgnoreDefaultCode_4 = "MKLP.bypass.Default.code4";
-            public string IgnoreDefaultCode_5 = "MKLP.bypass.Default.code5";
-            public string IgnoreDefaultCode_6 = "MKLP.bypass.Default.code6";
+            public string IgnoreMainCode_1 = "MKLP.disablenode.bypass.Main.code1";
+            public string IgnoreMainCode_2 = "MKLP.disablenode.bypass.Main.code2";
 
-            public string IgnoreSurvivalCode_1 = "MKLP.bypass.Survival.code1";
-            public string IgnoreSurvivalCode_2 = "MKLP.bypass.Survival.code2";
-            public string IgnoreSurvivalCode_3 = "MKLP.bypass.Survival.code3";
-            public string IgnoreSurvivalCode_4 = "MKLP.bypass.Survival.code4";
+            public string IgnoreDefaultCode_1 = "MKLP.disablenode.bypass.Default.code1";
+            public string IgnoreDefaultCode_2 = "MKLP.disablenode.bypass.Default.code2";
+            public string IgnoreDefaultCode_3 = "MKLP.disablenode.bypass.Default.code3";
+            public string IgnoreDefaultCode_4 = "MKLP.disablenode.bypass.Default.code4";
+            public string IgnoreDefaultCode_5 = "MKLP.disablenode.bypass.Default.code5";
+            public string IgnoreDefaultCode_6 = "MKLP.disablenode.bypass.Default.code6";
+
+            public string IgnoreSurvivalCode_1 = "MKLP.disablenode.bypass.Survival.code1";
+            public string IgnoreSurvivalCode_2 = "MKLP.disablenode.bypass.Survival.code2";
+            public string IgnoreSurvivalCode_3 = "MKLP.disablenode.bypass.Survival.code3";
+            public string IgnoreSurvivalCode_4 = "MKLP.disablenode.bypass.Survival.code4";
 
             public CONFIG_PERMISSIONS() { }
 
@@ -1020,6 +1047,7 @@ namespace MKLP
                 if (CMD_OfflineBan == null) CMD_OfflineBan = getdefault.CMD_OfflineBan;
                 if (CMD_UnBan == null) CMD_UnBan = getdefault.CMD_UnBan;
                 if (CMD_Disable == null) CMD_Disable = getdefault.CMD_Disable;
+                if (CMD_OfflineEnable == null) CMD_OfflineEnable = getdefault.CMD_OfflineEnable;
                 if (CMD_Mute == null) CMD_Mute = getdefault.CMD_Mute;
                 if (CMD_OfflineMute == null) CMD_OfflineMute = getdefault.CMD_OfflineMute;
                 if (CMD_UnMute == null) CMD_UnMute = getdefault.CMD_UnMute;
@@ -1043,6 +1071,8 @@ namespace MKLP
 
                 if (Ignore_IllegalWireProgression == null) Ignore_IllegalWireProgression = getdefault.Ignore_IllegalWireProgression;
 
+                if (IgnoreDupeCode_0 == null) IgnoreDupeCode_0 = getdefault.IgnoreDupeCode_0;
+
                 if (IgnoreMainCode_1 == null) IgnoreMainCode_1 = getdefault.IgnoreMainCode_1;
                 if (IgnoreMainCode_2 == null) IgnoreMainCode_2 = getdefault.IgnoreMainCode_2;
 
@@ -1065,6 +1095,16 @@ namespace MKLP
         #region ={ BOSSES }=
         public class CONFIG_BOSSES
         {
+            public bool? UsingBossManager = true;
+
+            public bool? UseBossSchedule = false;
+
+            public string S_1 = "▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬";
+            public string HelpText_0a = "■▶▶▶▶ Boss Schedule ◀◀◀◀■";
+            public string HelpText_Space1 = " ";
+            public string HelpText_0b = "- this is where you setup your boss schedule it uses DateTime format";
+            public string HelpText_Space2 = " ";
+            public string HelpText_Space3 = " ";
             public DateTime? ScheduleAllowKingSlime = DateTime.MaxValue;
             public DateTime? ScheduleAllowEyeOfCthulhu = DateTime.MaxValue;
             public DateTime? ScheduleAllowEaterOfWorlds = DateTime.MaxValue;
@@ -1088,6 +1128,24 @@ namespace MKLP
             public DateTime? ScheduleAllowLunaticCultist = DateTime.MaxValue;
             public DateTime? ScheduleAllowMoonLord = DateTime.MaxValue;
 
+            public string S_2 = "▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬";
+            public string HelpText_1a = "■▶▶▶▶ Schedule Setup ◀◀◀◀■";
+            public string HelpText_Space4 = " ";
+            public string HelpText_1b = "- this is where you easily setup your boss schedule without manually setting up the boss schedule using DateTime Format";
+            public string HelpText_Space5 = " ";
+            public string HelpText_1c = "- How it works is it uses day 1, 2, 3, 4 etc...";
+            public string HelpText_Space6 = " ";
+            public string HelpText_1d = "- this is used for '/mboss resetschedule' you can do it with '/mboss resetschedule <MM/DD/YY>' for your starting point";
+            public string HelpText_Space7 = " ";
+            public string HelpText_example1 = "example: the starting point will be [ january 8, 2025 ]";
+            public string HelpText_example2 = "- so king slime will be enabled already since its day 0 which is today";
+            public string HelpText_example3 = "- Eye of Cthulhu is set to 1 which is [ day 1 ] this means 'Eye of Cthulhu' will be enabled at january 9, 2025";
+            public string HelpText_example4 = " ";
+            public string HelpText_example5 = "- so yeah the rest goes on like : Evil Boss & Deerclops jan 10, Queen bee jan 11, and etc...";
+            public string HelpText_Space8 = " ";
+            public string HelpText_2a = "- for 'Default_ScheduleDay_Hour' it is what hour is gonna be enable should it be Hour 2 which is 2AM or something ( your choice )";
+            public string HelpText_Space9 = " ";
+            public string HelpText_Space10 = " ";
             public int? Default_ScheduleDay_AllowKingSlime = 0;
             public int? Default_ScheduleDay_AllowEyeOfCthulhu = 1;
             public int? Default_ScheduleDay_AllowEaterOfWorlds = 2;
@@ -1112,9 +1170,7 @@ namespace MKLP
             public int? Default_ScheduleDay_AllowMoonLord = 14;
 
             public int? Default_ScheduleDay_Hour = 0;
-
-            public bool? UseBossSchedule = false;
-
+            public string S_3 = "▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬";
             public bool? AllowKingSlime = true;
             public bool? AllowEyeOfCthulhu = true;
             public bool? AllowEaterOfWorlds = true;
@@ -1134,7 +1190,7 @@ namespace MKLP
             public bool? AllowEmpressOfLight = true;
             public bool? AllowLunaticCultist = true;
             public bool? AllowMoonLord = true;
-
+            public string S_4 = "▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬";
             public int? KingSlime_RequiredPlayersforBoss = 1;
             public int? EyeOfCthulhu_RequiredPlayersforBoss = 1;
             public int? BrainOfCthulhu_RequiredPlayersforBoss = 1;
@@ -1154,9 +1210,11 @@ namespace MKLP
             public int? EmpressOfLight_RequiredPlayersforBoss = 1;
             public int? LunaticCultist_RequiredPlayersforBoss = 1;
             public int? MoonLord_RequiredPlayersforBoss = 1;
+            public string S_5 = "▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬";
 
             public bool? AllowJoinDuringBoss = true;
             public bool? PreventIllegalBoss = true;
+            public string S_6 = "▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬";
 
             public ulong? Discord_BossEnableChannel = 0;
             public ulong? Discord_BossEnableRole = 0;
@@ -1170,6 +1228,39 @@ namespace MKLP
             public void FixNull()
             {
                 CONFIG_BOSSES getdefault = new();
+                S_1 = getdefault.S_1;
+                S_2 = getdefault.S_2;
+                S_3 = getdefault.S_3;
+                S_4 = getdefault.S_4;
+                S_5 = getdefault.S_5;
+                S_6 = getdefault.S_6;
+
+                HelpText_Space1 = getdefault.HelpText_Space1;
+                HelpText_Space2 = getdefault.HelpText_Space2;
+                HelpText_Space3 = getdefault.HelpText_Space3;
+                HelpText_Space4 = getdefault.HelpText_Space4;
+                HelpText_Space5 = getdefault.HelpText_Space5;
+                HelpText_Space6 = getdefault.HelpText_Space6;
+                HelpText_Space7 = getdefault.HelpText_Space7;
+                HelpText_Space8 = getdefault.HelpText_Space8;
+                HelpText_Space9 = getdefault.HelpText_Space9;
+                HelpText_Space10 = getdefault.HelpText_Space10;
+
+                HelpText_0a = getdefault.HelpText_0a;
+                HelpText_0b = getdefault.HelpText_0b;
+                HelpText_1a = getdefault.HelpText_1a;
+                HelpText_1b = getdefault.HelpText_1b;
+                HelpText_1c = getdefault.HelpText_1c;
+                HelpText_1d = getdefault.HelpText_1d;
+                HelpText_2a = getdefault.HelpText_2a;
+
+                HelpText_example1 = getdefault.HelpText_example1;
+                HelpText_example2 = getdefault.HelpText_example2;
+                HelpText_example3 = getdefault.HelpText_example3;
+                HelpText_example4 = getdefault.HelpText_example4;
+                HelpText_example5 = getdefault.HelpText_example5;
+
+                if (UsingBossManager == null) UsingBossManager = getdefault.UsingBossManager;
 
                 //schedule
                 if (ScheduleAllowKingSlime == null) ScheduleAllowKingSlime = getdefault.ScheduleAllowKingSlime;
@@ -1555,7 +1646,7 @@ namespace MKLP
                 newconfig.BossManager = oldconfig.BossManager;
                 newconfig.DataBaseMain = oldconfig.DataBaseMain;
                 newconfig.DataBaseDLink = oldconfig.DataBaseDLink;
-                newconfig.BanGuard = oldconfig.BanGuard;
+                newconfig.Main.UsingBanGuardPlugin = (bool)oldconfig.BanGuard.UsingBanGuard && (bool)oldconfig.BanGuard.UsingPlugin;
 
                 return true;
             } catch (Exception e)

@@ -121,6 +121,19 @@ namespace MKLP.Modules
             #endregion
         }
 
+        Dictionary<string, ulong> CommandIDs = new();
+        void CommandIDs_Add(string commandname, ulong id)
+        {
+            if (CommandIDs.ContainsKey(commandname)) return;
+
+            CommandIDs.Add(commandname, id);
+        }
+        string CommandIDs_GetMention(string commandname)
+        {
+            if (!CommandIDs.ContainsKey(commandname)) return $"/{commandname}";
+
+            return $"</{commandname}:{CommandIDs[commandname]}>";
+        }
         private async Task Ready()
         {
             #region code
@@ -210,7 +223,18 @@ namespace MKLP.Modules
                 // building slash command commands
                 foreach (var command in Guildcommands)
                 {
-                    await guild.CreateApplicationCommandAsync(command.Build());
+                    var cmdbuild = command.Build();
+                    var resultcmd = await guild.CreateApplicationCommandAsync(cmdbuild);
+                    if (SlashCommandName != "")
+                    {
+                        foreach (var subcmd in resultcmd.Options)
+                        {
+                            CommandIDs_Add(resultcmd.Name + " " + subcmd.Name, resultcmd.Id);
+                        }
+                    } else
+                    {
+                        CommandIDs_Add(resultcmd.Name, resultcmd.Id);
+                    }
                 }
             }
             catch (ApplicationCommandException exception)
@@ -1501,7 +1525,7 @@ namespace MKLP.Modules
                                                     .AddTextInput("Reason", "Ban_reason".Replace('_', S_), TextInputStyle.Paragraph, "Cheating")
                                                     .AddTextInput("Duration", "Ban_duration".Replace('_', S_), TextInputStyle.Short, "0d 0h 0m 0s", maxLength: 15);
 
-                                                if ((bool)MKLP.Config.BanGuard.UsingBanGuard)
+                                                if ((bool)MKLP.Config.Main.UsingBanGuardPlugin)
                                                 {
                                                     modal.AddTextInput("BanGuardType", "Ban_BGCategory".Replace('_', S_), TextInputStyle.Short, "Type -auto if you want to automatic categories ( leave it blank if you don't want to use BanGuard )", maxLength: 30, required: false);
                                                 }
@@ -1526,7 +1550,7 @@ namespace MKLP.Modules
                                                     .AddTextInput("Reason", "Ban_reason".Replace('_', S_), TextInputStyle.Paragraph, "Cheating", value: message.Data.CustomId.Split(S_)[5])
                                                     .AddTextInput("Duration", "Ban_duration".Replace('_', S_), TextInputStyle.Short, "0d 0h 0m 0s", maxLength: 15, value: "Permanent");
 
-                                                if ((bool)MKLP.Config.BanGuard.UsingBanGuard)
+                                                if ((bool)MKLP.Config.Main.UsingBanGuardPlugin)
                                                 {
                                                     modal.AddTextInput("BanGuardType", "Ban_BGCategory".Replace('_', S_), TextInputStyle.Short, "Type -auto if you want to automatic categories ( leave it blank if you don't want to use BanGuard )", maxLength: 30, required: false);
                                                 }
@@ -1636,7 +1660,7 @@ namespace MKLP.Modules
                                                     return;
                                                 }
 
-                                                if (ManagePlayer.UnDisablePlayer(targetplayer, executer.Name))
+                                                if (ManagePlayer.UnDisablePlayer(targetplayer.Name, AccountHasPermission(executer, MKLP.Config.Permissions.CMD_OfflineEnable), true, executer.Name))
                                                 {
                                                     await message.RespondAsync($"Successfully Enable **{message.Data.CustomId.Split(S_)[4]}**", ephemeral: true);
                                                 }
@@ -1840,7 +1864,7 @@ namespace MKLP.Modules
 
 
                                                 string BGCategory = "N/A";
-                                                if ((bool)MKLP.Config.BanGuard.UsingBanGuard && BanGuardAPI._isApiKeyValid)
+                                                if ((bool)MKLP.Config.Main.UsingBanGuardPlugin)
                                                 {
                                                     string banguardcat = components
                                                         .First(x => x.CustomId == "Ban_BGCategory".Replace('_', S_)).Value;
@@ -2301,11 +2325,11 @@ namespace MKLP.Modules
                             #region ( Command | help )
                             {
                                 string commands = 
-                                    $"</{SlashCommandName} moderation:{command.CommandId}> : shows mklp panel in discord" +
+                                    $"{CommandIDs_GetMention(SlashCommandName + " moderation")} : shows mklp panel in discord" +
                                     $"\n\n" +
-                                    $"</{SlashCommandName} moderation-user:{command.CommandId}> : Select a Account you want to view" +
+                                    $"{CommandIDs_GetMention(SlashCommandName + " moderation-user")} : Select a Account you want to view" +
                                     $"\n\n" +
-                                    $"</{SlashCommandName} ingame-command:{command.CommandId}> : execute a command in server";
+                                    $"{CommandIDs_GetMention(SlashCommandName + " ingame-command")} : execute a command in server";
 
                                 var embed = new EmbedBuilder()
                                     .WithTitle("List of Commands")
@@ -3005,11 +3029,11 @@ namespace MKLP.Modules
                     #region ( Command | help )
                     {
                         string commands =
-                            $"</moderation:{command.CommandId}> : shows mklp panel in discord" +
+                            $"{CommandIDs_GetMention("moderation")} : shows mklp panel in discord" +
                             $"\n\n" +
-                            $"</moderation-user:{command.CommandId}> : Select a Account you want to view" +
+                            $"{CommandIDs_GetMention("moderation-user")} : Select a Account you want to view" +
                             $"\n\n" +
-                            $"</ingame-command:{command.CommandId}> : execute a command in server";
+                            $"{CommandIDs_GetMention("ingame-command")} : execute a command in server";
 
                         var embed = new EmbedBuilder()
                             .WithTitle("List of Commands")
