@@ -3380,14 +3380,27 @@ namespace MKLP
                 {
                     MKLP.TogglePlayerVanish(args.Player, true);
 
-                    TShock.Utils.Broadcast($"{args.Player.Name} has left.", Color.Yellow);
+                    foreach (var player in TShock.Players)
+                    {
+                        if (player != null && player.Active && player != args.Player)
+                        {
+                            player.SendInfoMessage($"{args.Player.Name} has left.", Color.Yellow);
+                        }
+                    }
                     args.Player.SendSuccessMessage(MKLP.GetText("You're on Vanish"));
                 }
                 else
                 {
                     MKLP.TogglePlayerVanish(args.Player, false);
 
-                    TShock.Utils.Broadcast($"{args.Player.Name} has joined.", Color.Yellow);
+                    foreach (var player in TShock.Players)
+                    {
+                        if (player != null && player.Active && player != args.Player)
+                        {
+                            player.SendInfoMessage($"{args.Player.Name} has joined.", Color.Yellow);
+                        }
+                    }
+
                     args.Player.SendSuccessMessage(MKLP.GetText("You're no longer on Vanish"));
                 }
             }
@@ -3395,7 +3408,13 @@ namespace MKLP
             {
                 MKLP.TogglePlayerVanish(args.Player, true);
 
-                TShock.Utils.Broadcast($"{args.Player.Name} has left.", Color.Yellow);
+                foreach (var player in TShock.Players)
+                {
+                    if (player != null && player.Active && player != args.Player)
+                    {
+                        player.SendInfoMessage($"{args.Player.Name} has left.", Color.Yellow);
+                    }
+                }
                 args.Player.SendSuccessMessage(MKLP.GetText("You're on Vanish"));
             }
 
@@ -4838,3 +4857,4 @@ namespace MKLP
         #endregion
     }
 }
+
