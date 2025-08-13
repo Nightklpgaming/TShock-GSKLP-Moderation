@@ -74,7 +74,7 @@ namespace MKLP
 
             #region { Admin }
 
-            Commands.ChatCommands.Add(new Command(MKLP.Config.Permissions.CMD_ClearMessages, CMD_ClearMessages, "clearmessages", "clearmessage", "messageclear", "purgemessage")
+            Commands.ChatCommands.Add(new Command(MKLP.Config.Permissions.CMD_ClearMessage, CMD_ClearMessages, "clearmessages", "clearmessage", "messageclear", "purgemessage")
             {
                 HelpText = MKLP.GetText("Clears the whole message chat")
             });
@@ -4838,5 +4838,6 @@ namespace MKLP
         #endregion
     }
 }
+
 
 
