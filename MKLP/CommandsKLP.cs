@@ -74,7 +74,7 @@ namespace MKLP
 
             #region { Admin }
 
-            Commands.ChatCommands.Add(new Command(MKLP.Config.Permissions.CMD_ClearMessage, CMD_ClearMessage, "clearmessage", "messageclear", "purgemessage")
+            Commands.ChatCommands.Add(new Command(MKLP.Config.Permissions.CMD_ClearMessages, CMD_ClearMessages, "clearmessages", "clearmessage", "messageclear", "purgemessage")
             {
                 HelpText = MKLP.GetText("Clears the whole message chat")
             });
@@ -1545,7 +1545,7 @@ namespace MKLP
 
         #region { Admin }
 
-        private static void CMD_ClearMessage(CommandArgs args)
+        private static void CMD_ClearMessages(CommandArgs args)
         {
             #region code
 
@@ -1554,7 +1554,7 @@ namespace MKLP
                 TSPlayer.All.SendMessage("\n\n\n\n", Color.Black);
             }
 
-            args.Player.SendSuccessMessage(MKLP.GetText("Message Cleared!"));
+            args.Player.SendSuccessMessage(MKLP.GetText("Messages Cleared!"));
 
             #endregion
         }
@@ -4838,4 +4838,5 @@ namespace MKLP
         #endregion
     }
 }
+
 
