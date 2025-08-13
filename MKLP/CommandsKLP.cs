@@ -4721,7 +4721,7 @@ namespace MKLP
                     $"\n{(userid != 0 ? $"Discord UserID: {userid}\n\n" : "")}" +
                     $"Last  known IP: [c/ffffff:{lastknownip}]\n" +
                     $"Last accessed: [c/ffffff:{account.LastAccessed} UTC{UTC}] [c/82ff91:{GetSince(DateTime.Parse(account.LastAccessed))}]\n" +
-                    $"Registered Since: [c/ffffff:{account.Registered} UTC{UTC}] [c/82ff91:{GetSince(DateTime.Parse(account.Registered))}]\n",
+                    $"Registered Since: [c/ffffff:{account.Registered} UTC{UTC}] [c/82ff91:{GetSince(DateTime.Parse(account.Registered))}]",
                     Color.Gray);
             }
 
@@ -4838,3 +4838,4 @@ namespace MKLP
         #endregion
     }
 }
+
